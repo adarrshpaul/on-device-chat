@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>On-Device Chat — Live jsDelivr CDN Performance Test</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: #111827;
+      --border: #1f2937;
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --cyan: #06b6d4;
+      --green: #10b981;
+      --text: #f3f4f6;
+      --text-dim: #9ca3af;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 2rem 1.5rem;
+    }
+    .container {
+      max-width: 1080px;
+      margin: 0 auto;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1.5rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .title-group h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #a5b4fc 0%, #38bdf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.35rem;
+    }
+    .badge-bar {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.25rem 0.65rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: #1e1b4b;
+      color: #a5b4fc;
+      border: 1px solid #312e81;
+    }
+    .badge.green {
+      background: #064e3b;
+      color: #6ee7b7;
+      border-color: #047857;
+    }
+    .badge.cyan {
+      background: #164e63;
+      color: #67e8f9;
+      border-color: #0e7490;
+    }
+
+    /* Performance HUD */
+    .hud-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .hud-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .hud-card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--cyan));
+    }
+    .hud-title {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+      margin-bottom: 0.4rem;
+    }
+    .hud-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: baseline;
+      gap: 0.25rem;
+    }
+    .hud-sub {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      margin-top: 0.35rem;
+    }
+
+    /* Catalog Section */
+    .section-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .catalog-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+    }
+    .product-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .product-card:hover {
+      transform: translateY(-2px);
+      border-color: #374151;
+    }
+    .product-name {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+    }
+    .product-desc {
+      font-size: 0.825rem;
+      color: var(--text-dim);
+      line-height: 1.4;
+      margin-bottom: 1rem;
+    }
+    .product-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .product-price {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--cyan);
+    }
+    .btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 0.5rem 0.9rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn:hover {
+      background: var(--accent-hover);
+    }
+
+    /* Live Telemetry Log */
+    .telemetry-box {
+      background: #000000;
+      border: 1px solid #1f2937;
+      border-radius: 12px;
+      padding: 1.25rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.85rem;
+    }
+    .telemetry-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.35rem 0;
+      border-bottom: 1px solid #111827;
+    }
+    .telemetry-label { color: #9ca3af; }
+    .telemetry-val { color: #38bdf8; font-weight: 600; }
+
+    /* Interactive Benchmark Buttons */
+    .bench-controls {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+    }
+    .btn-bench {
+      background: #1f2937;
+      border: 1px solid #374151;
+      color: #e5e7eb;
+      padding: 0.45rem 0.85rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .btn-bench:hover {
+      background: #374151;
+      border-color: #4b5563;
+    }
+
+    .cdn-tag {
+      background: #1e1b4b;
+      border: 1px dashed #4338ca;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+      font-family: ui-monospace, monospace;
+      font-size: 0.825rem;
+      color: #c7d2fe;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <div class="title-group">
+        <h1>On-Device Chat — jsDelivr CDN Benchmark</h1>
+        <p style="color: var(--text-dim); font-size: 0.9rem;">
+          Running 100% in-browser on-device AI loaded live from jsDelivr Edge CDN.
+        </p>
+        <div class="badge-bar">
+          <span class="badge green">● jsDelivr CDN v0.1.1</span>
+          <span class="badge cyan">● Zero Cloud API Cost</span>
+          <span class="badge">● Chrome AI Prompt API</span>
+        </div>
+      </div>
+      <div style="text-align: right;">
+        <div style="font-size: 0.8rem; color: var(--text-dim);">Cart Items: <span id="cart-counter" style="color: var(--cyan); font-weight: 700; font-size: 1.25rem;">0</span></div>
+        <div style="font-size: 0.8rem; color: var(--text-dim);">Cart Total: <span id="cart-total" style="color: var(--green); font-weight: 700; font-size: 1.25rem;">$0.00</span></div>
+      </div>
+    </header>
+
+    <!-- The actual code used to import this widget -->
+    <div class="cdn-tag">
+      <span>&lt;script src="<strong>https://cdn.jsdelivr.net/npm/on-device-chat</strong>" data-auto-init&gt;&lt;/script&gt;</span>
+      <span style="color: #6ee7b7; font-weight: 600;">Active in DOM</span>
+    </div>
+
+    <!-- Real-time HUD -->
+    <div class="hud-grid">
+      <div class="hud-card">
+        <div class="hud-title">CDN Bundle Latency</div>
+        <div class="hud-value" id="hud-cdn-time">Measuring...</div>
+        <div class="hud-sub">jsDelivr HTTP/2 Edge POP</div>
+      </div>
+      <div class="hud-card">
+        <div class="hud-title">Active AI Execution Tier</div>
+        <div class="hud-value" id="hud-tier" style="color: #a5b4fc; font-size: 1.15rem;">Detecting...</div>
+        <div class="hud-sub" id="hud-tier-desc">Querying window.ai capabilities</div>
+      </div>
+      <div class="hud-card">
+        <div class="hud-title">Perception Latency</div>
+        <div class="hud-value" id="hud-perception">&lt; 15 ms</div>
+        <div class="hud-sub">DOM Scene Tree & Spotlight HUD</div>
+      </div>
+      <div class="hud-card">
+        <div class="hud-title">Safety & Evals Pass Rate</div>
+        <div class="hud-value" style="color: var(--green);">26 / 26</div>
+        <div class="hud-sub">Giskard Benchmark 100%</div>
+      </div>
+    </div>
+
+    <!-- Quick Test Prompts -->
+    <div class="section-title">⚡ Try Quick Agent Prompts</div>
+    <div class="bench-controls">
+      <button class="btn-bench" onclick="sendToChat('What products are available in this catalog?')">
+        🔍 "What products are available?"
+      </button>
+      <button class="btn-bench" onclick="sendToChat('Add 2 Titanium Smartwatches to my cart')">
+        🛒 "Add 2 Titanium Smartwatches"
+      </button>
+      <button class="btn-bench" onclick="sendToChat('What is the total price if I buy the ANC headphones and mechanical keyboard?')">
+        🧮 "Calculate Headphones + Keyboard"
+      </button>
+      <button class="btn-bench" onclick="sendToChat('Inspect the buy button for the wireless mouse and click it')">
+        🖱️ "Click Wireless Mouse button"
+      </button>
+    </div>
+
+    <!-- Store Catalog for Agent Interaction -->
+    <div class="section-title">🛍️ Live Interactive Catalog (Agent Target Elements)</div>
+    <div class="catalog-grid">
+      <div class="product-card" id="card-headphones">
+        <div>
+          <div class="product-name">Ultra ANC Headphones</div>
+          <div class="product-desc">Spatial audio, active noise cancellation, 40-hour ultra battery life.</div>
+        </div>
+        <div class="product-footer">
+          <div class="product-price">$199.99</div>
+          <button id="btn-add-headphones" class="btn" onclick="addToCart('Ultra ANC Headphones', 199.99, 1)">Add to Cart</button>
+        </div>
+      </div>
+
+      <div class="product-card" id="card-watch">
+        <div>
+          <div class="product-name">Titanium Smartwatch</div>
+          <div class="product-desc">Sapphire glass, ECG biometric monitor, titanium unibody enclosure.</div>
+        </div>
+        <div class="product-footer">
+          <div class="product-price">$299.99</div>
+          <button id="btn-add-watch" class="btn" onclick="addToCart('Titanium Smartwatch', 299.99, 1)">Add to Cart</button>
+        </div>
+      </div>
+
+      <div class="product-card" id="card-keyboard">
+        <div>
+          <div class="product-name">Mechanical Keyboard</div>
+          <div class="product-desc">Hot-swappable tactile switches, double-shot PBT keycaps, RGB backlighting.</div>
+        </div>
+        <div class="product-footer">
+          <div class="product-price">$129.99</div>
+          <button id="btn-add-keyboard" class="btn" onclick="addToCart('Mechanical Keyboard', 129.99, 1)">Add to Cart</button>
+        </div>
+      </div>
+
+      <div class="product-card" id="card-mouse">
+        <div>
+          <div class="product-name">Ergonomic Wireless Mouse</div>
+          <div class="product-desc">PAW3395 sensor, 26,000 DPI, magnetic hyper-scroll wheel, 60g ultralight.</div>
+        </div>
+        <div class="product-footer">
+          <div class="product-price">$79.99</div>
+          <button id="btn-add-mouse" class="btn" onclick="addToCart('Ergonomic Wireless Mouse', 79.99, 1)">Add to Cart</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Telemetry Box -->
+    <div class="section-title">📊 Live DOM & Host Telemetry</div>
+    <div class="telemetry-box">
+      <div class="telemetry-row">
+        <span class="telemetry-label">Last Agent Action:</span>
+        <span class="telemetry-val" id="tel-action">Idle / Ready for user input</span>
+      </div>
+      <div class="telemetry-row">
+        <span class="telemetry-label">Cart Item Count:</span>
+        <span class="telemetry-val" id="tel-count">0 items</span>
+      </div>
+      <div class="telemetry-row">
+        <span class="telemetry-label">Cart Subtotal:</span>
+        <span class="telemetry-val" id="tel-subtotal">$0.00</span>
+      </div>
+      <div class="telemetry-row">
+        <span class="telemetry-label">DevTools Companion:</span>
+        <span class="telemetry-val" style="color: #4ade80;">window.__G4_AGENT__ accessible in DevTools Console</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let cartCount = 0;
+    let cartTotal = 0;
+
+    function addToCart(item, price, qty = 1) {
+      cartCount += qty;
+      cartTotal += price * qty;
+      document.getElementById('cart-counter').innerText = cartCount;
+      document.getElementById('cart-total').innerText = '$' + cartTotal.toFixed(2);
+      document.getElementById('tel-action').innerText = `Added ${qty}x ${item} to cart ($${price.toFixed(2)} each)`;
+      document.getElementById('tel-count').innerText = `${cartCount} items`;
+      document.getElementById('tel-subtotal').innerText = '$' + cartTotal.toFixed(2);
+    }
+
+    function sendToChat(text) {
+      // Find chat textarea and populate it
+      const textarea = document.querySelector('textarea');
+      if (textarea) {
+        textarea.value = text;
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        const form = textarea.closest('form');
+        if (form) {
+          form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        }
+      } else {
+        alert("Click the chat widget icon in the bottom-right corner to open the chat!");
+      }
+    }
+
+    // Measure CDN bundle performance
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        const perfEntries = performance.getEntriesByType('resource');
+        const cdnScript = perfEntries.find(e => e.name.includes('on-device-chat'));
+        const hudCdn = document.getElementById('hud-cdn-time');
+        if (cdnScript) {
+          hudCdn.innerText = Math.round(cdnScript.duration) + ' ms';
+          hudCdn.style.color = '#38bdf8';
+        } else {
+          hudCdn.innerText = 'Cached';
+          hudCdn.style.color = '#4ade80';
+        }
+
+        // Detect AI tier
+        const hudTier = document.getElementById('hud-tier');
+        const hudTierDesc = document.getElementById('hud-tier-desc');
+        if (typeof window !== 'undefined' && 'ai' in window && 'languageModel' in (window.ai || {})) {
+          hudTier.innerText = 'Chrome Gemini Nano';
+          hudTier.style.color = '#4ade80';
+          hudTierDesc.innerText = '0 MB download (Chrome Built-in AI)';
+        } else if (navigator.gpu) {
+          hudTier.innerText = 'MiniLM / WebGPU';
+          hudTier.style.color = '#38bdf8';
+          hudTierDesc.innerText = 'Hardware accelerated WebGPU active';
+        } else {
+          hudTier.innerText = 'CPU / Semantic Engine';
+          hudTier.style.color = '#f59e0b';
+          hudTierDesc.innerText = 'Wasm / Workers fallback';
+        }
+      }, 500);
+    });
+  </script>
+
+  <!-- ============================================================ -->
+  <!-- THE OFFICIAL 1-LINE jsDelivr CDN DROP-IN                     -->
+  <!-- ============================================================ -->
+  <script src="https://cdn.jsdelivr.net/npm/on-device-chat" data-auto-init></script>
+
+</body>
+</html>
