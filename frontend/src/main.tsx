@@ -33,10 +33,19 @@ class Gemma4AgentImpl {
    * Auto-selects between Chrome Gemini Nano (0 MB), Compact In-Browser Router (~15 MB),
    * or Gemini API.
    */
-  init(config: Gemma4Config) {
+  init(config: Gemma4Config = {}) {
     if (this.root) {
-      console.warn("Gemma4Agent is already initialized.");
+      console.warn("OnDeviceChat is already initialized.");
       return;
+    }
+
+    // Auto-inject CSS stylesheet from jsDelivr if not already present in document
+    if (typeof document !== "undefined" && !document.getElementById("on-device-chat-styles")) {
+      const link = document.createElement("link");
+      link.id = "on-device-chat-styles";
+      link.rel = "stylesheet";
+      link.href = "https://cdn.jsdelivr.net/npm/on-device-chat/dist/style.css";
+      document.head.appendChild(link);
     }
 
     const containerId = config.containerId || "gemma4-widget-root";
@@ -72,7 +81,24 @@ class Gemma4AgentImpl {
 // Export singleton to global scope for <script> embedding
 const instance = new Gemma4AgentImpl();
 if (typeof window !== "undefined") {
-  (window as any).Gemma4Agent = instance;
+  (window as any).OnDeviceChat = instance;
+  (window as any).Gemma4Agent = instance; // Backwards compatibility
+}
+
+// Auto-initialize if script tag has data-auto-init
+if (typeof document !== "undefined") {
+  const currentScript = document.currentScript;
+  if (currentScript && currentScript.hasAttribute("data-auto-init")) {
+    const runInit = () => {
+      const tierAttr = currentScript.getAttribute("data-tier") as any;
+      instance.init(tierAttr ? { mode: tierAttr } : {});
+    };
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", runInit);
+    } else {
+      runInit();
+    }
+  }
 }
 
 export default instance;

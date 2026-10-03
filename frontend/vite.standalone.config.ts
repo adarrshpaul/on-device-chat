@@ -9,9 +9,9 @@ export default defineConfig({
     emptyOutDir: false,
     lib: {
       entry: 'src/main.tsx',
-      name: 'Gemma4Agent',
+      name: 'OnDeviceChat',
       formats: ['iife'],
-      fileName: () => 'gemma4-agent.min.js'
+      fileName: () => 'on-device-chat.min.js'
     },
     rollupOptions: {
       // For standalone script tag, bundle React so vanilla HTML pages don't need npm
