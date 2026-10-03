@@ -9,7 +9,13 @@
  * NO silent regex fallbacks. If neural models are loading or fail,
  * reports transparent neural pipeline status.
  */
-import { pipeline } from "@huggingface/transformers";
+async function getTransformersPipeline() {
+  if (typeof window !== "undefined" && (window as any).transformers?.pipeline) {
+    return (window as any).transformers.pipeline;
+  }
+  const mod = await import("@huggingface/transformers");
+  return mod.pipeline;
+}
 import type { ToolDefinition, EngineChatResponse } from "./types";
 
 export type LoadProgressCallback = (info: { text: string; progress: number }) => void;
@@ -69,6 +75,7 @@ export class CompactEngine {
     try {
       onProgress?.({ text: "Downloading & initializing neural embedding weights (~15MB)...", progress: 0.1 });
 
+      const pipeline = await getTransformersPipeline();
       this.featureExtractor = await pipeline(
         "feature-extraction",
         "Xenova/all-MiniLM-L6-v2",
@@ -112,6 +119,7 @@ export class CompactEngine {
 
     try {
       onProgress?.({ text: "Loading SmolLM2-135M neural weights into WebGPU (~80MB)...", progress: 0.05 });
+      const pipeline = await getTransformersPipeline();
       this.textGenerator = await pipeline(
         "text-generation",
         "HuggingFaceTB/SmolLM2-135M-Instruct",

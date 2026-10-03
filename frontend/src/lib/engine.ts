@@ -3,13 +3,20 @@
  * Provides OpenAI-compatible chat completions with native function calling.
  * Zero backend. Zero API keys. 100% client-side.
  */
-import {
-  CreateMLCEngine,
+import type {
   MLCEngine,
   ChatCompletionMessageParam,
   ChatCompletionTool,
   ChatCompletion,
 } from "@mlc-ai/web-llm";
+
+async function getCreateMLCEngine() {
+  if (typeof window !== "undefined" && (window as any).webllm?.CreateMLCEngine) {
+    return (window as any).webllm.CreateMLCEngine;
+  }
+  const mod = await import("@mlc-ai/web-llm");
+  return mod.CreateMLCEngine;
+}
 import { extractAllJsonBlocks } from "./harnessDecisionParser";
 
 // Model ID for Gemma 4 E2B Instruct (quantized for browser)
@@ -80,8 +87,9 @@ export class Gemma4Engine {
     this.setStatus("loading");
 
     try {
+      const CreateMLCEngine = await getCreateMLCEngine();
       this.engine = await CreateMLCEngine(this._modelId, {
-        initProgressCallback: (report) => {
+        initProgressCallback: (report: any) => {
           this.onLoadProgress?.({
             text: report.text,
             progress: report.progress,

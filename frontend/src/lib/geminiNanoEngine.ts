@@ -17,9 +17,10 @@ export class GeminiNanoEngine {
     const win = window as any;
     if (!win.LanguageModel && !win.ai?.languageModel) {
       try {
-        await import("prompt-api-polyfill");
-      } catch (err) {
-        console.warn("Could not load prompt-api-polyfill:", err);
+        const polyfillUrl = "https://esm.run/prompt-api-polyfill";
+        await import(/* @vite-ignore */ polyfillUrl);
+      } catch {
+        // Gracefully cascade to Tier 1 MiniLM Router
       }
     }
   }

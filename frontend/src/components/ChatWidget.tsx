@@ -12,7 +12,7 @@ export interface ChatWidgetProps {
 }
 
 export default function ChatWidget({ config = {} }: ChatWidgetProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(config.defaultOpen ?? false);
   const [inputValue, setInputValue] = useState("");
   const [showTierMenu, setShowTierMenu] = useState(false);
   const [showNanoHelp, setShowNanoHelp] = useState(false);

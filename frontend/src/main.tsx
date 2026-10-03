@@ -10,6 +10,8 @@ import type { GeminiApiConfig } from "./lib/geminiApiEngine";
 export interface Gemma4Config {
   /** DOM element ID to mount into (auto-created if missing) */
   containerId?: string;
+  /** Whether the chat widget starts open (defaults to true when data-auto-init is used) */
+  defaultOpen?: boolean;
   /** Engine mode: 'auto' (default: Nano -> Compact), 'gemini-nano', 'compact', 'gemini-api', 'webllm' */
   mode?: EngineMode;
   /** System prompt for the assistant */
@@ -87,11 +89,20 @@ if (typeof window !== "undefined") {
 
 // Auto-initialize if script tag has data-auto-init
 if (typeof document !== "undefined") {
-  const currentScript = document.currentScript;
-  if (currentScript && currentScript.hasAttribute("data-auto-init")) {
+  const getScriptTag = () =>
+    document.currentScript || document.querySelector("script[data-auto-init]");
+
+  const scriptEl = getScriptTag();
+  if (scriptEl && scriptEl.hasAttribute("data-auto-init")) {
     const runInit = () => {
-      const tierAttr = currentScript.getAttribute("data-tier") as any;
-      instance.init(tierAttr ? { mode: tierAttr } : {});
+      const activeEl = getScriptTag() || scriptEl;
+      const tierAttr = activeEl?.getAttribute("data-tier") as any;
+      const openAttr = activeEl?.getAttribute("data-open");
+      const defaultOpen = openAttr === "false" ? false : true; // Default to open so chat assistant is immediately visible
+      instance.init({
+        mode: tierAttr || undefined,
+        defaultOpen: defaultOpen,
+      });
     };
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", runInit);

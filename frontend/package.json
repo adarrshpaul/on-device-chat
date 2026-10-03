@@ -1,6 +1,6 @@
 {
   "name": "on-device-chat",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Local-first on-device AI chat widget and autonomous browser agent powered by Chrome Built-in Gemini Nano, Gemma 4, and MiniLM",
   "type": "module",
   "main": "./dist/index.cjs",
