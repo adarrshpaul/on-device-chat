@@ -112,9 +112,9 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
               )}
 
               {/* Messages Area */}
-              <div className="flex-1 p-4 overflow-y-auto space-y-3 text-xs">
+              <div className="g4-messages-container text-xs">
                 {messages.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-center p-4 space-y-4">
+                  <div className="g4-empty-hero">
                     <div className="relative">
                       <div className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-indigo-500/20 via-purple-500/20 to-pink-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-xl shadow-indigo-500/10">
                         <Sparkles size={26} />
@@ -132,7 +132,7 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
                     </div>
 
                     {/* Context-Adaptive Starter Cards */}
-                    <div className="w-full pt-1 grid grid-cols-1 gap-2 text-left">
+                    <div className="g4-cards-grid text-left">
                       {[
                         {
                           icon: <Eye size={15} className="text-indigo-400" />,
