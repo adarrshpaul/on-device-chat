@@ -107,25 +107,35 @@ export default function App() {
 }
 ```
 
-### 2. Standalone Vanilla JS / CDN
+### 2. Standalone Zero-Config CDN (jsDelivr)
 
-Add to any HTML page with zero build step:
+Add to any website with **just 1 line of HTML** — zero build step, zero dependencies, automatic stylesheet injection:
 
 ```html
-<!-- Stylesheet -->
-<link rel="stylesheet" href="https://unpkg.com/on-device-chat/dist/style.css" />
+<!-- 1-line instant drop-in: automatically injects CSS and mounts floating chat -->
+<script src="https://cdn.jsdelivr.net/npm/on-device-chat" data-auto-init></script>
+```
 
-<!-- Container -->
-<div id="gemma4-widget-root"></div>
+Or configure programmatically:
 
-<!-- Standalone IIFE Bundle -->
-<script src="https://unpkg.com/on-device-chat/dist/gemma4-agent.min.js"></script>
+```html
+<!-- Load standalone bundle -->
+<script src="https://cdn.jsdelivr.net/npm/on-device-chat"></script>
+
 <script>
-  window.initGemma4Widget({
-    containerId: "gemma4-widget-root",
-    initialTier: "gemini-nano"
+  // Mount anywhere on the page or as a floating widget
+  OnDeviceChat.init({
+    mode: 'gemini-nano', // 'gemini-nano' | 'compact' | 'gemini-api'
+    containerId: 'my-chat-root' // optional: target custom container or omit for floating pill
   });
 </script>
+```
+
+You can also target specific versions or pin the CSS explicitly:
+
+```html
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/on-device-chat@0.1.1/dist/style.css">
+<script src="https://cdn.jsdelivr.net/npm/on-device-chat@0.1.1/dist/on-device-chat.min.js"></script>
 ```
 
 ---
