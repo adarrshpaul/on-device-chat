@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { MessageSquare, Sparkles, Info, ChevronRight, Activity } from "lucide-react";
+import { Sparkles, Info, ChevronRight, Activity, Eye, Terminal, Zap } from "lucide-react";
 import { Gemma4Config } from "../main";
 import { useChat } from "../hooks/useChat";
 import MessageBubble from "./MessageBubble";
@@ -28,40 +28,34 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
     currentTierInfo,
     nanoSupported,
     activeSteps,
+    setTier,
+    triggerEscalation,
+    handleFeedback,
+    // Evals & Macros
     evalMetrics,
     recentTraces,
     siteMacros,
     isJudging,
-    setTier,
-    handleFeedback,
-    triggerEscalation,
-    runBatchJudge,
     judgeSingleTrace,
+    runBatchJudge,
     rateTrace,
   } = useChat(config);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  const handleQuickVisionInspect = () => {
+    sendMessage("Inspect and describe what is visible on this page in detail.");
   };
 
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    if (isOpen && activeTab === "chat") {
-      scrollToBottom();
-    }
-  }, [messages, isOpen, isLoading, activeTab]);
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, activeSteps]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim() || isLoading || engineStatus !== "ready") return;
+    if (!inputValue.trim() || isLoading) return;
     sendMessage(inputValue);
     setInputValue("");
-  };
-
-  const handleQuickVisionInspect = () => {
-    if (isLoading || engineStatus !== "ready") return;
-    sendMessage("Describe what is visible on this page in detail.");
   };
 
   const isReady = engineStatus === "ready";
@@ -69,12 +63,12 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
   return (
     <div
       data-g4-widget="true"
-      className="g4-widget-container fixed bottom-6 right-6 z-[9999] flex flex-col items-end"
+      className="g4-widget-container fixed bottom-6 right-6 z-[999999] flex flex-col items-end pointer-events-auto"
     >
-      {/* Chat Window */}
+      {/* Expanded Chat & Evals Window */}
       {isOpen && (
-        <div className="w-[440px] h-[660px] max-h-[88vh] max-w-[calc(100vw-32px)] bg-[var(--g4-bg-dark)] border border-[var(--g4-border)] rounded-2xl shadow-2xl flex flex-col mb-4 overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
-          {/* Modular Header */}
+        <div className="w-[440px] h-[650px] max-h-[88vh] max-w-[calc(100vw-32px)] g4-window-card rounded-2xl shadow-2xl flex flex-col mb-3 overflow-hidden transition-all duration-300 animate-in fade-in slide-in-from-bottom-5">
+          {/* Header */}
           <ChatHeader
             currentTierInfo={currentTierInfo}
             activeTab={activeTab}
@@ -95,11 +89,11 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
             <>
               {/* Nano Help Banner (if Chrome AI unavailable) */}
               {!nanoSupported && showNanoHelp && (
-                <div className="bg-amber-950/80 border-b border-amber-800/60 p-2.5 text-[11px] text-amber-200 flex items-start justify-between gap-2">
+                <div className="bg-amber-950/70 border-b border-amber-800/50 p-2.5 text-[11px] text-amber-200 flex items-start justify-between gap-2">
                   <div className="space-y-0.5">
                     <div className="font-semibold flex items-center gap-1 text-amber-300">
                       <Info size={12} />
-                      <span>Running on Fallback Local Engine</span>
+                      <span>Running on Client-Side Fallback Engine</span>
                     </div>
                     <p className="text-amber-200/80 leading-tight">
                       To run with 0 MB download on Chrome Gemini Nano, enable flags at{" "}
@@ -118,38 +112,64 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
               )}
 
               {/* Messages Area */}
-              <div className="flex-1 p-4 overflow-y-auto space-y-4 text-xs">
+              <div className="flex-1 p-4 overflow-y-auto space-y-3 text-xs">
                 {messages.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-center p-6 text-[var(--g4-text-muted)] space-y-3">
-                    <div className="w-12 h-12 rounded-2xl bg-purple-950/60 border border-purple-800/40 flex items-center justify-center text-purple-400">
-                      <Sparkles size={24} />
+                  <div className="h-full flex flex-col items-center justify-center text-center p-4 space-y-4">
+                    <div className="relative">
+                      <div className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-indigo-500/20 via-purple-500/20 to-pink-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-xl shadow-indigo-500/10">
+                        <Sparkles size={26} />
+                      </div>
+                      <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-400 border-2 border-[#0b0f19] shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
                     </div>
+
                     <div>
-                      <h4 className="font-semibold text-gray-200 text-sm">Autonomous Web Agent</h4>
-                      <p className="text-xs text-gray-400 max-w-[260px] mt-1">
-                        Executes actions using 5 primitives: browse, sandbox, read/write, search, and see.
+                      <h4 className="font-semibold text-white text-sm tracking-tight">
+                        How can I assist you on this page?
+                      </h4>
+                      <p className="text-[11px] text-gray-400 max-w-[270px] mt-1 leading-relaxed">
+                        Autonomous local agent running 100% in your browser. Inspects elements, executes tools, and reasons with zero cloud latency.
                       </p>
                     </div>
 
-                    {/* Quick Starter Prompts */}
-                    <div className="w-full pt-2 space-y-1.5 text-left">
-                      <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-                        Suggested Actions:
-                      </div>
+                    {/* Context-Adaptive Starter Cards */}
+                    <div className="w-full pt-1 grid grid-cols-1 gap-2 text-left">
                       {[
-                        "What is on this page?",
-                        "Search catalog for 'smartwatch'",
-                        "Add Titanium Smartwatch to cart",
-                      ].map((prompt) => (
+                        {
+                          icon: <Eye size={15} className="text-indigo-400" />,
+                          title: "Inspect Visible Page",
+                          desc: "Scan and summarize interactive elements on screen",
+                          prompt: "What is on this page?",
+                        },
+                        {
+                          icon: <Terminal size={15} className="text-emerald-400" />,
+                          title: "Explain Content & Code",
+                          desc: "Analyze specifications, logic, and data shown here",
+                          prompt: "Explain what this page is doing and its key data.",
+                        },
+                        {
+                          icon: <Zap size={15} className="text-amber-400" />,
+                          title: "Execute Page Action",
+                          desc: "Trigger actions, interact with controls, or search",
+                          prompt: "What actions can you perform on this page?",
+                        },
+                      ].map((item, idx) => (
                         <button
-                          key={prompt}
-                          onClick={() => {
-                            setInputValue(prompt);
-                          }}
-                          className="w-full text-left p-2 rounded-lg bg-gray-900/80 hover:bg-gray-800 border border-gray-800 text-[11px] text-gray-300 transition-colors flex items-center justify-between cursor-pointer"
+                          key={idx}
+                          onClick={() => setInputValue(item.prompt)}
+                          className="g4-suggestion-card w-full text-left p-2.5 rounded-xl flex items-center gap-3 cursor-pointer group"
                         >
-                          <span className="truncate">"{prompt}"</span>
-                          <ChevronRight size={12} className="text-gray-500 shrink-0" />
+                          <div className="w-8 h-8 rounded-lg bg-white/5 group-hover:bg-white/10 flex items-center justify-center shrink-0 transition-colors">
+                            {item.icon}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-xs text-gray-200 group-hover:text-white transition-colors truncate">
+                              {item.title}
+                            </div>
+                            <div className="text-[10px] text-gray-400 truncate">
+                              {item.desc}
+                            </div>
+                          </div>
+                          <ChevronRight size={14} className="text-gray-600 group-hover:text-indigo-400 transition-colors shrink-0" />
                         </button>
                       ))}
                     </div>
@@ -166,8 +186,8 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
 
                 {/* In-Flight Agent Steps Tracker */}
                 {isLoading && activeSteps.length > 0 && (
-                  <div className="p-2.5 rounded-xl bg-purple-950/40 border border-purple-800/40 space-y-1 animate-pulse font-mono text-[10px]">
-                    <div className="text-purple-300 font-semibold flex items-center gap-1.5">
+                  <div className="p-2.5 rounded-xl bg-indigo-950/40 border border-indigo-500/40 space-y-1 animate-pulse font-mono text-[10px]">
+                    <div className="text-indigo-300 font-semibold flex items-center gap-1.5">
                       <Activity size={11} className="animate-spin" />
                       <span>Autonomous Execution (Step {activeSteps.length}):</span>
                     </div>
@@ -216,13 +236,18 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
         </div>
       )}
 
-      {/* Floating Toggle Button */}
+      {/* Floating Toggle Button (when closed) */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="w-14 h-14 bg-[var(--g4-primary)] hover:bg-[var(--g4-primary-hover)] text-white rounded-2xl shadow-xl flex items-center justify-center transition-transform hover:scale-105 active:scale-95 cursor-pointer border border-purple-400/20"
+          className="relative group p-3.5 bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-2xl shadow-2xl flex items-center gap-2.5 transition-all hover:scale-105 active:scale-95 cursor-pointer border border-white/20 shadow-indigo-500/30"
+          title="Open On-Device AI Assistant"
         >
-          <MessageSquare size={24} />
+          <div className="w-5 h-5 flex items-center justify-center">
+            <Sparkles size={18} className="animate-pulse" />
+          </div>
+          <span className="font-semibold text-xs pr-1 tracking-tight">AI Assistant</span>
+          <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-400 border-2 border-[#0b0f19] shadow-[0_0_6px_rgba(52,211,153,0.9)]" />
         </button>
       )}
     </div>

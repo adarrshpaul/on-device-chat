@@ -30,8 +30,8 @@ export default function MessageBubble({ message, onFeedback, onEscalate }: Messa
 
   if (message.role === "user") {
     return (
-      <div className="flex justify-end mb-4">
-        <div className="bg-[var(--g4-primary)] text-white px-4 py-2 rounded-2xl rounded-tr-sm max-w-[85%] shadow-sm text-sm">
+      <div className="flex justify-end mb-3">
+        <div className="bg-gradient-to-tr from-indigo-600 to-purple-600 text-white px-3.5 py-2.5 rounded-2xl rounded-tr-sm max-w-[85%] shadow-md shadow-indigo-600/20 text-xs leading-relaxed">
           {message.content}
         </div>
       </div>
@@ -40,7 +40,7 @@ export default function MessageBubble({ message, onFeedback, onEscalate }: Messa
 
   if (message.role === "assistant") {
     return (
-      <div className="flex flex-col mb-4 items-start max-w-[90%]">
+      <div className="flex flex-col mb-3 items-start max-w-[92%]">
         {/* Tier & Macro Badge */}
         <div className="text-[10px] font-medium text-[var(--g4-text-muted)] mb-1 flex items-center gap-1.5 px-1 flex-wrap">
           {message.tierInfo && (
