@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+/* Scoped variables for the widget to prevent affecting the host app */
+.g4-widget-container {
+  /* Color palette - Gemma Indigo/Purple theme */
+  --g4-primary: #4f46e5;
+  --g4-primary-hover: #4338ca;
+  --g4-bg-dark: #111827;
+  --g4-bg-panel: #1f2937;
+  --g4-bg-bubble: #374151;
+  --g4-text-main: #f9fafb;
+  --g4-text-muted: #9ca3af;
+  --g4-border: #374151;
+  
+  font-family: system-ui, -apple-system, sans-serif;
+  color: var(--g4-text-main);
+}
+
+/* Ensure markdown content renders decently */
+.g4-prose p {
+  margin-bottom: 0.5rem;
+}
+.g4-prose p:last-child {
+  margin-bottom: 0;
+}
+.g4-prose pre {
+  background: rgba(0,0,0,0.3);
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  overflow-x: auto;
+  margin: 0.5rem 0;
+}
+.g4-prose code {
+  font-family: monospace;
+  font-size: 0.9em;
+}

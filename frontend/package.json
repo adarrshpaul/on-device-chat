@@ -1,0 +1,91 @@
+{
+  "name": "gemma4-chat-widget",
+  "version": "0.1.0",
+  "description": "On-device AI chat widget and autonomous browser agent powered by Chrome Built-in Gemini Nano, Gemma 4, and MiniLM",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./standalone": "./dist/gemma4-agent.min.js",
+    "./style.css": "./dist/style.css"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "gemini-nano",
+    "gemma4",
+    "chrome-ai",
+    "web-agent",
+    "agentic-ui",
+    "chat-widget",
+    "on-device-ai",
+    "react-widget"
+  ],
+  "license": "Apache-2.0",
+  "author": "Adarrsh Paul <adarrsh@paulcreates.online>",
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adarrshpaul/gemma4-chat-agent.git",
+    "directory": "frontend"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "homepage": "https://agent.paulcreates.online",
+  "bugs": {
+    "url": "https://github.com/adarrshpaul/gemma4-chat-agent/issues"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && tsc -p tsconfig.build.json && vite build --config vite.standalone.config.ts",
+    "build:docs": "vite build --config vite.demo.config.ts",
+    "test": "npm run test:giskard",
+    "test:giskard": "node --experimental-strip-types tests/giskard_stress_test.mjs",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "prepublishOnly": "npm run test:giskard && npm run lint && npm run build"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^4.3.0",
+    "@mlc-ai/web-llm": "^0.2.85",
+    "built-in-ai-task-apis-polyfills": "^1.19.0",
+    "lucide-react": "^0.453.0",
+    "marked": "^14.1.2",
+    "prompt-api-polyfill": "^1.22.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.11.1",
+    "@tailwindcss/vite": "^4.0.0-beta.1",
+    "@types/marked": "^6.0.0",
+    "@types/react": "^18.3.10",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.2",
+    "eslint": "^9.11.1",
+    "eslint-plugin-react-hooks": "^5.1.0-rc.0",
+    "eslint-plugin-react-refresh": "^0.4.12",
+    "globals": "^15.9.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwindcss": "^4.0.0-beta.1",
+    "typescript": "^5.5.3",
+    "typescript-eslint": "^8.7.0",
+    "vite": "^5.4.8"
+  }
+}

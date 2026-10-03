@@ -1,0 +1,10 @@
+declare module "prompt-api-polyfill";
+declare module "built-in-ai-task-apis-polyfills";
+declare module "built-in-ai-task-apis-polyfills/summarizer";
+declare module "built-in-ai-task-apis-polyfills/writer";
+declare module "built-in-ai-task-apis-polyfills/rewriter";
+declare module "built-in-ai-task-apis-polyfills/language-detector";
+declare module "built-in-ai-task-apis-polyfills/translator";
+declare module "built-in-ai-task-apis-polyfills/classifier";
+declare module "built-in-ai-task-apis-polyfills/semantic-embedder";
+declare module "built-in-ai-task-apis-polyfills/decision-model";

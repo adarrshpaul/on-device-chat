@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Universal Web Agent & Chrome AI Expert Judge</title>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        background-color: #0f172a;
+        color: #f8fafc;
+        margin: 0;
+        padding: 2.5rem 1.5rem;
+      }
+      .demo-container {
+        max-width: 860px;
+        margin: 0 auto;
+        background: #1e293b;
+        padding: 2.5rem;
+        border-radius: 16px;
+        box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.3);
+        border: 1px solid #334155;
+      }
+      .badge {
+        display: inline-block;
+        background: #3b82f6;
+        color: white;
+        padding: 0.2rem 0.6rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .catalog-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+        margin-top: 1.5rem;
+      }
+      .card {
+        background: #0f172a;
+        border: 1px solid #334155;
+        border-radius: 12px;
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      button.btn-primary {
+        background: #6366f1;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      button.btn-primary:hover {
+        background: #4f46e5;
+      }
+      input.input-field {
+        background: #0f172a;
+        border: 1px solid #334155;
+        color: white;
+        padding: 0.6rem 1rem;
+        border-radius: 8px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      .state-panel {
+        margin-top: 2rem;
+        padding: 1.25rem;
+        background: #0f172a;
+        border: 1px solid #334155;
+        border-radius: 10px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 0.85rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="demo-container">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <span class="badge">Host Web Application</span>
+          <h1 style="margin: 0.5rem 0 0 0; font-size: 1.75rem;">NextGen E-Commerce Portal</h1>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 0.85rem; color: #94a3b8;">Cart Items</div>
+          <div id="cart-count" style="font-size: 1.5rem; font-weight: bold; color: #38bdf8;">0</div>
+        </div>
+      </div>
+
+      <p style="color: #94a3b8; font-size: 0.95rem; margin-top: 0.75rem;">
+        The agent harness in the bottom right wraps frozen on-device LLMs (Chrome Gemini Nano / MiniLM / SmolLM2 / Gemma 4) with 5 primitives: <code>browse</code>, <code>sandbox</code>, <code>read/write</code>, <code>search</code>, and <code>ask</code>. It generates Chrome AI Expert Judge evals automatically on every interaction.
+      </p>
+
+      <div style="margin-top: 1.5rem;">
+        <input id="search-input" class="input-field" placeholder="Search catalog items (try: 'headphones', 'smartwatch')..." />
+      </div>
+
+      <div class="catalog-grid">
+        <div class="card">
+          <div>
+            <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem;">Ultra ANC Headphones</h3>
+            <p style="color: #94a3b8; font-size: 0.85rem; margin: 0 0 1rem 0;">Spatial audio, 40hr battery life.</p>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: bold; color: #38bdf8;">$199.99</span>
+            <button id="btn-add-headphones" class="btn-primary" onclick="updateCart(1)">Add to Cart</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div>
+            <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem;">Titanium Smartwatch</h3>
+            <p style="color: #94a3b8; font-size: 0.85rem; margin: 0 0 1rem 0;">ECG sensor, sapphire glass display.</p>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: bold; color: #38bdf8;">$299.99</span>
+            <button id="btn-add-watch" class="btn-primary" onclick="updateCart(1)">Add to Cart</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div>
+            <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem;">Mechanical Keyboard</h3>
+            <p style="color: #94a3b8; font-size: 0.85rem; margin: 0 0 1rem 0;">Hot-swappable switches, PBT keycaps.</p>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: bold; color: #38bdf8;">$129.99</span>
+            <button id="btn-add-keyboard" class="btn-primary" onclick="updateCart(1)">Add to Cart</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="state-panel">
+        <div style="color: #a855f7; font-weight: bold; margin-bottom: 0.5rem;">[Live App State Telemetry]</div>
+        <div>Current Route: <span id="current-path" style="color: #38bdf8;">/products</span></div>
+        <div>Cart Total: <span id="cart-total" style="color: #4ade80;">$0.00</span></div>
+        <div>Last Action: <span id="last-action" style="color: #f59e0b;">App Initialized</span></div>
+      </div>
+    </div>
+
+    <!-- The widget container -->
+    <div id="chat-widget"></div>
+
+    <script>
+      function updateCart(qty) {
+        const countEl = document.getElementById('cart-count');
+        const current = parseInt(countEl.innerText) || 0;
+        const next = current + qty;
+        countEl.innerText = next;
+        document.getElementById('cart-total').innerText = '$' + (next * 149.99).toFixed(2);
+        document.getElementById('last-action').innerText = 'Added ' + qty + ' item(s) to cart';
+      }
+    </script>
+
+    <script type="module">
+      import '/src/main.tsx'
+      
+      window.addEventListener('load', () => {
+        if (window.Gemma4Agent) {
+          window.Gemma4Agent.init({
+            containerId: 'chat-widget',
+            mode: 'auto',
+            systemPrompt: 'You are an autonomous AI web copilot equipped with 5 primitives (browse, sandbox, read/write, search, ask) to assist the user on this portal.',
+            tools: [
+              {
+                type: 'function',
+                function: {
+                  name: 'addToCart',
+                  description: 'Add quantity of items to the shopping cart',
+                  parameters: { type: 'object', properties: { quantity: { type: 'integer' } }, required: ['quantity'] }
+                }
+              },
+              {
+                type: 'function',
+                function: {
+                  name: 'navigateTo',
+                  description: 'Navigate to a page on the site',
+                  parameters: { type: 'object', properties: { path: { type: 'string' } }, required: ['path'] }
+                }
+              }
+            ],
+            onToolCall: async (name, args) => {
+              if (name === 'addToCart') {
+                const qty = parseInt(args.quantity) || 1;
+                updateCart(qty);
+                return { success: true, cartCount: parseInt(document.getElementById('cart-count').innerText) };
+              }
+              if (name === 'navigateTo') {
+                document.getElementById('current-path').innerText = args.path;
+                document.getElementById('last-action').innerText = 'Navigated to ' + args.path;
+                return { navigated: true, path: args.path };
+              }
+              return { error: 'Unknown function' };
+            }
+          });
+        }
+      });
+    </script>
+  </body>
+</html>

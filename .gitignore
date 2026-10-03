@@ -1,0 +1,46 @@
+# Node & Build Artifacts
+node_modules/
+dist/
+docs/
+frontend/docs/
+frontend/dist/
+*.log
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment & Secrets (Rule 4: Keychain only, never committed)
+.env
+.env.*
+!.env.example
+*.local
+
+# System & IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Cloudflare & Build Caches
+.wrangler/
+.turbo/
+.cache/
+*.tsbuildinfo
+
+
+# Python (for fine-tune)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+env/
+venv/
+*.egg-info/
