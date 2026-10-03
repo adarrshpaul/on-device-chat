@@ -1,18 +1,18 @@
-# Gemma 4 Agent & Web Widget (`gemma4-chat-widget`)
+# On-Device Chat (`on-device-chat`)
 
-[![npm version](https://img.shields.io/npm/v/gemma4-chat-widget.svg?style=flat-square&color=blue)](https://www.npmjs.com/package/gemma4-chat-widget)
+[![npm version](https://img.shields.io/npm/v/on-device-chat.svg?style=flat-square&color=blue)](https://www.npmjs.com/package/on-device-chat)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=flat-square)](https://opensource.org/licenses/Apache-2.0)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 [![Benchmarks: 26/26 Passed](https://img.shields.io/badge/Giskard%20Evals-26%2F26%20Passed-brightgreen?style=flat-square)](https://docs.giskard.ai/)
 [![Live Demo](https://img.shields.io/badge/Demo-agent.paulcreates.online-6366f1?style=flat-square)](https://agent.paulcreates.online)
 
-An autonomous, multi-tier client-side web agent and drop-in chat widget running entirely inside the user's browser. Built with **Chrome Built-in Gemini Nano** (0 MB), **Transformers.js WebGPU** (MiniLM / SmolLM2), and **WebLLM** (Gemma 4 E2B). Zero cloud API costs, zero data exfiltration, and full deterministic web navigation.
+A local-first, on-device AI chat widget and autonomous browser agent running entirely inside the user's browser. Built with **Chrome Built-in Gemini Nano** (0 MB), **Transformers.js WebGPU** (MiniLM / SmolLM2), and **WebLLM** (Gemma 4 E2B). Zero cloud API costs, zero data exfiltration, and full deterministic web navigation.
 
 ---
 
 ## 🏛️ 4-Tier Progressive Escalation Hierarchy
 
-Rather than forcing users to download heavy gigabyte-scale models upfront, `gemma4-chat-widget` cascades dynamically through four local tiers:
+Rather than forcing users to download heavy gigabyte-scale models upfront, `on-device-chat` cascades dynamically through four local tiers:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -78,13 +78,13 @@ The widget integrates directly with the Chrome DevTools Console:
 ### 1. React (npm)
 
 ```bash
-npm install gemma4-chat-widget
+npm install on-device-chat
 ```
 
 ```tsx
 import React from 'react';
-import { ChatWidget } from 'gemma4-chat-widget';
-import 'gemma4-chat-widget/style.css';
+import { ChatWidget } from 'on-device-chat';
+import 'on-device-chat/style.css';
 
 export default function App() {
   return (
@@ -113,13 +113,13 @@ Add to any HTML page with zero build step:
 
 ```html
 <!-- Stylesheet -->
-<link rel="stylesheet" href="https://unpkg.com/gemma4-chat-widget/dist/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/on-device-chat/dist/style.css" />
 
 <!-- Container -->
 <div id="gemma4-widget-root"></div>
 
 <!-- Standalone IIFE Bundle -->
-<script src="https://unpkg.com/gemma4-chat-widget/dist/gemma4-agent.min.js"></script>
+<script src="https://unpkg.com/on-device-chat/dist/gemma4-agent.min.js"></script>
 <script>
   window.initGemma4Widget({
     containerId: "gemma4-widget-root",

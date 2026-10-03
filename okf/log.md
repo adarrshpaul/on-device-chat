@@ -315,9 +315,19 @@
   - Configured for GitHub Actions OIDC trusted publishing with `permissions: { id-token: write, contents: read }`.
   - Scoped to `npm-publish` environment with `package-manager-cache: false`.
   - Uses `npm stage publish --access public` for maintainer 2FA gate before public release.
-- Documented 5-step operational release roadmap for initial interactive bootstrap and CI-driven subsequent releases.
+## 2026-10-03T11:22:00Z - Public GitHub Repository Creation & npm v0.1.0 Live Release
+- Created clean public GitHub repository: `https://github.com/adarrshpaul/gemma4-chat-agent`.
+  - Added open-source community standards: `LICENSE` (Apache-2.0), `README.md` (badges, architecture, usage), `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`.
+  - Configured `.gitignore` to prevent any build cache, wasm bundle, or secret leakage.
+  - Successfully pushed initial commit `2d21e2a` to branch `main`.
+- Published `gemma4-chat-widget@0.1.0` to npm registry:
+  - Maintainer: `adarrsh_dev`.
+  - Tarball: 865.9 kB (unpacked: 4.1 MB).
+  - SHA256 integrity and key signatures confirmed live via `npm view gemma4-chat-widget --json`.
+  - Package URL: `https://www.npmjs.com/package/gemma4-chat-widget`.
 
-
-
-
-
+## 2026-10-03T11:28:00Z - npm Unpublish & Package Deprecation
+- Received user instruction: package name `gemma4-chat-widget` is misaligned with the multi-model browser agent harness scope.
+- Executed `npm unpublish gemma4-chat-widget --force` with 2FA approval.
+- Verified on npm Registry API: `"unpublished": {"time": "2026-10-03T11:28:05.075Z", "versions": ["0.1.0"]}`.
+- Package completely removed from npm registry. Awaiting user decision on new library/package name.
