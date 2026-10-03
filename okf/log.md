@@ -326,8 +326,14 @@
   - SHA256 integrity and key signatures confirmed live via `npm view gemma4-chat-widget --json`.
   - Package URL: `https://www.npmjs.com/package/gemma4-chat-widget`.
 
-## 2026-10-03T11:28:00Z - npm Unpublish & Package Deprecation
-- Received user instruction: package name `gemma4-chat-widget` is misaligned with the multi-model browser agent harness scope.
-- Executed `npm unpublish gemma4-chat-widget --force` with 2FA approval.
-- Verified on npm Registry API: `"unpublished": {"time": "2026-10-03T11:28:05.075Z", "versions": ["0.1.0"]}`.
-- Package completely removed from npm registry. Awaiting user decision on new library/package name.
+## 2026-10-03T11:32:00Z - on-device-chat v0.1.0 Live on npm & GitHub
+- Aligned project identity with user selection: **`on-device-chat`** (local-first on-device AI focus).
+- Renamed public GitHub repository: `https://github.com/adarrshpaul/on-device-chat`.
+- Updated `package.json` package name to `on-device-chat` with updated metadata, keywords, and repository URLs.
+- Successfully published `on-device-chat@0.1.0` to npm:
+  - Package: `https://www.npmjs.com/package/on-device-chat`
+  - Tarball: 867.6 kB (unpacked: 4.1 MB, 50 files)
+  - Maintainer: `adarrsh_dev`
+  - Signed with SHA256 integrity: `DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U`
+  - Verified live via `npm view on-device-chat --json`.
+
