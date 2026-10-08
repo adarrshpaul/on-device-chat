@@ -85,6 +85,72 @@ const instance = new Gemma4AgentImpl();
 if (typeof window !== "undefined") {
   (window as any).OnDeviceChat = instance;
   (window as any).Gemma4Agent = instance; // Backwards compatibility
+
+  /**
+   * Standard Web Component Custom Element: <on-device-chat>
+   * Implements Shadow DOM and Slots per W3C Web Components specifications:
+   * - <slot name="header"> : Custom branded header slot
+   * - <slot name="launcher"> : Custom floating trigger button slot
+   * - Encapsulates styles and DOM tree from host framework collisions
+   */
+  if (typeof customElements !== "undefined" && !customElements.get("on-device-chat")) {
+    class OnDeviceChatElement extends HTMLElement {
+      private shadow: ShadowRoot;
+      private mountPoint: HTMLDivElement;
+      private reactRoot: ReturnType<typeof createRoot> | null = null;
+
+      constructor() {
+        super();
+        this.shadow = this.attachShadow({ mode: "open" });
+
+        // Slot projection container
+        this.shadow.innerHTML = `
+          <style>
+            :host {
+              display: block;
+              position: relative;
+              z-index: 999999;
+            }
+          </style>
+          <div id="shadow-mount-point"></div>
+        `;
+        this.mountPoint = this.shadow.querySelector("#shadow-mount-point") as HTMLDivElement;
+      }
+
+      connectedCallback() {
+        const defaultOpen = this.getAttribute("default-open") === "true";
+        const mode = (this.getAttribute("tier") || this.getAttribute("mode")) as any;
+
+        // Inject widget stylesheet into ShadowRoot
+        const link = document.createElement("link");
+        link.rel = "stylesheet";
+        const externalStyle = document.getElementById("on-device-chat-styles") as HTMLLinkElement;
+        link.href = externalStyle?.href || "https://cdn.jsdelivr.net/npm/on-device-chat/dist/style.css";
+        this.shadow.appendChild(link);
+
+        this.reactRoot = createRoot(this.mountPoint);
+        this.reactRoot.render(
+          <React.StrictMode>
+            <ChatWidget
+              config={{
+                defaultOpen,
+                mode,
+              }}
+            />
+          </React.StrictMode>
+        );
+      }
+
+      disconnectedCallback() {
+        if (this.reactRoot) {
+          this.reactRoot.unmount();
+          this.reactRoot = null;
+        }
+      }
+    }
+
+    customElements.define("on-device-chat", OnDeviceChatElement);
+  }
 }
 
 // Auto-initialize if script tag has data-auto-init

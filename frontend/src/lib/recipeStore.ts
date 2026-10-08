@@ -25,6 +25,20 @@ export interface SiteMacroRecipe {
   lastSuccessAt: number;
 }
 
+export function isActionGoal(goal: string): boolean {
+  if (!goal) return false;
+  const lower = goal.toLowerCase().trim();
+  // Informational and question queries must NEVER be treated as action macros
+  if (
+    lower.endsWith("?") ||
+    /^(what|how|who|why|where|when|can you|tell me|explain|describe|list)\b/i.test(lower) ||
+    /\b(what\s+actions|what\s+can|how\s+can|what\s+is)\b/i.test(lower)
+  ) {
+    return false;
+  }
+  return /\b(click|open|navigate|goto|go to|scroll|toggle|type|fill|select|press|tour|visit)\b/i.test(lower);
+}
+
 class RecipeStoreImpl {
   private dbName = "gemma4_agent_recipes";
   private dbVersion = 1;
@@ -108,6 +122,8 @@ class RecipeStoreImpl {
    * If found, the harness can bypass model generation and run the deterministic code directly!
    */
   async findMatchingMacro(siteOrigin: string, userGoal: string): Promise<SiteMacroRecipe | null> {
+    if (!isActionGoal(userGoal)) return null;
+
     await this.init();
     if (!this.db) return null;
 
@@ -120,11 +136,13 @@ class RecipeStoreImpl {
       const req = index.getAll(siteOrigin);
 
       req.onsuccess = () => {
-        const recipes = req.result as SiteMacroRecipe[];
-        const match = recipes.find((r) =>
-          normalizedGoal.includes(r.triggerPhrase.toLowerCase()) ||
-          r.triggerPhrase.toLowerCase().includes(normalizedGoal)
-        );
+        const recipes = (req.result as SiteMacroRecipe[]) || [];
+        // Strict exact action matching: do NOT use loose substring containment
+        const match = recipes.find((r) => {
+          if (!isActionGoal(r.triggerPhrase)) return false;
+          const trigger = r.triggerPhrase.toLowerCase().trim();
+          return trigger === normalizedGoal;
+        });
         resolve(match || null);
       };
       req.onerror = () => resolve(null);
@@ -135,6 +153,8 @@ class RecipeStoreImpl {
    * Save or update a deterministic macro recipe
    */
   async saveMacroRecipe(recipe: SiteMacroRecipe): Promise<void> {
+    if (!isActionGoal(recipe.triggerPhrase)) return;
+
     await this.init();
     if (!this.db) return;
 

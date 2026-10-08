@@ -1,5 +1,5 @@
-import React from "react";
-import { Send, Loader2, Eye, Sparkles } from "lucide-react";
+import React, { useState } from "react";
+import { ArrowUp, Square, X } from "lucide-react";
 import { TierInfo } from "../lib/escalationManager";
 
 interface ChatInputProps {
@@ -9,75 +9,87 @@ interface ChatInputProps {
   currentTierInfo: TierInfo;
   onInputChange: (val: string) => void;
   onSubmit: (e: React.FormEvent) => void;
-  onQuickVisionInspect?: () => void;
+  onStop?: () => void;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
   inputValue,
   isReady,
   isLoading,
-  currentTierInfo,
   onInputChange,
   onSubmit,
-  onQuickVisionInspect,
+  onStop,
 }) => {
+  const [isContextDismissed, setIsContextDismissed] = useState(false);
   const hasInput = inputValue.trim().length > 0;
 
+  // Derives clean page context path or host
+  const getContextLabel = (): string => {
+    if (typeof window === "undefined") return "/";
+    const path = window.location.pathname;
+    if (path && path !== "/") return path;
+    return window.location.hostname.replace(/^www\./, "");
+  };
+
+  const contextLabel = getContextLabel();
+
   return (
-    <div className="p-3 bg-[var(--g4-bg-panel)] border-t border-[var(--g4-border)] flex flex-col gap-2">
-      <form onSubmit={onSubmit} className="flex items-center gap-2">
-        <div className="flex-1 flex items-center bg-black/40 hover:bg-black/60 focus-within:bg-black/60 border border-white/10 focus-within:border-indigo-500/60 rounded-xl px-2.5 py-1.5 transition-all shadow-inner">
-          {onQuickVisionInspect && (
-            <button
-              type="button"
-              onClick={onQuickVisionInspect}
-              disabled={!isReady || isLoading}
-              title="Inspect visible page using local on-device vision"
-              className="p-1.5 rounded-lg text-indigo-400 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-40 cursor-pointer shrink-0"
-            >
-              <Eye size={17} />
-            </button>
+    <div className="p-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] bg-[var(--g4-bg-panel)] border-t border-[var(--g4-border)] shrink-0">
+      <form onSubmit={onSubmit} className="flex items-center">
+        <div className="flex-1 flex items-center gap-1.5 bg-black/40 border border-white/8 focus-within:border-purple-500/60 rounded-[6px] px-2 py-1.5 transition-colors min-w-0">
+          {/* Dismissible Left Page-Context Tag */}
+          {!isContextDismissed && contextLabel && (
+            <span className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[4px] bg-white/6 text-gray-300 border border-white/8 text-[11px] font-mono leading-none">
+              <span className="truncate max-w-[75px] sm:max-w-[110px]">{contextLabel}</span>
+              <button
+                type="button"
+                onClick={() => setIsContextDismissed(true)}
+                className="text-gray-500 hover:text-white cursor-pointer ml-0.5 p-0.5"
+                title="Dismiss context tag"
+              >
+                <X size={10} />
+              </button>
+            </span>
           )}
 
+          {/* Clean Central Input Field */}
           <input
             type="text"
             value={inputValue}
             onChange={(e) => onInputChange(e.target.value)}
             placeholder={
-              isReady
-                ? `Ask anything about this page on ${currentTierInfo.name}...`
-                : "Initializing local engine..."
+              isReady ? "Ask about this page..." : "Initializing local engine..."
             }
-            disabled={!isReady || isLoading}
-            className="flex-1 bg-transparent text-white placeholder-gray-400 px-2.5 py-1 text-xs focus:outline-none disabled:opacity-50 min-w-0"
+            disabled={!isReady}
+            className="flex-1 bg-transparent text-white placeholder-gray-500 px-1 py-0.5 text-[16px] sm:text-[13px] focus:outline-none disabled:opacity-50 min-w-0"
           />
 
-          <button
-            type="submit"
-            disabled={!isReady || isLoading || !hasInput}
-            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all cursor-pointer shrink-0 ${
-              hasInput && !isLoading
-                ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md shadow-indigo-500/30 hover:scale-105 active:scale-95"
-                : "bg-white/5 text-gray-500 cursor-not-allowed opacity-50"
-            }`}
-          >
-            {isLoading ? (
-              <Loader2 size={15} className="animate-spin text-indigo-300" />
-            ) : (
-              <Send size={14} className="translate-x-[0.5px]" />
-            )}
-          </button>
+          {/* Right Action: Stop or Send */}
+          {isLoading ? (
+            <button
+              type="button"
+              onClick={onStop}
+              className="w-7 h-7 sm:w-6 sm:h-6 rounded-[5px] bg-white/10 hover:bg-white/20 text-gray-200 flex items-center justify-center cursor-pointer transition-colors shrink-0"
+              title="Stop generation"
+            >
+              <Square size={10} className="fill-current text-gray-300" />
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={!isReady || !hasInput}
+              className={`w-7 h-7 sm:w-6 sm:h-6 rounded-[5px] flex items-center justify-center transition-colors shrink-0 ${
+                hasInput
+                  ? "bg-purple-600 hover:bg-purple-500 text-white cursor-pointer"
+                  : "text-gray-600 hover:text-gray-500 cursor-not-allowed opacity-40"
+              }`}
+              title="Send"
+            >
+              <ArrowUp size={14} />
+            </button>
+          )}
         </div>
       </form>
-
-      {/* Trust & Privacy Micro-Footer */}
-      <div className="flex items-center justify-between text-[10px] text-gray-400 px-1 font-mono">
-        <div className="flex items-center gap-1">
-          <Sparkles size={10} className="text-indigo-400" />
-          <span>Local-First Intelligence</span>
-        </div>
-        <span>Zero Data Exfiltration</span>
-      </div>
     </div>
   );
 };

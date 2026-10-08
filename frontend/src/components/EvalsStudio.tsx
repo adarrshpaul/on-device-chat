@@ -46,7 +46,7 @@ export const EvalsStudio: React.FC<EvalsStudioProps> = ({
   onToggleExpandTrace,
 }) => {
   return (
-    <div className="flex-1 p-4 overflow-y-auto space-y-4 text-xs">
+    <div className="flex-1 p-4 overflow-y-auto space-y-4 text-xs overscroll-contain touch-pan-y">
       {/* Header Banner & Guidance */}
       <div className="p-3.5 rounded-xl bg-gradient-to-br from-purple-950/40 via-purple-900/20 to-black/60 border border-purple-700/50">
         <div className="flex items-start justify-between gap-2">

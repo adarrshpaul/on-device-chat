@@ -1,0 +1,111 @@
+{
+  "ranAt": "2026-10-03T14:10:54.743Z",
+  "askEnabled": false,
+  "results": [
+    {
+      "url": "https://tailwindcss.com/",
+      "desktop": {
+        "viewport": "1440x900",
+        "status": 200,
+        "csp": "none",
+        "loaded": true,
+        "injected": {
+          "ok": true,
+          "control": true
+        },
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        }
+      },
+      "mobile": {
+        "viewport": "390x844",
+        "status": 200,
+        "csp": "none",
+        "loaded": true,
+        "injected": {
+          "ok": true,
+          "control": true
+        },
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        }
+      }
+    },
+    {
+      "url": "https://www.nytimes.com/",
+      "desktop": {
+        "viewport": "1440x900",
+        "status": 403,
+        "csp": "restrictive",
+        "loaded": false,
+        "injected": {
+          "ok": true,
+          "control": true
+        },
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        }
+      },
+      "mobile": {
+        "viewport": "390x844",
+        "status": 403,
+        "csp": "restrictive",
+        "loaded": false,
+        "injected": {
+          "ok": true,
+          "control": true
+        },
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        }
+      }
+    },
+    {
+      "url": "https://example.com/",
+      "desktop": {
+        "viewport": "1440x900",
+        "status": 200,
+        "csp": "none",
+        "loaded": true,
+        "injected": {
+          "ok": true,
+          "control": true
+        },
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        }
+      },
+      "mobile": {
+        "viewport": "390x844",
+        "status": 200,
+        "csp": "none",
+        "loaded": true,
+        "injected": {
+          "ok": true,
+          "control": true
+        },
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,86 @@
+{
+  "ranAt": "2026-10-03T14:06:25.023Z",
+  "askEnabled": true,
+  "results": [
+    {
+      "url": "http://127.0.0.1:4300/",
+      "desktop": {
+        "viewport": "1440x900",
+        "status": 200,
+        "csp": "none",
+        "loaded": true,
+        "injected": {
+          "ok": true,
+          "native": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          1285,
+          826,
+          131,
+          50
+        ],
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            976,
+            214,
+            440,
+            650
+          ]
+        },
+        "engine": {
+          "ready": true,
+          "placeholder": ""
+        },
+        "fatal": "TimeoutError: locator.fill: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator('[data-g4-widget] input[type=text]').first()\n"
+      },
+      "mobile": {
+        "viewport": "390x844",
+        "status": 200,
+        "csp": "none",
+        "loaded": true,
+        "injected": {
+          "ok": true,
+          "native": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          235,
+          770,
+          131,
+          50
+        ],
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            8,
+            158,
+            358,
+            650
+          ]
+        }
+      }
+    }
+  ]
+}

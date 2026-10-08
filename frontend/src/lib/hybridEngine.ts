@@ -93,7 +93,7 @@ export class HybridEngine {
 
     // Mode 4: Compact Engine (~15MB Tier 1 Semantic Tool Router)
     this.compactEngine = new CompactEngine();
-    await this.compactEngine.initRouter(this.tools, onProgress);
+    await this.compactEngine.initEmbedder(onProgress);
     this.activeEngineName = "Compact Router (~15 MB in-browser)";
     this.config.onActiveEngineChange?.(this.activeEngineName);
   }
@@ -126,7 +126,9 @@ export class HybridEngine {
     }
 
     if (this.compactEngine) {
-      return await this.compactEngine.chat(lastUserMsg);
+      const { answerFromPage } = await import("./pageQA");
+      const res = await answerFromPage(lastUserMsg, this.compactEngine);
+      return { content: res.text };
     }
 
     throw new Error("No active AI engine available");

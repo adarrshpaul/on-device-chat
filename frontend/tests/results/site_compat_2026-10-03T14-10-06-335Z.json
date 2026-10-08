@@ -1,0 +1,1100 @@
+{
+  "ranAt": "2026-10-03T14:10:06.337Z",
+  "askEnabled": false,
+  "results": [
+    {
+      "url": "http://127.0.0.1:4300/",
+      "desktop": {
+        "viewport": "1440x900",
+        "status": 200,
+        "csp": "none",
+        "loaded": true,
+        "injected": {
+          "ok": true,
+          "native": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          1285,
+          826,
+          131,
+          50
+        ],
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            976,
+            214,
+            440,
+            650
+          ]
+        },
+        "engine": {
+          "ready": false,
+          "placeholder": "Initializing local engine...",
+          "engineErrors": []
+        }
+      },
+      "mobile": {
+        "viewport": "390x844",
+        "status": 200,
+        "csp": "none",
+        "loaded": true,
+        "injected": {
+          "ok": true,
+          "native": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          235,
+          770,
+          131,
+          50
+        ],
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            8,
+            158,
+            358,
+            650
+          ]
+        }
+      }
+    },
+    {
+      "url": "https://example.com/",
+      "desktop": {
+        "viewport": "1440x900",
+        "status": 200,
+        "csp": "none",
+        "loaded": true,
+        "injected": {
+          "ok": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          1285,
+          826,
+          131,
+          50
+        ],
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            976,
+            214,
+            440,
+            650
+          ]
+        },
+        "engine": {
+          "ready": true,
+          "placeholder": "Ask anything about this page on Gemini Nano...",
+          "engineErrors": []
+        }
+      },
+      "mobile": {
+        "viewport": "390x844",
+        "status": 200,
+        "csp": "none",
+        "loaded": true,
+        "injected": {
+          "ok": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          235,
+          770,
+          131,
+          50
+        ],
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            8,
+            158,
+            358,
+            650
+          ]
+        }
+      }
+    },
+    {
+      "url": "https://news.ycombinator.com/",
+      "desktop": {
+        "viewport": "1440x900",
+        "status": 200,
+        "csp": "restrictive",
+        "loaded": true,
+        "injected": {
+          "ok": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          1285,
+          826,
+          131,
+          50
+        ],
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            976,
+            214,
+            440,
+            650
+          ]
+        },
+        "engine": {
+          "ready": true,
+          "placeholder": "Ask anything about this page on Gemini Nano...",
+          "engineErrors": []
+        }
+      },
+      "mobile": {
+        "viewport": "390x844",
+        "status": 200,
+        "csp": "restrictive",
+        "loaded": true,
+        "injected": {
+          "ok": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          235,
+          770,
+          131,
+          50
+        ],
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            8,
+            158,
+            358,
+            650
+          ]
+        }
+      }
+    },
+    {
+      "url": "https://en.wikipedia.org/wiki/Web_browser",
+      "desktop": {
+        "viewport": "1440x900",
+        "status": 200,
+        "csp": "restrictive",
+        "loaded": true,
+        "injected": {
+          "ok": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          1285,
+          826,
+          131,
+          50
+        ],
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            976,
+            214,
+            440,
+            650
+          ]
+        },
+        "engine": {
+          "ready": true,
+          "placeholder": "Ask anything about this page on Gemini Nano...",
+          "engineErrors": []
+        }
+      },
+      "mobile": {
+        "viewport": "390x844",
+        "status": 200,
+        "csp": "restrictive",
+        "loaded": true,
+        "injected": {
+          "ok": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          965,
+          2350,
+          131,
+          50
+        ],
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            656,
+            1738,
+            440,
+            650
+          ]
+        }
+      }
+    },
+    {
+      "url": "https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API",
+      "desktop": {
+        "viewport": "1440x900",
+        "status": 200,
+        "csp": "restrictive",
+        "loaded": true,
+        "injected": {
+          "ok": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          1285,
+          826,
+          131,
+          50
+        ],
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            976,
+            214,
+            440,
+            650
+          ]
+        },
+        "engine": {
+          "ready": true,
+          "placeholder": "Ask anything about this page on Gemini Nano...",
+          "engineErrors": []
+        }
+      },
+      "mobile": {
+        "viewport": "390x844",
+        "status": 200,
+        "csp": "restrictive",
+        "loaded": true,
+        "injected": {
+          "ok": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          235,
+          770,
+          131,
+          50
+        ],
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            8,
+            158,
+            358,
+            650
+          ]
+        }
+      }
+    },
+    {
+      "url": "https://react.dev/",
+      "desktop": {
+        "viewport": "1440x900",
+        "status": 200,
+        "csp": "none",
+        "loaded": true,
+        "injected": {
+          "ok": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          1318,
+          854,
+          98,
+          22
+        ],
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            976,
+            214,
+            440,
+            650
+          ]
+        },
+        "engine": {
+          "ready": true,
+          "placeholder": "Ask anything about this page on Gemini Nano...",
+          "engineErrors": []
+        }
+      },
+      "mobile": {
+        "viewport": "390x844",
+        "status": 200,
+        "csp": "none",
+        "loaded": true,
+        "injected": {
+          "ok": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          268,
+          798,
+          98,
+          22
+        ],
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            8,
+            158,
+            358,
+            650
+          ]
+        }
+      }
+    },
+    {
+      "url": "https://angular.dev/",
+      "desktop": {
+        "viewport": "1440x900",
+        "status": 200,
+        "csp": "none",
+        "loaded": true,
+        "injected": {
+          "ok": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          1287,
+          828,
+          129,
+          48
+        ],
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            976,
+            214,
+            440,
+            650
+          ]
+        },
+        "engine": {
+          "ready": true,
+          "placeholder": "Ask anything about this page on Gemini Nano...",
+          "engineErrors": []
+        }
+      },
+      "mobile": {
+        "viewport": "390x844",
+        "status": 200,
+        "csp": "none",
+        "loaded": true,
+        "injected": {
+          "ok": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          237,
+          772,
+          129,
+          48
+        ],
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            8,
+            158,
+            358,
+            650
+          ]
+        }
+      }
+    },
+    {
+      "url": "https://vuejs.org/",
+      "desktop": {
+        "viewport": "1440x900",
+        "status": 200,
+        "csp": "present-nonblocking",
+        "loaded": true,
+        "injected": {
+          "ok": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          1315,
+          856,
+          101,
+          20
+        ],
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            976,
+            214,
+            440,
+            650
+          ]
+        },
+        "engine": {
+          "ready": true,
+          "placeholder": "Ask anything about this page on Gemini Nano...",
+          "engineErrors": []
+        }
+      },
+      "mobile": {
+        "viewport": "390x844",
+        "status": 200,
+        "csp": "present-nonblocking",
+        "loaded": true,
+        "injected": {
+          "ok": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          265,
+          800,
+          101,
+          20
+        ],
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            8,
+            158,
+            358,
+            650
+          ]
+        }
+      }
+    },
+    {
+      "url": "https://nextjs.org/",
+      "desktop": {
+        "viewport": "1440x900",
+        "status": 200,
+        "csp": "restrictive",
+        "loaded": true,
+        "injected": {
+          "ok": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          1285,
+          826,
+          131,
+          50
+        ],
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            976,
+            214,
+            440,
+            650
+          ]
+        },
+        "engine": {
+          "ready": true,
+          "placeholder": "Ask anything about this page on Gemini Nano...",
+          "engineErrors": []
+        }
+      },
+      "mobile": {
+        "viewport": "390x844",
+        "status": 200,
+        "csp": "restrictive",
+        "loaded": true,
+        "injected": {
+          "ok": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          235,
+          770,
+          131,
+          50
+        ],
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            8,
+            158,
+            358,
+            650
+          ]
+        }
+      }
+    },
+    {
+      "url": "https://tailwindcss.com/",
+      "desktop": {
+        "viewport": "1440x900",
+        "status": 200,
+        "csp": "none",
+        "loaded": true,
+        "injected": {
+          "ok": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          1285,
+          826,
+          131,
+          50
+        ],
+        "hostIntact": false,
+        "hostDelta": {
+          "fontChanged": true,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            976,
+            214,
+            440,
+            650
+          ]
+        },
+        "engine": {
+          "ready": true,
+          "placeholder": "Ask anything about this page on Gemini Nano...",
+          "engineErrors": []
+        }
+      },
+      "mobile": {
+        "viewport": "390x844",
+        "status": 200,
+        "csp": "none",
+        "loaded": true,
+        "injected": {
+          "ok": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          235,
+          770,
+          131,
+          50
+        ],
+        "hostIntact": false,
+        "hostDelta": {
+          "fontChanged": true,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            8,
+            158,
+            358,
+            650
+          ]
+        }
+      }
+    },
+    {
+      "url": "https://github.com/",
+      "desktop": {
+        "viewport": "1440x900",
+        "status": 200,
+        "csp": "restrictive",
+        "loaded": true,
+        "injected": {
+          "ok": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          1285,
+          826,
+          131,
+          50
+        ],
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            976,
+            210,
+            440,
+            650
+          ]
+        },
+        "engine": {
+          "ready": true,
+          "placeholder": "Ask anything about this page on Gemini Nano...",
+          "engineErrors": []
+        }
+      },
+      "mobile": {
+        "viewport": "390x844",
+        "status": 200,
+        "csp": "restrictive",
+        "loaded": true,
+        "injected": {
+          "ok": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          235,
+          770,
+          131,
+          50
+        ],
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            8,
+            154,
+            358,
+            650
+          ]
+        }
+      }
+    },
+    {
+      "url": "https://www.bbc.com/news",
+      "desktop": {
+        "viewport": "1440x900",
+        "status": 200,
+        "csp": "none",
+        "loaded": true,
+        "injected": {
+          "ok": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          1306,
+          852,
+          110,
+          24
+        ],
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            976,
+            226,
+            440,
+            650
+          ]
+        },
+        "engine": {
+          "ready": true,
+          "placeholder": "Ask anything about this page on Gemini Nano...",
+          "engineErrors": []
+        }
+      },
+      "mobile": {
+        "viewport": "390x844",
+        "status": 200,
+        "csp": "none",
+        "loaded": true,
+        "injected": {
+          "ok": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          256,
+          796,
+          110,
+          24
+        ],
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            8,
+            170,
+            358,
+            650
+          ]
+        }
+      }
+    },
+    {
+      "url": "https://books.toscrape.com/",
+      "desktop": {
+        "viewport": "1440x900",
+        "status": 200,
+        "csp": "none",
+        "loaded": true,
+        "injected": {
+          "ok": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          1340,
+          853,
+          85,
+          32
+        ],
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            985,
+            228,
+            440,
+            650
+          ]
+        },
+        "engine": {
+          "ready": true,
+          "placeholder": "Ask anything about this page on Gemini Nano...",
+          "engineErrors": []
+        }
+      },
+      "mobile": {
+        "viewport": "390x844",
+        "status": 200,
+        "csp": "none",
+        "loaded": true,
+        "injected": {
+          "ok": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          290,
+          797,
+          85,
+          32
+        ],
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            17,
+            172,
+            358,
+            650
+          ]
+        }
+      }
+    },
+    {
+      "url": "https://www.nytimes.com/",
+      "desktop": {
+        "viewport": "1440x900",
+        "status": 403,
+        "csp": "restrictive",
+        "loaded": false,
+        "injected": {
+          "ok": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          1285,
+          826,
+          131,
+          50
+        ],
+        "hostIntact": false,
+        "hostDelta": {
+          "fontChanged": true,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            976,
+            214,
+            440,
+            650
+          ]
+        },
+        "engine": {
+          "ready": true,
+          "placeholder": "Ask anything about this page on Gemini Nano...",
+          "engineErrors": []
+        }
+      },
+      "mobile": {
+        "viewport": "390x844",
+        "status": 403,
+        "csp": "restrictive",
+        "loaded": false,
+        "injected": {
+          "ok": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          235,
+          770,
+          131,
+          50
+        ],
+        "hostIntact": false,
+        "hostDelta": {
+          "fontChanged": true,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            8,
+            158,
+            358,
+            650
+          ]
+        }
+      }
+    }
+  ]
+}

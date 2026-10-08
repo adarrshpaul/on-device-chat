@@ -117,81 +117,61 @@ export class PageActionInferer {
     const inferred: InferredAction[] = [];
 
     // 1. Analyze Buttons & Nearby Card Context
+    // 1. Analyze Buttons & Nearby Context Dynamically
     for (const btn of buttons.slice(0, 10)) {
       const btnText = (btn.textContent || btn.getAttribute("aria-label") || "").trim();
       if (!btnText || btnText.length > 40) continue;
 
-      // Check if button is inside a product/item card with a title
-      const card = btn.closest(".card, article, [class*='item'], [class*='product'], div");
+      // Extract contextual container title if present
+      const card = btn.closest("article, section, [class*='card'], [class*='item'], div");
       let itemTitle = "";
       if (card) {
-        const titleEl = card.querySelector("h2, h3, h4, .title, strong");
+        const titleEl = card.querySelector("h1, h2, h3, h4, .title, strong");
         if (titleEl && titleEl !== btn) {
           itemTitle = (titleEl.textContent || "").trim();
         }
       }
 
-      if (/add to cart/i.test(btnText)) {
-        if (itemTitle) {
-          inferred.push({
-            id: `act_${inferred.length}`,
-            label: `Add ${itemTitle} to cart`,
-            prompt: `Add 2 ${itemTitle} to my cart`,
-            category: "click",
-            sourceElement: btn.id ? `#${btn.id}` : `button:contains('${btnText}')`,
-            confidence: 0.95,
-          });
-        } else {
-          inferred.push({
-            id: `act_${inferred.length}`,
-            label: `Click "${btnText}"`,
-            prompt: `Click the "${btnText}" button on the page`,
-            category: "click",
-            sourceElement: btn.id ? `#${btn.id}` : undefined,
-            confidence: 0.85,
-          });
-        }
-      } else if (/checkout|buy|purchase/i.test(btnText)) {
-        inferred.push({
-          id: `act_${inferred.length}`,
-          label: `Proceed to checkout`,
-          prompt: `Click the checkout button and proceed`,
-          category: "click",
-          sourceElement: btn.id ? `#${btn.id}` : undefined,
-          confidence: 0.92,
-        });
-      } else if (/sign up|subscribe|join|register/i.test(btnText)) {
-        inferred.push({
-          id: `act_${inferred.length}`,
-          label: `${btnText}`,
-          prompt: `Help me ${btnText.toLowerCase()} on this page`,
-          category: "click",
-          sourceElement: btn.id ? `#${btn.id}` : undefined,
-          confidence: 0.88,
-        });
-      }
+      const actionLabel = itemTitle ? `${btnText} (${itemTitle})` : `Click "${btnText}"`;
+      const actionPrompt = itemTitle
+        ? `Perform action "${btnText}" on ${itemTitle}`
+        : `Click the "${btnText}" button on the page`;
+
+      inferred.push({
+        id: `act_${inferred.length}`,
+        label: actionLabel.slice(0, 45),
+        prompt: actionPrompt,
+        category: "click",
+        sourceElement: btn.id ? `#${btn.id}` : undefined,
+        confidence: itemTitle ? 0.92 : 0.85,
+      });
     }
 
-    // 2. Analyze Inputs (Search bars, form fields)
+    // 2. Analyze Inputs (Search bars, query fields, form inputs)
     for (const input of inputs.slice(0, 5)) {
       const placeholder = input.placeholder || input.getAttribute("aria-label") || input.name || "";
       const isSearch =
         input.type === "search" ||
-        /search|find|query/i.test(input.id || "") ||
-        /search|find|query/i.test(placeholder);
+        /search|find|query|filter/i.test(input.id || "") ||
+        /search|find|query|filter/i.test(placeholder);
 
-      if (isSearch) {
-        // Look for examples or extract keywords from placeholder (e.g. "try: 'headphones', 'smartwatch'")
-        const tryMatch = placeholder.match(/(?:try|e\.g\.|example):\s*['"]?([a-zA-Z\s]+)['"]?/i);
-        const searchSample = tryMatch ? tryMatch[1].trim() : "headphones";
-
+      if (isSearch && placeholder) {
         inferred.push({
           id: `act_${inferred.length}`,
-          label: `Search for "${searchSample}"`,
-          prompt: `Search for "${searchSample}" in the catalog search bar`,
+          label: `Search "${placeholder.slice(0, 25)}"`,
+          prompt: `Search for query in the "${placeholder}" search field`,
           category: "input",
           sourceElement: input.id ? `#${input.id}` : "input[type='search']",
           confidence: 0.9,
+        });
+      } else if (placeholder) {
+        inferred.push({
+          id: `act_${inferred.length}`,
+          label: `Fill ${placeholder.slice(0, 25)}`,
+          prompt: `Enter information into "${placeholder}"`,
+          category: "input",
+          sourceElement: input.id ? `#${input.id}` : undefined,
+          confidence: 0.82,
         });
       }
     }
@@ -200,39 +180,27 @@ export class PageActionInferer {
     for (const link of navLinks.slice(0, 8)) {
       const text = (link.textContent || "").trim();
       const href = link.getAttribute("href") || "";
-      if (text && href && !href.startsWith("javascript:") && text.length < 25) {
-        if (/checkout|cart|store|products|pricing|docs|settings|account/i.test(text + href)) {
-          inferred.push({
-            id: `act_${inferred.length}`,
-            label: `Navigate to ${text}`,
-            prompt: `Navigate to ${href} (${text})`,
-            category: "navigate",
-            sourceElement: `a[href='${href}']`,
-            confidence: 0.86,
-          });
-        }
+      if (text && href && !href.startsWith("javascript:") && text.length < 30) {
+        inferred.push({
+          id: `act_${inferred.length}`,
+          label: `Go to ${text}`,
+          prompt: `Navigate to ${text} (${href})`,
+          category: "navigate",
+          sourceElement: `a[href='${href}']`,
+          confidence: 0.86,
+        });
       }
     }
 
     // 4. Incorporate Host-Registered Tools
     for (const tool of customTools) {
-      if (tool.function.name === "addToCart" && !inferred.some((a) => a.prompt.includes("cart"))) {
-        inferred.push({
-          id: `act_${inferred.length}`,
-          label: `Add items to cart`,
-          prompt: `Add 2 items to my cart`,
-          category: "click",
-          confidence: 0.88,
-        });
-      } else if (tool.function.name === "navigateTo" && !inferred.some((a) => a.category === "navigate")) {
-        inferred.push({
-          id: `act_${inferred.length}`,
-          label: `Navigate site route`,
-          prompt: `Navigate to /products`,
-          category: "navigate",
-          confidence: 0.85,
-        });
-      }
+      inferred.push({
+        id: `act_${inferred.length}`,
+        label: `Execute ${tool.function.name}`,
+        prompt: `Use tool ${tool.function.name} to execute action`,
+        category: "click",
+        confidence: 0.88,
+      });
     }
 
     // 5. Always provide the universal page inspection action

@@ -13,6 +13,8 @@ import { AgentHarness } from "../lib/agentHarness";
 import { expertJudge, EvalMetrics, EvalTrace, AgentStepTrace } from "../lib/expertJudge";
 import { recipeStore, SiteMacroRecipe } from "../lib/recipeStore";
 import { pageActionInferer, PageAnalysisResult } from "../lib/pageActionInferer";
+import { sessionStore, ChatSession } from "../lib/sessionStore";
+import type { DecisionTrace } from "../lib/types";
 import type { Gemma4Config } from "../main";
 
 export interface DisplayMessage {
@@ -32,12 +34,15 @@ export interface DisplayMessage {
   stepTrace?: AgentStepTrace[];
   isMacro?: boolean;
   durationMs?: number;
+  decision?: DecisionTrace;
 }
 
 export type EngineStatus = "idle" | "loading" | "ready" | "generating" | "error";
 
 export function useChat(config: Gemma4Config) {
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
+  const [currentSessionId, setCurrentSessionId] = useState<string>(() => `sess_${Date.now()}`);
+  const [sessionsList, setSessionsList] = useState<ChatSession[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [engineStatus, setEngineStatus] = useState<EngineStatus>("loading");
@@ -56,6 +61,52 @@ export function useChat(config: Gemma4Config) {
 
   const escalationManagerRef = useRef<EscalationManager | null>(null);
   const harnessRef = useRef<AgentHarness | null>(null);
+
+  // Load stored sessions on init
+  const refreshSessions = useCallback(async () => {
+    try {
+      const list = await sessionStore.listSessions();
+      setSessionsList(list);
+    } catch (e) {
+      console.warn("Failed refreshing sessions:", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshSessions();
+  }, [refreshSessions]);
+
+  const createNewSession = useCallback(() => {
+    const newId = `sess_${Date.now()}`;
+    setCurrentSessionId(newId);
+    setMessages([]);
+    setError(null);
+  }, []);
+
+  const switchSession = useCallback(async (sessionId: string) => {
+    try {
+      const sess = await sessionStore.getSession(sessionId);
+      if (sess) {
+        setCurrentSessionId(sess.id);
+        setMessages(sess.messages || []);
+        setError(null);
+      }
+    } catch (e) {
+      console.error("Failed to switch session:", e);
+    }
+  }, []);
+
+  const deleteSession = useCallback(async (sessionId: string) => {
+    try {
+      await sessionStore.deleteSession(sessionId);
+      await refreshSessions();
+      if (sessionId === currentSessionId) {
+        createNewSession();
+      }
+    } catch (e) {
+      console.error("Failed to delete session:", e);
+    }
+  }, [currentSessionId, createNewSession, refreshSessions]);
 
   const reanalyzePage = useCallback(() => {
     return pageActionInferer.analyzePage(config.tools || []);
@@ -234,10 +285,25 @@ export function useChat(config: Gemma4Config) {
           stepTrace: harnessResult.trajectory,
           isMacro: harnessResult.isMacro,
           durationMs: harnessResult.totalDurationMs,
+          decision: harnessResult.decision || escalationManagerRef.current.lastDecisionTrace || undefined,
         };
 
+        const updatedMessages = [...messages, userMsg, assistantMsg];
         setMessages((prev) => [...prev, assistantMsg]);
         await refreshEvalsData();
+
+        // Persist session to IndexedDB
+        const siteOrigin = typeof window !== "undefined" ? window.location.origin : "web";
+        const title = userMsg.content ? userMsg.content.slice(0, 35) : "Chat Session";
+        await sessionStore.saveSession({
+          id: currentSessionId,
+          title,
+          siteOrigin,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          messages: updatedMessages,
+        });
+        await refreshSessions();
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "Failed to execute harness loop";
         setError(msg);
@@ -246,7 +312,7 @@ export function useChat(config: Gemma4Config) {
         setActiveSteps([]);
       }
     },
-    [engineStatus, refreshEvalsData]
+    [currentSessionId, engineStatus, messages, refreshEvalsData, refreshSessions]
   );
 
   /**
@@ -371,9 +437,23 @@ export function useChat(config: Gemma4Config) {
     setCurrentTierInfo(escalationManagerRef.current.currentTierInfo);
   }, []);
 
+  const stopGeneration = useCallback(() => {
+    setIsLoading(false);
+    setActiveSteps([]);
+  }, []);
+
+  const lastMsg = messages[messages.length - 1];
+  const canEscalate = Boolean(
+    error ||
+    lastMsg?.feedback === "down" ||
+    (lastMsg?.role === "assistant" && lastMsg?.decision?.confidence !== undefined && lastMsg.decision.confidence < 0.75)
+  );
+
   return {
     messages,
     isLoading,
+    stopGeneration,
+    canEscalate,
     error,
     sendMessage,
     engineStatus,
@@ -395,5 +475,10 @@ export function useChat(config: Gemma4Config) {
     judgeSingleTrace,
     rateTrace,
     refreshEvalsData,
+    currentSessionId,
+    sessionsList,
+    createNewSession,
+    switchSession,
+    deleteSession,
   };
 }

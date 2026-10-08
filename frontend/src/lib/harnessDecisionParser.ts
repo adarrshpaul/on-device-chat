@@ -117,6 +117,29 @@ export function parseHarnessDecision(raw: string, userGoal?: string): HarnessToo
       };
     }
 
+    // Case D: Direct action property format: e.g. { "action": "click", "selector": "#btn" }
+    if (obj.action && typeof obj.action === "string" && !obj.tool) {
+      const actionStr = obj.action.trim();
+      const { action: _act, final: _fin, ...rest } = obj;
+      return {
+        tool: actionStr,
+        args: rest,
+        final: obj.final,
+      };
+    }
+
+    // Case E: Shorthand root key format: e.g. { "click": { "selector": "#btn" } }
+    const rootTools = ["click", "type", "scroll", "navigate", "inspect", "search", "browse", "sandbox", "read", "write", "ask"];
+    for (const rt of rootTools) {
+      if (obj[rt] && typeof obj[rt] === "object") {
+        return {
+          tool: rt,
+          args: obj[rt],
+          final: obj.final,
+        };
+      }
+    }
+
     return null;
   };
 
@@ -152,6 +175,29 @@ export function parseHarnessDecision(raw: string, userGoal?: string): HarnessToo
       }
       return { tool: toolName, args: argsObj };
     }
+  }
+
+  // 4. Action Efficiency Shorthand DSL (Astra-style compact algebraic notation)
+  // Supports CLICK(selector), SCROLL(direction), SEARCH(query), TYPE(selector, text), NOTE(text)
+  const dslClickMatch = trimmed.match(/^CLICK\s*\(\s*['"]?([^'")]+)['"]?\s*\)$/i);
+  if (dslClickMatch) {
+    return { tool: "browse", args: { action: "click", selector: dslClickMatch[1].trim() } };
+  }
+  const dslScrollMatch = trimmed.match(/^SCROLL\s*\(\s*(up|down)?\s*(?:,\s*(\d+))?\s*\)$/i);
+  if (dslScrollMatch) {
+    return { tool: "browse", args: { action: "scroll", direction: dslScrollMatch[1]?.toLowerCase() || "down", amount: Number(dslScrollMatch[2]) || 500 } };
+  }
+  const dslSearchMatch = trimmed.match(/^SEARCH\s*\(\s*['"]?([^'")]+)['"]?\s*\)$/i);
+  if (dslSearchMatch) {
+    return { tool: "search", args: { query: dslSearchMatch[1].trim() } };
+  }
+  const dslTypeMatch = trimmed.match(/^TYPE\s*\(\s*['"]?([^,'"]+)['"]?\s*,\s*['"]?([^'")]+)['"]?\s*\)$/i);
+  if (dslTypeMatch) {
+    return { tool: "browse", args: { action: "type", selector: dslTypeMatch[1].trim(), value: dslTypeMatch[2].trim() } };
+  }
+  const dslNoteMatch = trimmed.match(/^NOTE\s*\(\s*['"]?([^'")]+)['"]?\s*\)$/i);
+  if (dslNoteMatch) {
+    return { tool: "write", args: { target: "notes", content: dslNoteMatch[1].trim() } };
   }
 
   // 4. Default: Check if user asked a visual question and model outputted conversational preamble

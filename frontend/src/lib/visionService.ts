@@ -162,10 +162,10 @@ export class VisionService {
       .filter(Boolean)
       .slice(0, 4);
 
-    // Extract product cards / visible lists
-    const items = smartQuerySelectorAll("[class*='product'], [class*='card'], [class*='item'], li")
+    // Extract visible content items / cards / list items
+    const items = smartQuerySelectorAll("[class*='card'], [class*='item'], article, li")
       .map((el) => (el.textContent || "").replace(/\s+/g, " ").trim().slice(0, 100))
-      .filter((t) => t.length > 5 && (t.includes("$") || t.includes("Watch") || t.includes("Headphones") || t.includes("Add")))
+      .filter((t) => t.length > 5 && !t.includes("\n"))
       .slice(0, 6);
 
     return { title, headings, buttons, inputs, items, focusText };
@@ -207,7 +207,7 @@ export class VisionService {
 - Main Headings: ${scene.headings.join(", ") || "None"}
 - Primary Buttons: ${scene.buttons.join(", ") || "None"}
 - Input Controls: ${scene.inputs.join(", ") || "None"}
-- Displayed Catalog Items & Prices: ${scene.items.join(" | ") || "None"}
+- Visible Content Items: ${scene.items.join(" | ") || "None"}
 ${scene.focusText ? `- Specific Focus Element: ${scene.focusText}` : ""}
 
 User question: "${prompt}"
@@ -232,15 +232,15 @@ Provide a clear, human-like answer describing what you see on the screen.`;
     if (scene.headings.length > 0) {
       parts.push(`I see the page heading "${scene.headings[0]}"`);
     } else {
-      parts.push(`I am viewing the ${scene.title}`);
+      parts.push(`I am viewing "${scene.title}"`);
     }
 
     if (scene.items.length > 0) {
-      parts.push(`featuring products such as ${scene.items.slice(0, 2).join(" and ")}`);
+      parts.push(`displaying content elements like ${scene.items.slice(0, 2).join(" and ")}`);
     }
 
     if (scene.buttons.length > 0) {
-      parts.push(`with action buttons like "${scene.buttons.slice(0, 3).join('", "')}"`);
+      parts.push(`with interactive controls like "${scene.buttons.slice(0, 3).join('", "')}"`);
     }
 
     const synthesized = `${parts.join(", ")}.`;

@@ -1,0 +1,342 @@
+{
+  "ranAt": "2026-10-03T14:11:17.970Z",
+  "askEnabled": true,
+  "results": [
+    {
+      "url": "https://example.com/",
+      "desktop": {
+        "viewport": "1440x900",
+        "status": 200,
+        "csp": "none",
+        "loaded": true,
+        "injected": {
+          "ok": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          1285,
+          826,
+          131,
+          50
+        ],
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            976,
+            214,
+            440,
+            650
+          ]
+        },
+        "engine": {
+          "ready": true,
+          "placeholder": "Ask anything about this page on Gemini Nano...",
+          "engineErrors": []
+        },
+        "ask": {
+          "answered": true,
+          "latencyMs": 2027,
+          "groundedKeyword": null,
+          "text": "What is on this page?\nModel Escalation Triggered\n\nI understand this didn't meet your expectations (Gemini Nano harness prediction error). I am escalating this conversation to MiniLM Router (~15 MB (ONNX))..."
+        }
+      },
+      "mobile": {
+        "viewport": "390x844",
+        "status": 200,
+        "csp": "none",
+        "loaded": true,
+        "injected": {
+          "ok": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          235,
+          770,
+          131,
+          50
+        ],
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            8,
+            158,
+            358,
+            650
+          ]
+        }
+      }
+    },
+    {
+      "url": "https://news.ycombinator.com/",
+      "desktop": {
+        "viewport": "1440x900",
+        "status": 200,
+        "csp": "restrictive",
+        "loaded": true,
+        "injected": {
+          "ok": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          1285,
+          826,
+          131,
+          50
+        ],
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            976,
+            214,
+            440,
+            650
+          ]
+        },
+        "engine": {
+          "ready": true,
+          "placeholder": "Ask anything about this page on Gemini Nano...",
+          "engineErrors": []
+        },
+        "ask": {
+          "answered": true,
+          "latencyMs": 2021,
+          "groundedKeyword": null,
+          "text": "What is on this page?\nModel Escalation Triggered\n\nI understand this didn't meet your expectations (Gemini Nano harness prediction error). I am escalating this conversation to MiniLM Router (~15 MB (ONNX))..."
+        }
+      },
+      "mobile": {
+        "viewport": "390x844",
+        "status": 200,
+        "csp": "restrictive",
+        "loaded": true,
+        "injected": {
+          "ok": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          235,
+          770,
+          131,
+          50
+        ],
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            8,
+            158,
+            358,
+            650
+          ]
+        }
+      }
+    },
+    {
+      "url": "https://en.wikipedia.org/wiki/Web_browser",
+      "desktop": {
+        "viewport": "1440x900",
+        "status": 200,
+        "csp": "restrictive",
+        "loaded": true,
+        "injected": {
+          "ok": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          1285,
+          826,
+          131,
+          50
+        ],
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            976,
+            214,
+            440,
+            650
+          ]
+        },
+        "engine": {
+          "ready": true,
+          "placeholder": "Ask anything about this page on Gemini Nano...",
+          "engineErrors": []
+        },
+        "ask": {
+          "answered": true,
+          "latencyMs": 2034,
+          "groundedKeyword": null,
+          "text": "What is on this page?\nModel Escalation Triggered\n\nI understand this didn't meet your expectations (Gemini Nano harness prediction error). I am escalating this conversation to MiniLM Router (~15 MB (ONNX))..."
+        }
+      },
+      "mobile": {
+        "viewport": "390x844",
+        "status": 200,
+        "csp": "restrictive",
+        "loaded": true,
+        "injected": {
+          "ok": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          965,
+          2350,
+          131,
+          50
+        ],
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            656,
+            1738,
+            440,
+            650
+          ]
+        }
+      }
+    },
+    {
+      "url": "https://books.toscrape.com/",
+      "desktop": {
+        "viewport": "1440x900",
+        "status": 200,
+        "csp": "none",
+        "loaded": true,
+        "injected": {
+          "ok": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          1340,
+          853,
+          85,
+          32
+        ],
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            985,
+            228,
+            440,
+            650
+          ]
+        },
+        "engine": {
+          "ready": true,
+          "placeholder": "Ask anything about this page on Gemini Nano...",
+          "engineErrors": []
+        },
+        "ask": {
+          "answered": true,
+          "latencyMs": 2022,
+          "groundedKeyword": null,
+          "text": "What is on this page?\nModel Escalation Triggered\n\nI understand this didn't meet your expectations (Gemini Nano harness prediction error). I am escalating this conversation to MiniLM Router (~15 MB (ONNX))..."
+        }
+      },
+      "mobile": {
+        "viewport": "390x844",
+        "status": 200,
+        "csp": "none",
+        "loaded": true,
+        "injected": {
+          "ok": true
+        },
+        "mounted": true,
+        "inView": true,
+        "reachable": true,
+        "rect": [
+          290,
+          797,
+          85,
+          32
+        ],
+        "hostIntact": true,
+        "hostDelta": {
+          "fontChanged": false,
+          "newOverflowPx": 0,
+          "newPageErrors": 0
+        },
+        "open": {
+          "opens": true,
+          "fits": true,
+          "reachable": true,
+          "rect": [
+            17,
+            172,
+            358,
+            650
+          ]
+        }
+      }
+    }
+  ]
+}

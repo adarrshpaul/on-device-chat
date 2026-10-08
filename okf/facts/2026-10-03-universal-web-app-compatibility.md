@@ -5,6 +5,8 @@ predicate: universal_web_app_compatibility
 object: multi_target_distribution_verified
 valid_from: 2026-10-03T05:31:00Z
 learned_at: 2026-10-03T05:31:00Z
+valid_to: 2026-10-03T14:12:00Z
+invalidated_by: ./2026-10-03-standalone-bundle-defects.md
 trust: machine-confirmed
 ---
 

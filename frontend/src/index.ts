@@ -8,6 +8,8 @@ export { PlannerAgent, MetaAgent } from './lib/plannerAgent';
 export type { AgentPlan, PlanTask, TaskType, TaskStatus, MetaExecutionResult, PlannerConfig } from './lib/plannerAgent';
 export { VisionService } from './lib/visionService';
 export type { VisionAnalysisResult, VisionOptions } from './lib/visionService';
+export { LoopEngineer } from './lib/loopEngineer';
+export type { LoopGoalSpec, LoopExecutionState } from './lib/loopEngineer';
 export * from './lib/types';
 
 
