@@ -24,6 +24,10 @@ import { VisionService } from "./visionService";
 import { buildHarnessPrompt } from "./harnessPrompt";
 import { parseHarnessDecision, HarnessToolCall } from "./harnessDecisionParser";
 import { ProbabilisticHarnessEngine } from "./probabilisticHarness";
+import { A11yTreeEngine } from "./a11yTree";
+import { SomOverlayManager } from "./somOverlay";
+import { ActionDispatcher } from "./actionDispatcher";
+import { StateDeltaVerifier } from "./stateDeltaVerifier";
 
 export type { HarnessToolCall };
 
@@ -72,6 +76,7 @@ export class AgentHarness {
       this.activeAbortController.abort();
       this.activeAbortController = null;
     }
+    SomOverlayManager.clearBadges();
   }
 
   /**
@@ -251,41 +256,71 @@ export class AgentHarness {
       }
 
       case "snapshot": {
-        // Build a lightweight accessibility/element tree of host elements (excluding agent widget)
-        const interactive = smartQuerySelectorAll(
-          "button, a, input, select, textarea, canvas, [role='button'], h1, h2, h3"
-        ).slice(0, 30);
+        // Build clean indexed accessibility tree [1..N] (Mind2Web / Stagehand standard)
+        const nodes = A11yTreeEngine.scan({ viewportOnly: true, maxItems: 36 });
+        const dump = A11yTreeEngine.formatForPrompt(nodes);
+        return this.compactObservation(dump, `Interactive a11y tree (${nodes.length} elements mapped [1..${nodes.length}])`);
+      }
 
-        const summary = interactive.map((el) => {
-          const tag = el.tagName.toLowerCase();
-          const cleanSel = getCleanElementSelector(el);
-          const text = (el.textContent || (el as HTMLInputElement).placeholder || (el as HTMLInputElement).value || "").trim().slice(0, 40);
-          return `[selector: "${cleanSel}"] <${tag}> "${text}"`;
-        });
-
-        const fullDump = summary.join("\n");
-        return this.compactObservation(fullDump, `Interactive elements on host page (${summary.length} items found)`);
+      case "som":
+      case "badge":
+      case "badges": {
+        // In-DOM Set-of-Marks visual overlay (Browser-Use / SeeClick standard)
+        const nodes = A11yTreeEngine.scan({ viewportOnly: true, maxItems: 36 });
+        SomOverlayManager.renderBadges(nodes, 4500);
+        const dump = A11yTreeEngine.formatForPrompt(nodes);
+        return `Rendered Set-of-Marks visual badges for ${nodes.length} elements:\n${dump}`;
       }
 
       case "click": {
-        if (!selector) return "Error: selector required for click action.";
-        const el = smartQuerySelector(selector);
-        if (!el) return `Click failed: element "${selector}" not found on page.`;
-        highlightElement(el, "Clicked");
-        el.click();
-        return `Successfully clicked element "${selector}".`;
+        const rawTarget = rawArgs.target !== undefined ? rawArgs.target : (rawArgs.targetId !== undefined ? rawArgs.targetId : (rawArgs.id !== undefined ? rawArgs.id : selector));
+        if (rawTarget === undefined || rawTarget === "") return "Error: target [ID] or selector required for click action.";
+        const resolved = ActionDispatcher.resolveTarget(rawTarget);
+        if (!resolved.element) {
+          return `Click failed: target "${resolved.identifierDescription}" not found on page.`;
+        }
+        highlightElement(resolved.element, "Clicked");
+
+        const before = StateDeltaVerifier.captureSnapshot();
+        await ActionDispatcher.click(resolved.element);
+        const after = StateDeltaVerifier.captureSnapshot();
+        const delta = StateDeltaVerifier.computeDelta(before, after);
+
+        return `Successfully clicked ${resolved.identifierDescription}. State transition: ${delta.summary}.`;
       }
 
       case "type": {
-        if (!selector) return "Error: selector required for type action.";
-        const el = smartQuerySelector(selector) as HTMLInputElement;
-        if (!el) return `Type failed: input "${selector}" not found on page.`;
-        highlightElement(el, "Typing");
-        el.focus();
-        el.value = value;
-        el.dispatchEvent(new Event("input", { bubbles: true }));
-        el.dispatchEvent(new Event("change", { bubbles: true }));
-        return `Successfully typed "${value}" into "${selector}".`;
+        const rawTarget = rawArgs.target !== undefined ? rawArgs.target : (rawArgs.targetId !== undefined ? rawArgs.targetId : (rawArgs.id !== undefined ? rawArgs.id : selector));
+        if (rawTarget === undefined || rawTarget === "") return "Error: target [ID] or selector required for type action.";
+        const resolved = ActionDispatcher.resolveTarget(rawTarget);
+        if (!resolved.element) {
+          return `Type failed: target "${resolved.identifierDescription}" not found on page.`;
+        }
+        highlightElement(resolved.element, "Typing");
+
+        const before = StateDeltaVerifier.captureSnapshot();
+        await ActionDispatcher.type(resolved.element, value, {
+          clearFirst: rawArgs.clear !== false,
+          pressEnter: Boolean(rawArgs.enter || rawArgs.pressEnter),
+        });
+        const after = StateDeltaVerifier.captureSnapshot();
+        const delta = StateDeltaVerifier.computeDelta(before, after);
+
+        return `Successfully typed "${value}" into ${resolved.identifierDescription}. State transition: ${delta.summary}.`;
+      }
+
+      case "select": {
+        const rawTarget = rawArgs.target !== undefined ? rawArgs.target : (rawArgs.targetId !== undefined ? rawArgs.targetId : (rawArgs.id !== undefined ? rawArgs.id : selector));
+        if (rawTarget === undefined || rawTarget === "") return "Error: target [ID] or selector required for select action.";
+        const resolved = ActionDispatcher.resolveTarget(rawTarget);
+        if (!resolved.element || !(resolved.element instanceof HTMLSelectElement)) {
+          return `Select failed: target "${resolved.identifierDescription}" is not a select element.`;
+        }
+        const success = await ActionDispatcher.select(resolved.element, value);
+        if (!success) {
+          return `Option "${value}" not found in ${resolved.identifierDescription}.`;
+        }
+        return `Selected "${value}" in ${resolved.identifierDescription}.`;
       }
 
       case "extract": {
@@ -302,6 +337,9 @@ export class AgentHarness {
       case "visual":
       case "ocr": {
         const prompt = String(rawArgs.prompt || rawArgs.question || "Describe what is visually displayed on this page or element.");
+        // Render Set-of-Marks badges in DOM before vision analysis
+        const nodes = A11yTreeEngine.scan({ viewportOnly: true, maxItems: 36 });
+        SomOverlayManager.renderBadges(nodes, 4000);
         try {
           const visionResult = await VisionService.describeVisualScene(selector, prompt);
           return `[Visual Observation (${visionResult.engineUsed}, ${visionResult.durationMs}ms)]: ${visionResult.text}`;
@@ -541,8 +579,14 @@ export class AgentHarness {
       case "fill":
       case "input":
         return this.primitiveBrowse({ action: "type", ...args });
+      case "select":
+        return this.primitiveBrowse({ action: "select", ...args });
       case "scroll":
         return this.primitiveBrowse({ action: "scroll", ...args });
+      case "som":
+      case "badge":
+      case "badges":
+        return this.primitiveBrowse({ action: "som", ...args });
       case "navigate":
       case "goto":
       case "open":
@@ -694,19 +738,12 @@ export class AgentHarness {
       notes: [],
     };
 
-    // Grounding: extract visible interactive candidate elements so local models don't guess in the dark
+    // Grounding: extract visible interactive candidate elements using A11yTreeEngine [1..N]
     let initialCandidatesNotice = "";
     if (typeof document !== "undefined") {
-      const candidates = smartQuerySelectorAll(
-        "button, a, input, select, textarea, [role='button']"
-      ).slice(0, 16);
-      if (candidates.length > 0) {
-        const lines = candidates.map((el) => {
-          const sel = getCleanElementSelector(el);
-          const label = el.getAttribute("aria-label") || (el.textContent || "").trim().slice(0, 25);
-          return `• ${sel}${label ? ` ("${label}")` : ""}`;
-        });
-        initialCandidatesNotice = `\nVisible Interactive Elements on Screen:\n${lines.join("\n")}`;
+      const a11yNodes = A11yTreeEngine.scan({ viewportOnly: true, maxItems: 24 });
+      if (a11yNodes.length > 0) {
+        initialCandidatesNotice = `\nInteractive Elements on Screen (Reference by numeric [ID] or selector):\n${A11yTreeEngine.formatForPrompt(a11yNodes)}`;
       }
     }
 
@@ -843,6 +880,7 @@ export class AgentHarness {
           };
         }
 
+        SomOverlayManager.clearBadges();
         return {
           final: cleanFinal,
           trajectory,
@@ -1061,6 +1099,7 @@ export class AgentHarness {
     };
     await expertJudge.logTrace(trace);
 
+    SomOverlayManager.clearBadges();
     return {
       final: maxStepMsg,
       trajectory,

@@ -10,6 +10,12 @@ export { VisionService } from './lib/visionService';
 export type { VisionAnalysisResult, VisionOptions } from './lib/visionService';
 export { LoopEngineer } from './lib/loopEngineer';
 export type { LoopGoalSpec, LoopExecutionState } from './lib/loopEngineer';
+export { A11yTreeEngine } from './lib/a11yTree';
+export type { IA11yNode, A11yScanOptions } from './lib/a11yTree';
+export { SomOverlayManager } from './lib/somOverlay';
+export { ActionDispatcher } from './lib/actionDispatcher';
+export { StateDeltaVerifier } from './lib/stateDeltaVerifier';
+export type { IStateSnapshot, IStateDelta } from './lib/stateDeltaVerifier';
 export * from './lib/types';
 
 

@@ -1,6 +1,6 @@
 {
   "name": "on-device-chat",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "Local-first on-device AI chat widget and autonomous browser agent powered by Chrome Built-in Gemini Nano, Gemma 4, and MiniLM",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -54,8 +54,9 @@
     "dev": "vite",
     "build": "vite build && tsc -p tsconfig.build.json && vite build --config vite.standalone.config.ts && cp dist/on-device-chat.min.js dist/gemma4-agent.min.js",
     "build:docs": "vite build --config vite.demo.config.ts",
-    "test": "npm run test:giskard",
+    "test": "npm run test:giskard && npm run test:grounding",
     "test:giskard": "node --experimental-strip-types tests/giskard_stress_test.mjs",
+    "test:grounding": "node --experimental-strip-types tests/test_numeric_grounding_and_a11y.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "prepublishOnly": "npm run test:giskard && npm run lint && npm run build"

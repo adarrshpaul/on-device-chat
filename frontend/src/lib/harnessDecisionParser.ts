@@ -128,15 +128,23 @@ export function parseHarnessDecision(raw: string, userGoal?: string): HarnessToo
       };
     }
 
-    // Case E: Shorthand root key format: e.g. { "click": { "selector": "#btn" } }
-    const rootTools = ["click", "type", "scroll", "navigate", "inspect", "search", "browse", "sandbox", "read", "write", "ask"];
+    // Case E: Shorthand root key format: e.g. { "click": { "target": 1 } }, { "click": 1 }, or { "click": "#btn" }
+    const rootTools = ["click", "type", "scroll", "navigate", "inspect", "search", "browse", "sandbox", "read", "write", "ask", "select"];
     for (const rt of rootTools) {
-      if (obj[rt] && typeof obj[rt] === "object") {
-        return {
-          tool: rt,
-          args: obj[rt],
-          final: obj.final,
-        };
+      if (obj[rt] !== undefined) {
+        if (typeof obj[rt] === "object" && obj[rt] !== null) {
+          return {
+            tool: rt,
+            args: obj[rt],
+            final: obj.final,
+          };
+        } else if (typeof obj[rt] === "number" || typeof obj[rt] === "string") {
+          return {
+            tool: rt,
+            args: { target: obj[rt], selector: String(obj[rt]) },
+            final: obj.final,
+          };
+        }
       }
     }
 
@@ -181,7 +189,8 @@ export function parseHarnessDecision(raw: string, userGoal?: string): HarnessToo
   // Supports CLICK(selector), SCROLL(direction), SEARCH(query), TYPE(selector, text), NOTE(text)
   const dslClickMatch = trimmed.match(/^CLICK\s*\(\s*['"]?([^'")]+)['"]?\s*\)$/i);
   if (dslClickMatch) {
-    return { tool: "browse", args: { action: "click", selector: dslClickMatch[1].trim() } };
+    const rawVal = dslClickMatch[1].trim();
+    return { tool: "browse", args: { action: "click", target: rawVal, selector: rawVal } };
   }
   const dslScrollMatch = trimmed.match(/^SCROLL\s*\(\s*(up|down)?\s*(?:,\s*(\d+))?\s*\)$/i);
   if (dslScrollMatch) {
@@ -193,7 +202,8 @@ export function parseHarnessDecision(raw: string, userGoal?: string): HarnessToo
   }
   const dslTypeMatch = trimmed.match(/^TYPE\s*\(\s*['"]?([^,'"]+)['"]?\s*,\s*['"]?([^'")]+)['"]?\s*\)$/i);
   if (dslTypeMatch) {
-    return { tool: "browse", args: { action: "type", selector: dslTypeMatch[1].trim(), value: dslTypeMatch[2].trim() } };
+    const rawVal = dslTypeMatch[1].trim();
+    return { tool: "browse", args: { action: "type", target: rawVal, selector: rawVal, value: dslTypeMatch[2].trim() } };
   }
   const dslNoteMatch = trimmed.match(/^NOTE\s*\(\s*['"]?([^'")]+)['"]?\s*\)$/i);
   if (dslNoteMatch) {

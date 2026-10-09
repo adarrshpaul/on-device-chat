@@ -44,16 +44,19 @@ export const DEFAULT_BROWSER_TOOLS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "click",
-      description: "Click an interactive element (button, link, tab, control) on the current web page.",
+      description: "Click an interactive element (button, link, tab, control) on the page by its numeric ID [1..N] or CSS selector.",
       parameters: {
         type: "object",
         properties: {
+          target: {
+            type: "number",
+            description: "Numeric badge ID [1..N] of the element to click (preferred), or CSS selector.",
+          },
           selector: {
             type: "string",
             description: "CSS selector of the element to click (e.g. '#submit-btn', 'button.checkout', 'a.nav-link').",
           },
         },
-        required: ["selector"],
       },
     },
   },
@@ -61,10 +64,14 @@ export const DEFAULT_BROWSER_TOOLS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "type",
-      description: "Type text into an input field or textarea on the page.",
+      description: "Type text into an input field or textarea on the page by its numeric ID [1..N] or CSS selector.",
       parameters: {
         type: "object",
         properties: {
+          target: {
+            type: "number",
+            description: "Numeric badge ID [1..N] of the input field (preferred), or CSS selector.",
+          },
           selector: {
             type: "string",
             description: "CSS selector of the input field or textarea.",
@@ -73,8 +80,37 @@ export const DEFAULT_BROWSER_TOOLS: ToolDefinition[] = [
             type: "string",
             description: "Text value to type into the input field.",
           },
+          enter: {
+            type: "boolean",
+            description: "Press Enter key after typing.",
+          },
         },
-        required: ["selector", "value"],
+        required: ["value"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "select",
+      description: "Select an option from a dropdown element by its numeric ID [1..N] or CSS selector.",
+      parameters: {
+        type: "object",
+        properties: {
+          target: {
+            type: "number",
+            description: "Numeric badge ID [1..N] of the select element (preferred), or CSS selector.",
+          },
+          selector: {
+            type: "string",
+            description: "CSS selector of the select element.",
+          },
+          value: {
+            type: "string",
+            description: "Option text or value to select.",
+          },
+        },
+        required: ["value"],
       },
     },
   },

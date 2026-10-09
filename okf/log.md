@@ -1,5 +1,18 @@
 # OKF Transition Log
 
+## 2026-10-10T02:05:00Z - SOTA Numeric Grounding, A11y Tree Engine & State Delta Verifier (v0.1.9)
+- **Problem**: Small on-device models suffered from "CSS Selector Hallucination" and massive token bloat when fed raw DOM trees. Reactive forms (React 19 / Angular Signals / Vue 3) did not trigger state changes on raw property assignments.
+- **SOLID Clean Code Architecture**:
+  - `A11yTreeEngine` (`src/lib/a11yTree.ts`): Computes canonical accessible roles/names and assigns monotonic integer IDs `[1..N]`. Emits token-dense snapshot (<400 tokens/screen).
+  - `SomOverlayManager` (`src/lib/somOverlay.ts`): Injects high-contrast visual badges over interactive targets with automatic lifecycle cleanup.
+  - `ActionDispatcher` (`src/lib/actionDispatcher.ts`): Emulates human interaction with synthetic event sequences and native prototype property descriptor setters for framework reactivity.
+  - `StateDeltaVerifier` (`src/lib/stateDeltaVerifier.ts`): Captures pre/post action DOM snapshots and computes transitions to close the OODA verification loop.
+- **Verification & Deployment**:
+  - Standalone tests (`test_numeric_grounding_and_a11y.mjs`): 6/6 passed.
+  - Giskard benchmarks: 26/26 passed. Total tests: 32/32 passed (100%).
+  - Version bumped to `0.1.9`. Rebuilt `on-device-chat.min.js` (398.83 kB).
+  - Synced to `cloudfare-portfolio-app` and deployed to Cloudflare Pages (`https://92969e28.cloudfare-portfolio-app-41v.pages.dev` / `https://paulcreates.online`).
+
 ## 2026-10-08T09:33:00Z - Mobile-First Responsive Chrome & Liquid AI LFM2 CoT Evaluation
 - **Mobile-First Responsive Layout Fix (`on-device-chat`)**:
   - Resolved mobile layout collapse (screenshot RCA): Header wrapping, top letter clipping under browser URL bar, horizontal card overflow, and clipped Send button.
