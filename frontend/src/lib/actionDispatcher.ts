@@ -92,8 +92,13 @@ export class ActionDispatcher {
   /**
    * Click an element with visual highlight and human mouse events
    */
-  public static async click(element: HTMLElement): Promise<void> {
-    element.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+  public static async click(target: HTMLElement | number | string): Promise<boolean> {
+    const element = target instanceof HTMLElement ? target : this.resolveTarget(target).element;
+    if (!element) return false;
+
+    if (typeof element.scrollIntoView === "function") {
+      element.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+    }
     await this.pause(50);
 
     // Mouse sequence: pointerdown -> mousedown -> pointerup -> mouseup -> click
@@ -105,6 +110,7 @@ export class ActionDispatcher {
     element.click();
 
     await this.pause(50);
+    return true;
   }
 
   /**
@@ -112,10 +118,12 @@ export class ActionDispatcher {
    * Uses prototype setter override to trigger React/Angular/Vue reactive bindings
    */
   public static async type(
-    element: HTMLElement,
+    target: HTMLElement | number | string,
     text: string,
     options: TypeActionOptions = {}
-  ): Promise<void> {
+  ): Promise<boolean> {
+    const element = target instanceof HTMLElement ? target : this.resolveTarget(target).element;
+    if (!element) return false;
     element.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
     await this.pause(30);
 
@@ -171,6 +179,7 @@ export class ActionDispatcher {
     }
 
     await this.pause(40);
+    return true;
   }
 
   /**
@@ -200,11 +209,17 @@ export class ActionDispatcher {
   /**
    * Hover over an element with mouseover and mouseenter events
    */
-  public static async hover(element: HTMLElement): Promise<void> {
-    element.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+  public static async hover(target: HTMLElement | number | string): Promise<boolean> {
+    const element = target instanceof HTMLElement ? target : this.resolveTarget(target).element;
+    if (!element) return false;
+
+    if (typeof element.scrollIntoView === "function") {
+      element.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+    }
     await this.pause(30);
     element.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true, cancelable: true }));
     element.dispatchEvent(new MouseEvent("mouseover", { bubbles: true, cancelable: true }));
     await this.pause(40);
+    return true;
   }
 }

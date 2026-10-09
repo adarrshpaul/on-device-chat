@@ -6,6 +6,11 @@ import "./index.css";
 import type { EngineMode } from "./lib/hybridEngine";
 import type { ToolDefinition } from "./lib/types";
 import type { GeminiApiConfig } from "./lib/geminiApiEngine";
+import { A11yTreeEngine } from "./lib/a11yTree";
+import { SomOverlayManager } from "./lib/somOverlay";
+import { ActionDispatcher } from "./lib/actionDispatcher";
+import { StateDeltaVerifier } from "./lib/stateDeltaVerifier";
+import { AgentHarness } from "./lib/agentHarness";
 
 export interface Gemma4Config {
   /** DOM element ID to mount into (auto-created if missing) */
@@ -82,9 +87,22 @@ class Gemma4AgentImpl {
 
 // Export singleton to global scope for <script> embedding
 const instance = new Gemma4AgentImpl();
+Object.assign(instance, {
+  A11yTreeEngine,
+  SomOverlayManager,
+  ActionDispatcher,
+  StateDeltaVerifier,
+  AgentHarness
+});
+
 if (typeof window !== "undefined") {
   (window as any).OnDeviceChat = instance;
   (window as any).Gemma4Agent = instance; // Backwards compatibility
+  (window as any).A11yTreeEngine = A11yTreeEngine;
+  (window as any).SomOverlayManager = SomOverlayManager;
+  (window as any).ActionDispatcher = ActionDispatcher;
+  (window as any).StateDeltaVerifier = StateDeltaVerifier;
+  (window as any).AgentHarness = AgentHarness;
 
   /**
    * Standard Web Component Custom Element: <on-device-chat>
