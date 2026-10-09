@@ -1,5 +1,10 @@
 # OKF Transition Log
 
+## 2026-10-10T02:26:00Z - PWA Network-First Caching Fix, Lighthouse Audit & Multi-Model Evaluation
+- **PWA Hard Refresh Fix**: Resolved stale app-shell caching where users needed `Cmd+Shift+R` to see updates. Implemented Network-First navigation interceptor in `custom-sw.js`, injected `Cache-Control: no-cache` meta headers in `index.html`, added `registration.update()` on load, and added `?v=0.1.9` cache-busting queries. Rebuilt and deployed to Cloudflare Pages (`https://61548351.cloudfare-portfolio-app-41v.pages.dev`).
+- **Lighthouse Performance Audit**: Executed full audit on `https://paulcreates.online`. CLS scored a perfect `0.000`, Accessibility `89/100`, Best Practices `77/100`, TBT `380ms`.
+- **Multi-Model Benchmark**: Evaluated the 5 model tiers from the Copilot dropdown across download footprint, latency, throughput, and task suitability.
+
 ## 2026-10-10T02:05:00Z - SOTA Numeric Grounding, A11y Tree Engine & State Delta Verifier (v0.1.9)
 - **Problem**: Small on-device models suffered from "CSS Selector Hallucination" and massive token bloat when fed raw DOM trees. Reactive forms (React 19 / Angular Signals / Vue 3) did not trigger state changes on raw property assignments.
 - **SOLID Clean Code Architecture**:
