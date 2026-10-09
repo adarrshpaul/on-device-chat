@@ -53,12 +53,12 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
     };
 
     return (
-      <div className="bg-[var(--g4-bg-panel)] px-3 py-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] border-b border-[var(--g4-border)] flex items-center justify-between select-none touch-none shrink-0 flex-nowrap">
+      <div className="bg-[var(--g4-bg-panel)] px-4 h-[52px] min-h-[48px] pt-[max(0.625rem,env(safe-area-inset-top))] border-b border-[var(--g4-border)] flex items-center justify-between select-none touch-none shrink-0 flex-nowrap">
         <button
           onClick={() => onTabChange("chat")}
-          className="flex items-center gap-1.5 text-xs text-gray-300 hover:text-white font-medium py-1 px-1.5 rounded-[6px] hover:bg-white/5 transition-colors cursor-pointer shrink-0"
+          className="flex items-center gap-1.5 text-xs text-gray-300 hover:text-white font-medium min-h-[40px] px-2 rounded-[6px] hover:bg-white/5 transition-colors cursor-pointer shrink-0"
         >
-          <ArrowLeft size={13} className="text-gray-400" />
+          <ArrowLeft size={14} className="text-gray-400" />
           <span>Back to Chat</span>
         </button>
 
@@ -66,13 +66,14 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           {titles[activeTab]}
         </span>
 
-        <div className="flex items-center gap-0.5 shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white w-7 h-7 sm:w-6 sm:h-6 rounded-[6px] hover:bg-white/5 flex items-center justify-center transition-colors cursor-pointer"
+            className="text-gray-400 hover:text-white w-[40px] h-[40px] min-w-[40px] min-h-[40px] rounded-[8px] hover:bg-white/5 flex items-center justify-center transition-colors cursor-pointer"
             title="Close"
+            aria-label="Close"
           >
-            <X size={14} />
+            <X size={16} />
           </button>
         </div>
       </div>
@@ -80,15 +81,15 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   }
 
   return (
-    <div className="bg-[var(--g4-bg-panel)] px-3 py-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] border-b border-[var(--g4-border)] flex items-center justify-between relative select-none touch-none shrink-0 flex-nowrap gap-1">
+    <div className="bg-[var(--g4-bg-panel)] px-4 h-[52px] min-h-[48px] pt-[max(0.625rem,env(safe-area-inset-top))] border-b border-[var(--g4-border)] flex items-center justify-between relative select-none touch-none shrink-0 flex-nowrap gap-2">
       {/* Left: Status beacon + Copilot Title + Model Text Dropdown */}
-      <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 shrink flex-nowrap">
+      <div className="flex items-center gap-2 min-w-0 shrink flex-nowrap">
         <span
           className="w-2 h-2 rounded-full bg-emerald-400 shrink-0 cursor-help transition-transform hover:scale-125"
           title={`On-device · ${currentTierInfo.name} (${currentTierInfo.size})`}
         />
 
-        <span className="font-semibold text-white text-[13px] sm:text-sm tracking-tight leading-none whitespace-nowrap shrink-0">
+        <span className="font-semibold text-white text-[14px] sm:text-sm tracking-tight leading-none whitespace-nowrap shrink-0">
           AI Copilot
         </span>
 
@@ -97,11 +98,12 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
             setShowOverflowMenu(false);
             onToggleTierMenu();
           }}
-          className="text-[11px] sm:text-[12px] text-gray-400 hover:text-gray-200 flex items-center gap-0.5 cursor-pointer py-0.5 px-1 rounded-[4px] hover:bg-white/5 transition-colors min-w-0 shrink"
+          className="text-[12px] text-gray-400 hover:text-gray-200 flex items-center gap-1 cursor-pointer py-1 px-2 rounded-[6px] hover:bg-white/5 transition-colors min-w-0 shrink min-h-[38px]"
           title="Select model tier"
+          aria-label="Select model tier"
         >
-          <span className="truncate max-w-[85px] sm:max-w-[130px]">{currentTierInfo.name}</span>
-          <ChevronDown size={11} className="text-gray-400 shrink-0" />
+          <span className="truncate max-w-[90px] sm:max-w-[130px]">{currentTierInfo.name}</span>
+          <ChevronDown size={12} className="text-gray-400 shrink-0" />
         </button>
       </div>
 
@@ -110,8 +112,9 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         {canEscalate && (
           <button
             onClick={onEscalate}
-            className="text-[10px] sm:text-[11px] text-purple-400 hover:text-purple-300 font-medium px-1.5 py-0.5 rounded-[4px] hover:bg-purple-500/10 cursor-pointer transition-colors whitespace-nowrap"
+            className="text-[11px] text-purple-400 hover:text-purple-300 font-medium px-2 py-1 rounded-[6px] hover:bg-purple-500/10 cursor-pointer transition-colors whitespace-nowrap"
             title="Escalate to more capable tier"
+            aria-label="Escalate to more capable tier"
           >
             Escalate
           </button>
@@ -124,12 +127,13 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
               if (showTierMenu) onToggleTierMenu();
               setShowOverflowMenu(!showOverflowMenu);
             }}
-            className={`text-gray-400 hover:text-white w-7 h-7 sm:w-6 sm:h-6 rounded-[6px] hover:bg-white/5 flex items-center justify-center transition-colors cursor-pointer ${
+            className={`text-gray-400 hover:text-white w-[40px] h-[40px] min-w-[40px] min-h-[40px] rounded-[8px] hover:bg-white/5 flex items-center justify-center transition-colors cursor-pointer ${
               showOverflowMenu ? "bg-white/10 text-white" : ""
             }`}
             title="More views & settings"
+            aria-label="More views and settings"
           >
-            <MoreHorizontal size={14} />
+            <MoreHorizontal size={16} />
           </button>
 
           {/* Overflow Popover Menu */}

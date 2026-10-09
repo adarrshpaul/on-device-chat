@@ -104,9 +104,9 @@
   -webkit-overflow-scrolling: touch;
 }
 
-/* Layout containers with guaranteed paddings */
+/* Layout containers with guaranteed 16px side padding */
 .g4-messages-container {
-  padding: 1.25rem !important;
+  padding: 1rem 1rem 2rem 1rem !important;
   box-sizing: border-box !important;
   display: flex !important;
   flex-direction: column !important;
@@ -114,7 +114,7 @@
   overflow-y: auto !important;
   overscroll-behavior: contain !important;
   overscroll-behavior-y: contain !important;
-  gap: 0.75rem !important;
+  gap: 0.875rem !important;
 }
 
 .g4-empty-hero {
@@ -175,14 +175,16 @@
   background: rgba(255, 255, 255, 0.3);
 }
 
-/* Markdown prose rendering */
+/* Markdown prose rendering - Mobile Standard: Body 16px minimum, line-height 1.45-1.55 */
 .g4-prose {
-  font-size: 0.85rem;
-  line-height: 1.55;
-  color: #e2e8f0;
+  font-size: 16px !important;
+  line-height: 1.52 !important;
+  color: #f1f5f9 !important;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 .g4-prose p {
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.75rem;
 }
 .g4-prose p:last-child {
   margin-bottom: 0;
@@ -190,7 +192,7 @@
 .g4-prose a {
   color: #c084fc;
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: 3px;
 }
 .g4-prose a:hover {
   color: #d8b4fe;

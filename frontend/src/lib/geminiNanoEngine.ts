@@ -99,7 +99,17 @@ export class GeminiNanoEngine {
     const api = GeminiNanoEngine.getApi();
     if (!api) return false;
 
-    let sys = systemPrompt || "You are an intelligent web assistant embedded in a web application.";
+    const defaultMobilePrompt =
+      "You are a mobile-friendly on-device assistant embedded in this web application. One job per turn.\n" +
+      "Reply rules:\n" +
+      "1. Result first. Direct answer in line 1 (1–3 lines).\n" +
+      "2. Context second, only if it changes the user's next tap.\n" +
+      "3. Budget: 40–120 words. No filler, no empathy padding, no restating user's question, no closing pleasantries.\n" +
+      "4. At most one question or one next step per turn.\n" +
+      "5. If presenting choices, write 2–4 short numbered items so they can render as action chips.\n" +
+      "6. Confirm before committing destructive, paid, or external actions.\n" +
+      "7. Say what you cannot do in one line.";
+    let sys = systemPrompt || defaultMobilePrompt;
     if (tools && tools.length > 0) {
       sys += `\n\nYou have access to the following tools to control the host app:\n` +
         JSON.stringify(tools, null, 2) +

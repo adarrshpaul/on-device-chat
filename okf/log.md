@@ -12,6 +12,8 @@
   - Designed architecture to bring local WebGPU LFM2 reasoning into `on-device-chat`:
     - `LFM2.5-1.2B-Thinking-ONNX` for autonomous multi-step planning with streaming `<thought>` tags.
     - `LFM2.5-350M-ONNX` for sub-400ms on-device site navigation & DOM grounding.
+- **NPM Package Publishing Fix**:
+  - Removed `"provenance": true` constraint from `package.json` to allow local terminal publishing without failing on `provider: null`.
 
 ## 2026-10-06T01:38:00Z - Production Deployment to paulcreates.online
 - **Cloudflare Pages Deployment**:

@@ -51,7 +51,33 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
   } = useChat(config);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+  const [isNearBottom, setIsNearBottom] = useState(true);
+  const [showScrollBottomChip, setShowScrollBottomChip] = useState(false);
+
+  // Dynamic visualViewport tracking for seamless mobile keyboard docking (Standard 2.2)
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.visualViewport) return;
+    const updateViewport = () => {
+      if (window.innerWidth < 640) {
+        setViewportHeight(window.visualViewport ? window.visualViewport.height : window.innerHeight);
+      } else {
+        setViewportHeight(null);
+      }
+    };
+    updateViewport();
+    const vv = window.visualViewport;
+    vv.addEventListener("resize", updateViewport);
+    vv.addEventListener("scroll", updateViewport);
+    window.addEventListener("resize", updateViewport);
+    return () => {
+      vv.removeEventListener("resize", updateViewport);
+      vv.removeEventListener("scroll", updateViewport);
+      window.removeEventListener("resize", updateViewport);
+    };
+  }, [isOpen]);
 
   // Complete scroll isolation: stops mouse wheel & touch gestures from bleeding through to host page
   useEffect(() => {
@@ -124,8 +150,36 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
     };
   }, [isOpen]);
 
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const nearBottom = distanceFromBottom < 72;
+    setIsNearBottom(nearBottom);
+    if (nearBottom) {
+      setShowScrollBottomChip(false);
+    }
+  };
+
+  const scrollToBottom = (smooth = true) => {
+    if (!messagesEndRef.current) return;
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    messagesEndRef.current.scrollIntoView({
+      behavior: smooth && !prefersReducedMotion ? "smooth" : "auto",
+    });
+    setIsNearBottom(true);
+    setShowScrollBottomChip(false);
+  };
+
+  // Standard 2.3: Stream to newest message ONLY when already at bottom.
+  // If user scrolled up, do not yank down; show "New message ↓" chip instead.
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (isNearBottom) {
+      scrollToBottom(true);
+    } else {
+      setShowScrollBottomChip(true);
+    }
   }, [messages, activeSteps]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -150,7 +204,8 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
       {isOpen && (
         <div
           ref={cardRef}
-          className="w-full h-[100dvh] max-h-[100dvh] sm:w-[440px] sm:h-[650px] sm:max-h-[88vh] sm:max-w-[calc(100vw-32px)] g4-window-card rounded-none sm:rounded-[8px] shadow-2xl flex flex-col sm:mb-3 overflow-hidden transition-all duration-300 animate-in fade-in slide-in-from-bottom-5 overscroll-contain"
+          style={viewportHeight ? { height: `${viewportHeight}px`, maxHeight: `${viewportHeight}px` } : undefined}
+          className="w-full h-[100dvh] max-h-[100dvh] sm:w-[440px] sm:h-[650px] sm:max-h-[88vh] sm:max-w-[calc(100vw-32px)] g4-window-card rounded-none sm:rounded-[8px] shadow-2xl flex flex-col sm:mb-3 overflow-hidden transition-all duration-300 animate-in fade-in slide-in-from-bottom-5 overscroll-contain relative"
         >
           {/* Header */}
           <ChatHeader
@@ -198,35 +253,50 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
               )}
 
               {/* Messages Area */}
-              <div className="g4-messages-container text-xs overscroll-contain">
+              <div
+                ref={messagesContainerRef}
+                onScroll={handleScroll}
+                className="g4-messages-container text-xs overscroll-contain relative"
+              >
                 {messages.length === 0 ? (
-                  <div className="flex flex-col gap-3 py-4 px-1 text-left">
-                    {/* One line of context */}
-                    <div className="flex items-center gap-1.5 text-[12px] text-gray-400 font-medium select-none">
-                      <span className="text-gray-300 font-semibold">This page</span>
-                      <span>·</span>
-                      <span className="text-gray-400 truncate max-w-[280px] font-mono text-[11px]">
+                  <div className="flex flex-col gap-3 py-4 px-1 text-left select-none">
+                    {/* Page context pill */}
+                    <div className="flex items-center gap-2 text-[12px] text-gray-400 font-medium">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="text-gray-200 font-semibold">Ready on</span>
+                      <span className="text-purple-300 truncate max-w-[240px] font-mono text-[11px]">
                         {typeof window !== "undefined"
                           ? (window.location.hostname + (window.location.pathname !== "/" ? window.location.pathname : "")).replace(/^www\./, "")
                           : "current page"}
                       </span>
                     </div>
 
-                    {/* 3-4 prompt chips (not cards) */}
-                    <div className="flex flex-wrap gap-1.5 pt-1">
+                    {/* Standard Section 5 & 7: Capability in one sentence */}
+                    <p className="text-[14px] text-gray-200 leading-relaxed font-normal">
+                      I can navigate this site, summarize pages, explain code, and trigger on-page actions.
+                    </p>
+
+                    {/* Standard Section 5 & 7: Limit in one sentence */}
+                    <p className="text-[12px] text-gray-400 leading-normal">
+                      I cannot submit forms or perform actions without your explicit confirmation.
+                    </p>
+
+                    {/* Standard Section 2.2: 4 action chips (36-44px tall touch targets, 8px gap) */}
+                    <div className="flex flex-wrap gap-2 pt-2">
                       {[
                         "Summarize this page",
-                        "Explain the code",
-                        "Find the main CTA",
-                        "List form fields",
+                        "Navigate site sections",
+                        "Explain page architecture",
+                        "Find contact & links",
                       ].map((chip) => (
                         <button
                           key={chip}
+                          type="button"
                           onClick={() => {
                             setInputValue(chip);
                             sendMessage(chip);
                           }}
-                          className="px-2.5 py-1.5 rounded-[6px] border border-white/8 bg-white/4 hover:bg-white/8 hover:border-purple-500/40 text-[12px] text-gray-300 hover:text-white transition-all cursor-pointer text-left"
+                          className="min-h-[40px] px-3.5 py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-purple-600/20 hover:border-purple-500/50 text-[13px] text-gray-200 hover:text-white transition-all cursor-pointer text-left flex items-center justify-center font-medium shadow-sm active:scale-98"
                         >
                           {chip}
                         </button>
@@ -260,6 +330,19 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
 
                 <div ref={messagesEndRef} />
               </div>
+
+              {/* Standard Section 2.3: Floating "New message ↓" chip when user has scrolled up */}
+              {showScrollBottomChip && (
+                <button
+                  type="button"
+                  onClick={() => scrollToBottom(true)}
+                  className="absolute bottom-20 left-1/2 -translate-x-1/2 z-30 px-3.5 py-1.5 rounded-full bg-purple-600/95 hover:bg-purple-500 text-white text-[12px] font-medium shadow-xl flex items-center gap-1.5 backdrop-blur-md border border-white/20 transition-all cursor-pointer animate-in fade-in"
+                  aria-label="Scroll to new messages"
+                >
+                  <span>New message</span>
+                  <span>↓</span>
+                </button>
+              )}
 
               {/* Anchor Composer */}
               <ChatInput
