@@ -9,10 +9,11 @@ import {
   History,
   Award,
   ShieldCheck,
+  Zap,
 } from "lucide-react";
 import { ModelTier, TierInfo, TIER_METADATA, ModelProgressInfo } from "../lib/escalationManager";
 
-export type WidgetTab = "chat" | "navigator" | "history" | "evals";
+export type WidgetTab = "chat" | "navigator" | "history" | "evals" | "workflows";
 
 interface ChatHeaderProps {
   currentTierInfo: TierInfo;
@@ -45,13 +46,14 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
 }) => {
   const [showOverflowMenu, setShowOverflowMenu] = useState(false);
 
-  // When inside a secondary view (Nav Hub, History, Judge), show a dedicated clean back bar
+  // When inside a secondary view (Nav Hub, History, Judge, Workflows), show a dedicated clean back bar
   if (activeTab !== "chat") {
     const titles: Record<WidgetTab, string> = {
       chat: "Chat",
       navigator: "AI Navigation Hub",
       history: "Session History",
       evals: "Judge & Evals Studio",
+      workflows: "Workflows & Automations",
     };
 
     return (
@@ -186,6 +188,22 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                     {recentTracesCount}
                   </span>
                 )}
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowOverflowMenu(false);
+                  onTabChange("workflows");
+                }}
+                className="w-full text-left px-2.5 py-1.5 rounded-[6px] text-gray-200 hover:text-white hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Zap size={13} className="text-amber-400" />
+                  <span>Workflows & Automations</span>
+                </div>
+                <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-purple-950/60 text-purple-300 border border-purple-500/30">
+                  Macro
+                </span>
               </button>
 
               <div className="my-1 border-t border-white/5" />

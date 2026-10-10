@@ -9,17 +9,24 @@ import {
   ShieldAlert,
   Info,
   Compass,
+  Play,
+  BookmarkPlus,
+  Cpu,
 } from "lucide-react";
 import type { DecisionTrace } from "../lib/types";
 
 interface DecisionCardProps {
   decision: DecisionTrace;
   onSelectOption?: (optionLabel: string) => void;
+  onExecuteAction?: (actionName: string, payload?: Record<string, unknown>) => void;
+  onSaveToWorkflow?: (title: string, actionName: string, target?: string) => void;
 }
 
 export const DecisionCard: React.FC<DecisionCardProps> = ({
   decision,
   onSelectOption,
+  onExecuteAction,
+  onSaveToWorkflow,
 }) => {
   const [isExpanded, setIsExpanded] = useState<boolean>(true);
   const [showEvidence, setShowEvidence] = useState<boolean>(false);
@@ -140,56 +147,119 @@ export const DecisionCard: React.FC<DecisionCardProps> = ({
               </div>
             </div>
           ) : (
-            /* Primary Routed Decision Banner */
             <div className="flex items-start gap-2 p-2 rounded-[6px] bg-black/40 border border-gray-800">
-              <CheckCircle2 size={14} className="text-emerald-400 mt-0.5 shrink-0" />
-              <div className="min-w-0 flex-1">
-                <div className="text-[10px] uppercase font-mono tracking-wider text-gray-400 flex items-center justify-between">
-                  <span>Selected Action</span>
-                  {decision.latencyMs !== undefined && (
-                    <span className="text-gray-500 lowercase font-normal">
-                      {decision.latencyMs}ms · 0 tokens
-                    </span>
+                <CheckCircle2 size={14} className="text-emerald-400 mt-0.5 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-[10px] uppercase font-mono tracking-wider text-gray-400 flex items-center justify-between">
+                    <span>Selected Action</span>
+                    {decision.latencyMs !== undefined && (
+                      <span className="text-gray-500 lowercase font-normal">
+                        {decision.latencyMs}ms · 0 tokens
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[11px] font-medium text-emerald-200 truncate mt-0.5">
+                    {decision.selectedOption}
+                  </div>
+                </div>
+
+                {/* Direct 1-Click Action & Workflow Buttons */}
+                <div className="flex items-center gap-1 shrink-0 ml-1">
+                  {onExecuteAction && (
+                    <button
+                      onClick={() => onExecuteAction(decision.selectedOption, decision.executableAction?.args)}
+                      className="px-2 py-1 rounded-[5px] bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[10px] font-medium flex items-center gap-1 cursor-pointer transition-all hover:scale-105 active:scale-95"
+                      title="Execute this action immediately on the website"
+                    >
+                      <Play size={10} className="fill-current text-emerald-400" />
+                      <span>Run</span>
+                    </button>
+                  )}
+
+                  {onSaveToWorkflow && (
+                    <button
+                      onClick={() => onSaveToWorkflow(decision.title, decision.selectedOption)}
+                      className="p-1 rounded-[5px] bg-white/5 hover:bg-purple-900/40 text-purple-300 border border-white/8 hover:border-purple-500/30 text-[10px] transition-colors cursor-pointer"
+                      title="Save as repeated workflow button"
+                    >
+                      <BookmarkPlus size={12} />
+                    </button>
                   )}
                 </div>
-                <div className="text-[11px] font-medium text-emerald-200 truncate mt-0.5">
-                  {decision.selectedOption}
+              </div>
+            )}
+
+            {/* Multi-Model Ensemble Consensus Box (Jev Style) */}
+            {decision.ensemble && (
+              <div className="p-2 rounded-[6px] bg-purple-950/25 border border-purple-500/20 space-y-1.5">
+                <div className="flex items-center justify-between text-[10px]">
+                  <div className="flex items-center gap-1.5 text-purple-300 font-semibold font-mono">
+                    <Cpu size={12} className="text-purple-400" />
+                    <span>Ensemble Consensus: {Math.round(decision.ensemble.consensusConfidence * 100)}%</span>
+                  </div>
+                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-purple-900/50 text-purple-200 border border-purple-500/30">
+                    {Math.round(decision.ensemble.agreementRatio * 100)}% model agreement
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 pt-0.5">
+                  {decision.ensemble.votes.map((vote, vIdx) => (
+                    <div
+                      key={vIdx}
+                      className="p-1.5 rounded-[4px] bg-black/40 border border-white/6 text-[9px] font-mono flex flex-col justify-between"
+                    >
+                      <span className="text-gray-400 truncate font-sans font-medium">{vote.modelName}</span>
+                      <div className="flex items-center justify-between mt-1 text-purple-200">
+                        <span className="truncate max-w-[85px]">{vote.selectedChoice}</span>
+                        <span className="text-emerald-400">{Math.round(vote.confidence * 100)}%</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Quick Choice / Steer Pills (When not in clarification mode, user can still override) */}
-          {!decision.needsClarification && decision.distribution && decision.distribution.length > 1 && (
-            <div className="pt-0.5">
-              <div className="text-[10px] font-mono text-gray-400 mb-1 flex items-center justify-between">
-                <span>STEER OR OVERRIDE:</span>
-                <span className="text-[9px] text-gray-500">Click to switch</span>
+            {/* Quick Choice / Steer Pills (When not in clarification mode, user can still override or execute) */}
+            {!decision.needsClarification && decision.distribution && decision.distribution.length > 1 && (
+              <div className="pt-0.5">
+                <div className="text-[10px] font-mono text-gray-400 mb-1 flex items-center justify-between">
+                  <span>STEER OR EXECUTE:</span>
+                  <span className="text-[9px] text-gray-500">Tap to run</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {decision.distribution.map((alt, idx) => {
+                    const altScorePct = Math.round(alt.score * 100);
+                    const isWinner = Boolean(alt.isWinner);
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => {
+                          if (onExecuteAction && isWinner) {
+                            onExecuteAction(alt.label, alt.actionPayload?.args);
+                          } else {
+                            onSelectOption?.(alt.label);
+                          }
+                        }}
+                        className={`px-2 py-0.5 rounded-[5px] text-[10px] font-medium transition-all flex items-center gap-1 cursor-pointer ${
+                          isWinner
+                            ? "bg-purple-950/60 border border-purple-500/40 text-purple-200 hover:bg-purple-900/50"
+                            : "bg-white/4 hover:bg-purple-900/30 text-gray-300 border border-white/6 hover:border-purple-500/30"
+                        }`}
+                        title={isWinner ? `Run "${alt.label}" immediately` : `Switch and run "${alt.label}"`}
+                      >
+                        {isWinner ? (
+                          <Play size={9} className="fill-current text-purple-400" />
+                        ) : (
+                          <Zap size={9} className="text-gray-400" />
+                        )}
+                        <span className="truncate max-w-[140px]">{alt.label}</span>
+                        <span className="text-[9px] font-mono opacity-60">{altScorePct}%</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              <div className="flex flex-wrap gap-1.5">
-                {decision.distribution.map((alt, idx) => {
-                  const altScorePct = Math.round(alt.score * 100);
-                  const isWinner = Boolean(alt.isWinner);
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => onSelectOption?.(alt.label)}
-                      className={`px-2 py-0.5 rounded-[5px] text-[10px] font-medium transition-all flex items-center gap-1 cursor-pointer ${
-                        isWinner
-                          ? "bg-purple-950/60 border border-purple-500/40 text-purple-200"
-                          : "bg-white/4 hover:bg-purple-900/30 text-gray-300 border border-white/6 hover:border-purple-500/30"
-                      }`}
-                      title={isWinner ? "Active choice" : `Override and execute "${alt.label}"`}
-                    >
-                      {isWinner && <Zap size={10} className="text-purple-400" />}
-                      <span className="truncate max-w-[140px]">{alt.label}</span>
-                      <span className="text-[9px] font-mono opacity-60">{altScorePct}%</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+            )}
 
           {/* Jev Hallucination Shield Notice (Noul DOM Evidence Verification) */}
           {decision.hallucinationShield && (

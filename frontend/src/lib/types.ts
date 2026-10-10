@@ -298,8 +298,65 @@ export interface DecisionAlternative {
   isWinner?: boolean;
 }
 
+export interface EnsembleModelVote {
+  modelName: string; // e.g. "Laya System 1", "MiniLM-L6 Router", "Gemini Nano", "SmolLM2"
+  role: "fast_reflex" | "semantic_vector" | "system2_verifier";
+  selectedChoice: string;
+  confidence: number; // 0.0 to 1.0
+  rationale?: string;
+}
+
+export interface EnsembleConsensus {
+  modelsUsed: string[];
+  votes: EnsembleModelVote[];
+  consensusWinner: string;
+  consensusConfidence: number; // Calibrated ensemble score
+  agreementRatio: number; // 0.0 to 1.0
+  margin: number;
+}
+
+export interface ActionExecutionOutput {
+  id: string;
+  action: string;
+  target: string;
+  status: "success" | "error";
+  domDelta?: {
+    beforeState?: string;
+    afterState?: string;
+    description: string;
+  };
+  durationMs: number;
+  outputSummary: string;
+  timestamp: number;
+}
+
+export interface WorkflowStep {
+  id: string;
+  title: string;
+  action: "click" | "scroll" | "type" | "teleport" | "wait" | "verify";
+  target?: string;
+  value?: string;
+  delayMs?: number;
+  status?: "idle" | "running" | "success" | "error";
+  output?: string;
+}
+
+export interface WebWorkflow {
+  id: string;
+  name: string;
+  description: string;
+  siteOrigin: string;
+  steps: WorkflowStep[];
+  triggerPhrase?: string;
+  executionCount: number;
+  createdAt: number;
+  lastRunAt?: number;
+  tags?: string[];
+  isSystemStarter?: boolean;
+}
+
 export interface DecisionTrace {
-  type: "macro" | "system1_gate" | "semantic_route" | "model_decision";
+  type: "macro" | "system1_gate" | "semantic_route" | "model_decision" | "ensemble_consensus";
   title: string;
   selectedOption: string;
   confidence: number; // 0.0 to 1.0
@@ -315,5 +372,11 @@ export interface DecisionTrace {
     evidenceSelector?: string;
     probability: number;
   };
+  ensemble?: EnsembleConsensus;
+  executableAction?: {
+    tool: string;
+    args: Record<string, unknown>;
+  };
   explanation?: string;
 }
+

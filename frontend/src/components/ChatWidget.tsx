@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Sparkles, Info, Plus, Trash2, Clock } from "lucide-react";
+import { Sparkles, Info, Plus, Trash2, Clock, Zap, Play } from "lucide-react";
 import { Gemma4Config } from "../main";
 import { useChat } from "../hooks/useChat";
 import MessageBubble from "./MessageBubble";
@@ -7,6 +7,9 @@ import { ChatHeader, WidgetTab } from "./ChatHeader";
 import { ChatInput } from "./ChatInput";
 import { EvalsStudio } from "./EvalsStudio";
 import { NavigationHub } from "./NavigationHub";
+import { WorkflowStudio } from "./WorkflowStudio";
+import { workflowStore } from "../lib/workflowStore";
+import { WebWorkflow } from "../lib/types";
 
 export interface ChatWidgetProps {
   config?: Gemma4Config;
@@ -20,6 +23,7 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
   const [activeTab, setActiveTab] = useState<WidgetTab>("chat");
   const [expandedTraceId, setExpandedTraceId] = useState<string | null>(null);
   const [showGuide, setShowGuide] = useState(false);
+  const [quickWorkflows, setQuickWorkflows] = useState<WebWorkflow[]>([]);
 
   const {
     messages,
@@ -49,7 +53,18 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
     createNewSession,
     switchSession,
     deleteSession,
+    executeDirectAction,
+    runSavedWorkflow,
   } = useChat(config);
+
+  const loadQuickWorkflows = async () => {
+    const list = await workflowStore.getWorkflowsForOrigin();
+    setQuickWorkflows(list);
+  };
+
+  useEffect(() => {
+    loadQuickWorkflows();
+  }, [isOpen]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -343,6 +358,21 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
                       onFeedback={handleFeedback}
                       onEscalate={triggerEscalation}
                       onSelectOption={(optionLabel) => sendMessage(optionLabel)}
+                      onExecuteAction={executeDirectAction}
+                      onSaveToWorkflow={async (title, action, target) => {
+                        const newWf: WebWorkflow = {
+                          id: `wf_${Date.now()}`,
+                          name: `⚡ ${title}`,
+                          description: `Repeat ${action} on ${target || "element"}`,
+                          siteOrigin: "*",
+                          steps: [{ id: "s1", title, action: (action as any) || "teleport", target, delayMs: 300, status: "idle" }],
+                          executionCount: 0,
+                          createdAt: Date.now(),
+                        };
+                        await workflowStore.saveWorkflow(newWf);
+                        await loadQuickWorkflows();
+                        setActiveTab("workflows");
+                      }}
                     />
                   ))
                 )}
@@ -374,6 +404,37 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
                   <span>New message</span>
                   <span>↓</span>
                 </button>
+              )}
+
+              {/* Quick Workflows Thumb Bar */}
+              {quickWorkflows.length > 0 && (
+                <div className="px-3 py-1.5 bg-black/40 border-t border-white/6 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0 select-none">
+                  <div className="flex items-center gap-1 text-[10px] font-mono text-purple-400 font-semibold shrink-0 mr-0.5">
+                    <Zap size={11} className="text-amber-400" />
+                    <span>Workflows:</span>
+                  </div>
+
+                  {quickWorkflows.map((wf) => (
+                    <button
+                      key={wf.id}
+                      onClick={() => runSavedWorkflow(wf.id)}
+                      className="px-2 py-0.5 rounded-[5px] bg-white/5 hover:bg-purple-950/40 text-gray-300 hover:text-white border border-white/8 hover:border-purple-500/30 text-[10px] flex items-center gap-1 cursor-pointer transition-all shrink-0 whitespace-nowrap active:scale-95"
+                      title={wf.description}
+                    >
+                      <Play size={9} className="fill-current text-emerald-400" />
+                      <span className="truncate max-w-[110px]">{wf.name}</span>
+                    </button>
+                  ))}
+
+                  <button
+                    onClick={() => setActiveTab("workflows")}
+                    className="px-2 py-0.5 rounded-[5px] bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 text-[10px] font-medium flex items-center gap-1 cursor-pointer transition-colors shrink-0"
+                    title="Open Workflows & Automations Studio"
+                  >
+                    <Plus size={10} />
+                    <span>Add</span>
+                  </button>
+                </div>
               )}
 
               {/* Anchor Composer */}
@@ -489,6 +550,14 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
                 </div>
               )}
             </div>
+          )}
+
+          {/* Tab 5: Workflows & Automations Studio */}
+          {activeTab === "workflows" && (
+            <WorkflowStudio
+              onBackToChat={() => setActiveTab("chat")}
+              onWorkflowExecuted={loadQuickWorkflows}
+            />
           )}
         </div>
       )}

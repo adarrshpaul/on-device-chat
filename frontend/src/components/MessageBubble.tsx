@@ -2,6 +2,7 @@ import { useState } from "react";
 import { marked } from "marked";
 import ToolCallCard from "./ToolCallCard";
 import { DecisionCard } from "./DecisionCard";
+import { ActionOutputCard } from "./ActionOutputCard";
 import type { DisplayMessage } from "../hooks/useChat";
 import {
   ThumbsUp,
@@ -18,6 +19,8 @@ interface MessageBubbleProps {
   onFeedback?: (messageId: string, feedback: "up" | "down") => void;
   onEscalate?: () => void;
   onSelectOption?: (optionLabel: string) => void;
+  onExecuteAction?: (actionName: string, payload?: Record<string, unknown>) => void;
+  onSaveToWorkflow?: (title: string, actionName: string, target?: string) => void;
 }
 
 function formatToolSummary(trace: AgentStepTrace[]): string {
@@ -48,6 +51,8 @@ export default function MessageBubble({
   onFeedback,
   onEscalate,
   onSelectOption,
+  onExecuteAction,
+  onSaveToWorkflow,
 }: MessageBubbleProps) {
   const [showSteps, setShowSteps] = useState(false);
 
@@ -86,6 +91,30 @@ export default function MessageBubble({
 
     return (
       <div className="flex flex-col mb-4 items-start w-full">
+        {/* Action Output Card (if direct 1-click button or workflow step was run) */}
+        {message.actionOutput && (
+          <div className="mb-2 w-full">
+            <ActionOutputCard
+              output={message.actionOutput}
+              onRepeat={
+                onExecuteAction
+                  ? () => onExecuteAction(message.actionOutput!.action, { target: message.actionOutput!.target })
+                  : undefined
+              }
+              onSaveToWorkflow={
+                onSaveToWorkflow
+                  ? () =>
+                      onSaveToWorkflow(
+                        `${message.actionOutput!.action} action`,
+                        message.actionOutput!.action,
+                        message.actionOutput!.target
+                      )
+                  : undefined
+              }
+            />
+          </div>
+        )}
+
         {/* Small model label + latency */}
         <div className="text-[12px] font-medium text-gray-400 mb-1 flex items-center gap-1.5 select-none">
           <span>{message.tierInfo?.name || "Gemini Nano"}</span>
@@ -132,7 +161,12 @@ export default function MessageBubble({
         {/* Decision Card (if calibrated choice alternatives exist) */}
         {message.decision && (
           <div className="mb-2 w-full">
-            <DecisionCard decision={message.decision} onSelectOption={onSelectOption} />
+            <DecisionCard
+              decision={message.decision}
+              onSelectOption={onSelectOption}
+              onExecuteAction={onExecuteAction}
+              onSaveToWorkflow={onSaveToWorkflow}
+            />
           </div>
         )}
 

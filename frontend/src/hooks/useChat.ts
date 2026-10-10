@@ -14,7 +14,10 @@ import { expertJudge, EvalMetrics, EvalTrace, AgentStepTrace } from "../lib/expe
 import { recipeStore, SiteMacroRecipe } from "../lib/recipeStore";
 import { pageActionInferer, PageAnalysisResult } from "../lib/pageActionInferer";
 import { sessionStore, ChatSession } from "../lib/sessionStore";
-import type { DecisionTrace } from "../lib/types";
+import type { DecisionTrace, ActionExecutionOutput } from "../lib/types";
+import { workflowRunner } from "../lib/workflowRunner";
+import { workflowStore } from "../lib/workflowStore";
+import { ensembleDecisionEngine } from "../lib/ensembleDecision";
 import type { Gemma4Config } from "../main";
 
 export interface DisplayMessage {
@@ -35,6 +38,7 @@ export interface DisplayMessage {
   isMacro?: boolean;
   durationMs?: number;
   decision?: DecisionTrace;
+  actionOutput?: ActionExecutionOutput;
 }
 
 export type EngineStatus = "idle" | "loading" | "ready" | "generating" | "error";
@@ -245,11 +249,102 @@ export function useChat(config: Gemma4Config) {
   }, [config.tools, config.systemPrompt, config.onToolCall, refreshEvalsData]);
 
   /**
+   * Execute a direct standalone action (from a button click or inline card)
+   * Guaranteed to always execute and append visible output telemetry to chat.
+   */
+  const executeDirectAction = useCallback(
+    async (actionName: string, args: Record<string, unknown> = {}) => {
+      const output = await workflowRunner.executeSingleAction(actionName, args);
+      const outputMsg: DisplayMessage = {
+        id: `act_${Date.now()}`,
+        role: "assistant",
+        actionOutput: output,
+        durationMs: output.durationMs,
+        tierInfo: currentTierInfo,
+      };
+      setMessages((prev) => [...prev, outputMsg]);
+      return output;
+    },
+    [currentTierInfo]
+  );
+
+  /**
+   * Run a saved multi-step automation workflow
+   */
+  const runSavedWorkflow = useCallback(
+    async (workflowId: string) => {
+      const workflows = await workflowStore.getWorkflowsForOrigin();
+      const wf = workflows.find((w) => w.id === workflowId);
+      if (!wf) return;
+
+      setIsLoading(true);
+      const startMsg: DisplayMessage = {
+        id: `wf_start_${Date.now()}`,
+        role: "assistant",
+        content: `Running workflow: **${wf.name}** (${wf.steps.length} steps)...`,
+        isMacro: true,
+      };
+      setMessages((prev) => [...prev, startMsg]);
+
+      const res = await workflowRunner.runWorkflow(wf, {
+        onStepUpdate: (idx, step) => {
+          if (step.output) {
+            const stepMsg: DisplayMessage = {
+              id: `wf_step_${Date.now()}_${idx}`,
+              role: "assistant",
+              actionOutput: {
+                id: `act_${Date.now()}_${idx}`,
+                action: step.action,
+                target: step.target || "page",
+                status: step.status === "error" ? "error" : "success",
+                outputSummary: step.output,
+                durationMs: step.delayMs || 250,
+                timestamp: Date.now(),
+              },
+            };
+            setMessages((prev) => [...prev, stepMsg]);
+          }
+        },
+      });
+
+      const finishMsg: DisplayMessage = {
+        id: `wf_end_${Date.now()}`,
+        role: "assistant",
+        content: res.success
+          ? `✓ Completed workflow **${wf.name}** (${wf.steps.length} steps executed deterministically with 0 tokens).`
+          : `✗ Workflow stopped with error: ${res.error}`,
+        isMacro: true,
+      };
+      setMessages((prev) => [...prev, finishMsg]);
+      setIsLoading(false);
+    },
+    []
+  );
+
+  /**
+   * Run multi-model ensemble consensus decision evaluation
+   */
+  const evaluateEnsembleDecision = useCallback(
+    async (goal: string, candidateActions: any[]) => {
+      return await ensembleDecisionEngine.evaluateEnsemble(goal, candidateActions);
+    },
+    []
+  );
+
+  /**
    * Execute task through Agent Harness Loop
    */
   const sendMessage = useCallback(
     async (content: string) => {
       if (!content.trim()) return;
+
+      // Check if user intent matches a saved automation workflow
+      const matchedWf = await workflowStore.findMatchingWorkflow("*", content);
+      if (matchedWf && !content.includes("?")) {
+        await runSavedWorkflow(matchedWf.id);
+        return;
+      }
+
       if (!escalationManagerRef.current || !harnessRef.current || engineStatus !== "ready") {
         setError("AI Engine is still loading. Please wait a moment.");
         return;
@@ -483,5 +578,8 @@ export function useChat(config: Gemma4Config) {
     createNewSession,
     switchSession,
     deleteSession,
+    executeDirectAction,
+    runSavedWorkflow,
+    evaluateEnsembleDecision,
   };
 }
