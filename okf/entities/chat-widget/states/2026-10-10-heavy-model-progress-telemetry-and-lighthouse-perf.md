@@ -2,10 +2,11 @@
 
 - **Date:** 2026-10-10
 - **Entity:** `chat-widget`
-- **Layer:** current
+- **Layer:** archived
 - **Version:** `0.1.9`
-- **Status:** Active / Production Deployed
+- **Status:** Superseded
 - **Valid_from:** 2026-10-10T03:05:00Z
+- **Valid_to:** 2026-10-10T03:55:00Z
 
 ## Summary
 The chat widget provides real-time download progress feedback (model name, percentage bar, downloaded/total MBs, cached indicator) across all heavy tiers (Laya System 1 at 524 MB, Gemma 4 E2B at 680 MB, SmolLM2 at 80 MB, MiniLM Router at 15 MB). Portfolio web application incorporates network-first service worker routing with Cache-Control headers ensuring instant webpage updates on refresh, deferred animations via `requestIdleCallback`, font preloading, and delayed idle prefetching, lifting Lighthouse score from 49 to 64 with 40ms Total Blocking Time and 0.003 Cumulative Layout Shift.
