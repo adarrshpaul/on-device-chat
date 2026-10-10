@@ -2,9 +2,10 @@
 
 - **Date:** 2026-10-10
 - **Entity:** `chat-widget`
-- **Layer:** current
+- **Layer:** archived
 - **Version:** `0.1.9`
-- **Status:** Active / Production Verified
+- **Status:** Superseded
+- **Valid_to:** 2026-10-10T03:05:00Z
 
 ## Summary
 The on-device chat widget and agent harness features SOTA browser navigation powered by an In-DOM Accessibility Tree Engine (`A11yTreeEngine`), Set-of-Marks visual overlay system (`SomOverlayManager`), synthetic human-like action dispatcher (`ActionDispatcher`), and OODA state delta verifier (`StateDeltaVerifier`). Models interact with web pages using resilient integer element IDs `[1..N]` rather than fragile CSS selectors, drastically cutting token cost and eliminating hallucinated selector errors.
