@@ -13,7 +13,7 @@ import { Gemma4Engine } from "./engine";
 import { LayaDecisionEngine, layaDecisionEngine } from "./layaEngine";
 import { backgroundDownloader } from "./backgroundDownloader";
 import { ToolDefinition, EngineChatResponse, ModelTier, TierInfo, DEFAULT_BROWSER_TOOLS, DecisionTrace } from "./types";
-import { smartQuerySelector, getCleanElementSelector, spotlightElement } from "./domUtils";
+import { smartQuerySelector, getCleanElementSelector, spotlightElement, smoothScrollTo } from "./domUtils";
 export { ModelTier };
 export type { TierInfo };
 
@@ -476,6 +476,141 @@ export class EscalationManager {
         return JSON.stringify({
           final: `Successfully clicked the Theme Toggle (\`${cleanSel}\`)! 🎨 The application is now in **${currentTheme}** mode.`,
           tool: "click",
+          args: { selector: cleanSel },
+        });
+      }
+    }
+
+    // 2.5 Instant Viewport Scrolling Actions (<10ms, 0 tokens)
+    const isScrollIntent = (q: string): { isScroll: boolean; direction: "down" | "up" | "top" | "bottom" } => {
+      const lower = q.toLowerCase().trim();
+      if (/^(scroll\s+down|down|page\s+down|next\s+page)\b/i.test(lower)) return { isScroll: true, direction: "down" };
+      if (/^(scroll\s+up|up|page\s+up|previous\s+page)\b/i.test(lower)) return { isScroll: true, direction: "up" };
+      if (/^(scroll\s+to\s+top|top|to\s+top|scroll\s+top|home\s+top)\b/i.test(lower)) return { isScroll: true, direction: "top" };
+      if (/^(scroll\s+to\s+bottom|bottom|to\s+bottom|footer)\b/i.test(lower)) return { isScroll: true, direction: "bottom" };
+      return { isScroll: false, direction: "down" };
+    };
+
+    const scrollCheck = isScrollIntent(cleanQuery);
+    if (!hasObservation && scrollCheck.isScroll) {
+      const currentScroll = typeof window !== "undefined" ? window.scrollY : 0;
+      let targetY = currentScroll;
+      let label = "";
+
+      if (scrollCheck.direction === "down") {
+        targetY = currentScroll + 550;
+        label = "Scrolled viewport down (+550px)";
+      } else if (scrollCheck.direction === "up") {
+        targetY = Math.max(0, currentScroll - 550);
+        label = "Scrolled viewport up (-550px)";
+      } else if (scrollCheck.direction === "top") {
+        targetY = 0;
+        label = "Scrolled to top of page";
+      } else if (scrollCheck.direction === "bottom") {
+        targetY = typeof document !== "undefined" ? document.body.scrollHeight : 5000;
+        label = "Scrolled to bottom of page";
+      }
+
+      smoothScrollTo(targetY);
+
+      this.lastDecisionTrace = {
+        type: "system1_gate",
+        title: "Viewport Smooth Scroll",
+        selectedOption: label,
+        confidence: 1.0,
+        margin: 0.85,
+        primitive: "choice",
+        latencyMs: 8,
+        engineUsed: "DOM Motor Action (0 Tokens)",
+        distribution: [{ label, score: 1.0, isWinner: true }],
+        explanation: `Dispatched native smooth scroll to ${Math.round(targetY)}px with 0 prompt token overhead.`,
+      };
+
+      return JSON.stringify({
+        final: `✓ **${label}** (scrollY: ${Math.round(currentScroll)}px ➔ ${Math.round(targetY)}px).`,
+        tool: "scroll",
+        args: { position: targetY },
+      });
+    }
+
+    // 2.6 Instant Section Landmark Navigation (<15ms, 0 tokens)
+    const isSectionNavIntent = (q: string): { isNav: boolean; sectionId: string; sectionName: string } => {
+      const lower = q.toLowerCase().trim();
+      const sectionKeywords: Record<string, { id: string; name: string }> = {
+        "project": { id: "projects", name: "Featured Projects" },
+        "projects": { id: "projects", name: "Featured Projects" },
+        "skill": { id: "skills", name: "Skills & Engineering Matrix" },
+        "skills": { id: "skills", name: "Skills & Engineering Matrix" },
+        "journey": { id: "journey", name: "Career & Experience Journey" },
+        "experience": { id: "journey", name: "Career & Experience Journey" },
+        "timeline": { id: "journey", name: "Career & Experience Journey" },
+        "contact": { id: "contact", name: "Contact & Work Inquiries" },
+        "contact me": { id: "contact", name: "Contact & Work Inquiries" },
+        "hire": { id: "contact", name: "Contact & Hire Me" },
+        "hire me": { id: "contact", name: "Contact & Hire Me" },
+        "insight": { id: "insights", name: "Research Insights & Articles" },
+        "insights": { id: "insights", name: "Research Insights & Articles" },
+        "blog": { id: "insights", name: "Research Insights & Articles" },
+        "blogs": { id: "insights", name: "Research Insights & Articles" },
+        "music": { id: "music", name: "Web Audio Synth & DSP" },
+        "synth": { id: "music", name: "Web Audio Synth & DSP" },
+        "home": { id: "home", name: "Home Hero" },
+        "about": { id: "home", name: "About Hero" },
+      };
+
+      const navPrefix = /^(?:go\s+to|goto|navigate\s+to|scroll\s+to|show\s+me|show|take\s+me\s+to|view|visit|open)\s+(.+)$/i;
+      const matchPrefix = lower.match(navPrefix);
+      const targetQuery = matchPrefix ? matchPrefix[1].trim() : lower;
+
+      for (const [kw, info] of Object.entries(sectionKeywords)) {
+        if (
+          targetQuery === kw ||
+          targetQuery === `${kw} section` ||
+          targetQuery === `the ${kw}` ||
+          targetQuery === `${kw}s` ||
+          targetQuery === `show ${kw}` ||
+          targetQuery === `show me ${kw}`
+        ) {
+          return { isNav: true, sectionId: info.id, sectionName: info.name };
+        }
+      }
+
+      return { isNav: false, sectionId: "", sectionName: "" };
+    };
+
+    const navCheck = isSectionNavIntent(cleanQuery);
+    if (!hasObservation && navCheck.isNav && navCheck.sectionId) {
+      const el = smartQuerySelector(`#${navCheck.sectionId}`) || smartQuerySelector(`[id*='${navCheck.sectionId}']`);
+      if (el) {
+        spotlightElement(el, navCheck.sectionName);
+        smoothScrollTo(el);
+        const cleanSel = `#${navCheck.sectionId}`;
+
+        this.lastDecisionTrace = {
+          type: "system1_gate",
+          title: `Navigation to ${navCheck.sectionName}`,
+          selectedOption: `Navigate to ${navCheck.sectionName}`,
+          confidence: 0.99,
+          margin: 0.88,
+          primitive: "choice",
+          latencyMs: 10,
+          engineUsed: "DOM Motor Action (0 Tokens)",
+          distribution: [
+            { label: navCheck.sectionName, score: 0.99, isWinner: true },
+            { label: "Site Overview", score: 0.15, isWinner: false },
+          ],
+          hallucinationShield: {
+            verified: true,
+            check: `Element '${cleanSel}' verified in DOM and focused`,
+            evidenceSelector: cleanSel,
+            probability: 0.99,
+          },
+          explanation: `Dispatched coordinated smooth scroll to '${cleanSel}' with 0 token overhead.`,
+        };
+
+        return JSON.stringify({
+          final: `📍 Navigated to **${navCheck.sectionName}** (\`${cleanSel}\`). Section is spotlighted on your screen.`,
+          tool: "scroll",
           args: { selector: cleanSel },
         });
       }

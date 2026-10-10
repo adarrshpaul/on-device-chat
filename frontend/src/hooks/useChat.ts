@@ -272,19 +272,27 @@ export function useChat(config: Gemma4Config) {
    * Run a saved multi-step automation workflow
    */
   const runSavedWorkflow = useCallback(
-    async (workflowId: string) => {
+    async (workflowId: string, fromUserQuery?: string) => {
       const workflows = await workflowStore.getWorkflowsForOrigin();
       const wf = workflows.find((w) => w.id === workflowId);
       if (!wf) return;
 
       setIsLoading(true);
-      const startMsg: DisplayMessage = {
+      const msgsToAdd: DisplayMessage[] = [];
+      if (fromUserQuery) {
+        msgsToAdd.push({
+          id: `user_${Date.now()}`,
+          role: "user",
+          content: fromUserQuery,
+        });
+      }
+      msgsToAdd.push({
         id: `wf_start_${Date.now()}`,
         role: "assistant",
-        content: `Running workflow: **${wf.name}** (${wf.steps.length} steps)...`,
+        content: `Executing workflow: **${wf.name}** (${wf.steps.length} steps)...`,
         isMacro: true,
-      };
-      setMessages((prev) => [...prev, startMsg]);
+      });
+      setMessages((prev) => [...prev, ...msgsToAdd]);
 
       const res = await workflowRunner.runWorkflow(wf, {
         onStepUpdate: (idx, step) => {
@@ -311,7 +319,7 @@ export function useChat(config: Gemma4Config) {
         id: `wf_end_${Date.now()}`,
         role: "assistant",
         content: res.success
-          ? `✓ Completed workflow **${wf.name}** (${wf.steps.length} steps executed deterministically with 0 tokens).`
+          ? `✓ Finished workflow **${wf.name}** (${wf.steps.length} steps completed deterministically with 0 prompt tokens).`
           : `✗ Workflow stopped with error: ${res.error}`,
         isMacro: true,
       };
@@ -341,7 +349,7 @@ export function useChat(config: Gemma4Config) {
       // Check if user intent matches a saved automation workflow
       const matchedWf = await workflowStore.findMatchingWorkflow("*", content);
       if (matchedWf && !content.includes("?")) {
-        await runSavedWorkflow(matchedWf.id);
+        await runSavedWorkflow(matchedWf.id, content);
         return;
       }
 

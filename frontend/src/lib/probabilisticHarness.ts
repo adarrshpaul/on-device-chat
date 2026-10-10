@@ -13,6 +13,7 @@
 
 import { parseHarnessDecision, HarnessToolCall } from "./harnessDecisionParser";
 import { smartQuerySelector, isWidgetElement } from "./domUtils";
+import { ActionDispatcher } from "./actionDispatcher";
 import { ToolDefinition } from "./types";
 
 export interface CandidateDecision {
@@ -137,19 +138,21 @@ export class ProbabilisticHarnessEngine {
       }
 
       if (action === "click" || action === "type" || action === "inspect") {
-        const selector = String(args.selector || "").trim();
+        const rawTarget = args.selector ?? args.target ?? args.targetId ?? args.id;
+        const selector = String(rawTarget || "").trim();
         if (!selector) {
-          return { score: 0.3, passed: false, reason: `Missing required 'selector' parameter for browse.${action}` };
+          return { score: 0.3, passed: false, reason: `Missing required target or selector for browse.${action}` };
         }
 
         // DOM grounding verification (if running in browser)
         if (domRoot) {
-          const el = smartQuerySelector(selector, domRoot);
+          const resolved = ActionDispatcher.resolveTarget(rawTarget);
+          const el = resolved.element || smartQuerySelector(selector, domRoot);
           if (!el) {
             return {
               score: 0.4,
               passed: false,
-              reason: `Target element selector '${selector}' was not found in active document DOM.`,
+              reason: `Target element '${selector}' was not found in active document DOM.`,
             };
           }
           if (isWidgetElement(el)) {

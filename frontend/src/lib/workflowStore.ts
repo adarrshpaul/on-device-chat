@@ -15,40 +15,48 @@ const STARTER_WORKFLOWS: WebWorkflow[] = [
   {
     id: "wf_portfolio_tour",
     name: "🚀 Full Portfolio Guided Tour",
-    description: "Step through the About hero, skills deck, featured projects, and contact footer.",
+    description: "Step through the Home hero, journey, skills deck, featured projects, and contact footer.",
     siteOrigin: "*",
     isSystemStarter: true,
     executionCount: 0,
     createdAt: Date.now(),
-    tags: ["tour", "navigation", "featured"],
-    triggerPhrase: "tour",
+    tags: ["portfolio tour", "site tour", "guided tour"],
+    triggerPhrase: "portfolio tour",
     steps: [
       {
         id: "step_1",
-        title: "Scroll to About Hero",
+        title: "Scroll to Home Hero",
         action: "scroll",
-        target: "#about",
+        target: "#home",
         delayMs: 400,
         status: "idle",
       },
       {
         id: "step_2",
-        title: "Inspect Core Skills & Engineering",
-        action: "teleport",
-        target: "skills",
+        title: "Explore Engineering Journey Timeline",
+        action: "scroll",
+        target: "#journey",
         delayMs: 500,
         status: "idle",
       },
       {
         id: "step_3",
-        title: "Navigate to Featured Projects Showcase",
-        action: "teleport",
-        target: "projects",
+        title: "Inspect Core Skills & Engineering Matrix",
+        action: "scroll",
+        target: "#skills",
         delayMs: 500,
         status: "idle",
       },
       {
         id: "step_4",
+        title: "Navigate to Featured Projects Showcase",
+        action: "scroll",
+        target: "#projects",
+        delayMs: 500,
+        status: "idle",
+      },
+      {
+        id: "step_5",
         title: "Open Contact & Work Inquiries",
         action: "scroll",
         target: "#contact",
@@ -59,18 +67,18 @@ const STARTER_WORKFLOWS: WebWorkflow[] = [
   },
   {
     id: "wf_ai_engram_deepdive",
-    name: "🧠 AI Architecture & Engram Deep Dive",
-    description: "Inspect the on-device multi-model harness and neural cognitive engrams.",
+    name: "🧠 AI Architecture & Systems Deep Dive",
+    description: "Inspect on-device AI models, cognitive engrams, and infrastructure.",
     siteOrigin: "*",
     isSystemStarter: true,
     executionCount: 0,
     createdAt: Date.now(),
-    tags: ["ai", "architecture", "engram"],
-    triggerPhrase: "architecture",
+    tags: ["ai deep dive", "architecture tour"],
+    triggerPhrase: "ai deep dive",
     steps: [
       {
         id: "step_1",
-        title: "Locate On-Device Chat Showcase",
+        title: "Locate Projects & AI Demos Showcase",
         action: "scroll",
         target: "#projects",
         delayMs: 400,
@@ -78,17 +86,17 @@ const STARTER_WORKFLOWS: WebWorkflow[] = [
       },
       {
         id: "step_2",
-        title: "Verify Decision Engine Presence",
-        action: "verify",
-        target: "[data-testid='decision-card'], #projects",
-        delayMs: 300,
+        title: "Inspect AI Systems & Cloudflare Infrastructure",
+        action: "scroll",
+        target: "#skills",
+        delayMs: 400,
         status: "idle",
       },
       {
         id: "step_3",
-        title: "Focus Music Web DSP / Rust Engine",
-        action: "teleport",
-        target: "music.paulcreates.online",
+        title: "Examine Technical Research & Insights",
+        action: "scroll",
+        target: "#insights",
         delayMs: 400,
         status: "idle",
       },
@@ -102,22 +110,30 @@ const STARTER_WORKFLOWS: WebWorkflow[] = [
     isSystemStarter: true,
     executionCount: 0,
     createdAt: Date.now(),
-    tags: ["ui", "theme", "contrast"],
-    triggerPhrase: "theme",
+    tags: ["contrast check", "theme check"],
+    triggerPhrase: "contrast check",
     steps: [
       {
         id: "step_1",
         title: "Check Navigation Bar Header",
         action: "verify",
-        target: "header, nav, [class*='navbar']",
+        target: "header .navbar, header, nav",
         delayMs: 300,
         status: "idle",
       },
       {
         id: "step_2",
-        title: "Verify Color Mode / Canvas Contrast",
+        title: "Toggle Theme Mode",
+        action: "click",
+        target: "button[aria-label*='theme' i]",
+        delayMs: 400,
+        status: "idle",
+      },
+      {
+        id: "step_3",
+        title: "Verify Color Contrast & Atmosphere",
         action: "verify",
-        target: "canvas, #about, body",
+        target: "#home, main, body",
         delayMs: 300,
         status: "idle",
       },
@@ -291,17 +307,35 @@ class WorkflowStoreImpl {
   }
 
   /**
-   * Find matching workflow by intent or trigger phrase
+   * Find matching workflow by intent or trigger phrase.
+   * Uses strict word boundary matching to avoid hijacking regular chat messages.
    */
   async findMatchingWorkflow(siteOrigin: string, phrase: string): Promise<WebWorkflow | null> {
     const list = await this.getWorkflowsForOrigin(siteOrigin);
     const lower = phrase.toLowerCase().trim();
 
+    // Check if this is an explicit workflow command
+    const isExplicitRunCommand = /^(?:run|start|execute|play|trigger)\s+(?:workflow\s+)?/i.test(lower);
+
     return (
       list.find((w) => {
-        if (w.triggerPhrase && lower.includes(w.triggerPhrase.toLowerCase())) return true;
-        if (w.name.toLowerCase().includes(lower)) return true;
-        return w.tags?.some((t) => lower.includes(t.toLowerCase())) ?? false;
+        // 1. Direct name match
+        const cleanName = w.name.replace(/^[^\w\s]+/, "").trim().toLowerCase();
+        if (isExplicitRunCommand && lower.includes(cleanName)) return true;
+
+        // 2. Strict trigger phrase match (whole phrase boundary)
+        if (w.triggerPhrase && w.triggerPhrase.length >= 4) {
+          const tp = w.triggerPhrase.toLowerCase();
+          const regex = new RegExp(`(^|\\b)${tp.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(\\b|$)`, "i");
+          if (regex.test(lower)) {
+            // Require the command to either be explicit or close to the trigger phrase length
+            if (isExplicitRunCommand || lower.length <= tp.length + 15) {
+              return true;
+            }
+          }
+        }
+
+        return false;
       }) || null
     );
   }

@@ -12,7 +12,7 @@
  */
 
 import { A11yTreeEngine } from "./a11yTree";
-import { smartQuerySelector } from "./domUtils";
+import { smartQuerySelector, smoothScrollTo } from "./domUtils";
 
 export interface TargetResolutionResult {
   element: HTMLElement | null;
@@ -96,9 +96,7 @@ export class ActionDispatcher {
     const element = target instanceof HTMLElement ? target : this.resolveTarget(target).element;
     if (!element) return false;
 
-    if (typeof element.scrollIntoView === "function") {
-      element.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
-    }
+    smoothScrollTo(element);
     await this.pause(50);
 
     // Mouse sequence: pointerdown -> mousedown -> pointerup -> mouseup -> click
@@ -124,7 +122,7 @@ export class ActionDispatcher {
   ): Promise<boolean> {
     const element = target instanceof HTMLElement ? target : this.resolveTarget(target).element;
     if (!element) return false;
-    element.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+    smoothScrollTo(element);
     await this.pause(30);
 
     element.focus();
@@ -213,9 +211,7 @@ export class ActionDispatcher {
     const element = target instanceof HTMLElement ? target : this.resolveTarget(target).element;
     if (!element) return false;
 
-    if (typeof element.scrollIntoView === "function") {
-      element.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
-    }
+    smoothScrollTo(element);
     await this.pause(30);
     element.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true, cancelable: true }));
     element.dispatchEvent(new MouseEvent("mouseover", { bubbles: true, cancelable: true }));

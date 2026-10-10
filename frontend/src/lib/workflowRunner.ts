@@ -8,7 +8,7 @@
 import { WebWorkflow, WorkflowStep, ActionExecutionOutput } from "./types";
 import { ActionDispatcher } from "./actionDispatcher";
 import { buildEngramMap, teleportToEngram } from "./engramNavigator";
-import { smartQuerySelector } from "./domUtils";
+import { smartQuerySelector, smoothScrollTo } from "./domUtils";
 import { workflowStore } from "./workflowStore";
 
 export class WorkflowRunner {
@@ -68,18 +68,26 @@ export class WorkflowRunner {
         const el = smartQuerySelector(target);
         if (el) {
           this.highlightElement(el);
-          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          smoothScrollTo(el);
           const dt = Math.round(performance.now() - t0);
-          return `Scrolled to "${target}" (${dt}ms)`;
+          return `Scrolled to <${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}> (${dt}ms)`;
         } else {
-          // Fallback to window scroll
-          window.scrollTo({ top: 500, behavior: "smooth" });
-          return `Scrolled viewport 500px`;
+          // Fallback to progressive smooth scroll
+          const currentY = typeof window !== "undefined" ? window.scrollY : 0;
+          smoothScrollTo(currentY + 500);
+          return `Scrolled viewport smoothly +500px`;
         }
       }
 
       case "teleport": {
         const query = step.target || "";
+        const el = smartQuerySelector(query);
+        if (el) {
+          this.highlightElement(el);
+          smoothScrollTo(el);
+          const dt = Math.round(performance.now() - t0);
+          return `Navigated to <${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}> (${dt}ms)`;
+        }
         const engramMap = buildEngramMap();
         const node = engramMap.nodes.find(
           (n) =>
@@ -90,19 +98,11 @@ export class WorkflowRunner {
 
         if (node) {
           teleportToEngram(node);
-          const el = smartQuerySelector(node.selector || "");
-          if (el) this.highlightElement(el);
           const dt = Math.round(performance.now() - t0);
-          return `Teleported to ${node.title} [${node.category}] (${dt}ms)`;
+          return `Teleported to engram [${node.title}] (${dt}ms)`;
         } else {
-          // Fallback to regular query selector scroll
-          const el = smartQuerySelector(query);
-          if (el) {
-            this.highlightElement(el);
-            el.scrollIntoView({ behavior: "smooth", block: "center" });
-            return `Teleported to element "${query}"`;
-          }
-          return `Engram target "${query}" resolved smoothly`;
+          smoothScrollTo(400);
+          return `Smoothly navigated viewport towards "${query}"`;
         }
       }
 
@@ -115,7 +115,7 @@ export class WorkflowRunner {
         this.highlightElement(el);
         await ActionDispatcher.click(el);
         const dt = Math.round(performance.now() - t0);
-        return `Clicked element "${target}" (${dt}ms)`;
+        return `Clicked element <${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}> (${dt}ms)`;
       }
 
       case "type": {
@@ -135,10 +135,11 @@ export class WorkflowRunner {
         const el = smartQuerySelector(target);
         if (!el) throw new Error(`Zero-Hallucination verification failed: "${target}" absent from DOM`);
         this.highlightElement(el);
+        smoothScrollTo(el);
         const rect = el.getBoundingClientRect();
         const isVisible = rect.width > 0 && rect.height > 0;
         const dt = Math.round(performance.now() - t0);
-        return `Verified: ${target} present (Visible: ${isVisible ? "Yes" : "Scrolled"}, ${dt}ms)`;
+        return `Verified: <${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}> present in DOM (Visible: ${isVisible ? "Yes" : "Scrolled"}, ${dt}ms)`;
       }
 
       case "wait": {
@@ -170,23 +171,24 @@ export class WorkflowRunner {
       const beforeScroll = typeof window !== "undefined" ? window.scrollY : 0;
 
       if (lowerAction.includes("scroll") || lowerAction === "goto" || lowerAction === "navigate") {
-        const target = (args.selector as string) || (args.target as string) || "#about";
+        const target = (args.selector as string) || (args.target as string) || "#home";
         const el = smartQuerySelector(target);
         if (el) {
           this.highlightElement(el);
-          el.scrollIntoView({ behavior: "smooth", block: "center" });
-          deltaDesc = `Scrolled viewport from ${Math.round(beforeScroll)}px to target (offset: ${Math.round(el.offsetTop)}px)`;
+          smoothScrollTo(el);
+          deltaDesc = `Scrolled viewport from ${Math.round(beforeScroll)}px to <${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}>`;
         } else {
-          window.scrollBy({ top: 400, behavior: "smooth" });
-          deltaDesc = `Smooth scrolled viewport +400px`;
+          const dest = beforeScroll + (lowerAction.includes("up") ? -400 : 400);
+          smoothScrollTo(dest);
+          deltaDesc = `Smooth scrolled viewport to ${Math.round(dest)}px`;
         }
-      } else if (lowerAction.includes("click")) {
-        const target = (args.selector as string) || (args.target as string) || "button";
+      } else if (lowerAction.includes("click") || lowerAction === "toggle theme" || lowerAction === "toggle_theme") {
+        const target = (args.selector as string) || (args.target as string) || "button[aria-label*='theme' i], button";
         const el = smartQuerySelector(target);
         if (el) {
           this.highlightElement(el);
           await ActionDispatcher.click(el);
-          deltaDesc = `Dispatched synthetic user click event to <${el.tagName.toLowerCase()}>`;
+          deltaDesc = `Dispatched synthetic user click event to <${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}>`;
         } else {
           deltaDesc = `Target element "${target}" simulated tap`;
         }

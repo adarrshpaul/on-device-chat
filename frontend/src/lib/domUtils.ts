@@ -270,11 +270,55 @@ export function smartQuerySelectorAll(rawSelector: string, root: ParentNode = do
 }
 
 /**
+ * Flawless Smooth Scroll to Element or Coordinate
+ * Coordinates with host smooth scroll libraries (Lenis, GSAP ScrollTrigger)
+ * or falls back to native smooth scrolling.
+ */
+export function smoothScrollTo(target: HTMLElement | number | string, offset = 0): boolean {
+  if (typeof window === "undefined") return false;
+
+  const lenis = (window as any).lenis;
+
+  // 1. Numeric coordinate target
+  if (typeof target === "number") {
+    const dest = Math.max(0, target + offset);
+    if (lenis && typeof lenis.scrollTo === "function") {
+      try {
+        lenis.scrollTo(dest, { immediate: false, duration: 1.0 });
+        return true;
+      } catch {}
+    }
+    window.scrollTo({ top: dest, behavior: "smooth" });
+    return true;
+  }
+
+  // 2. Element or selector target
+  const el = target instanceof HTMLElement ? target : smartQuerySelector(String(target));
+  if (!el || isWidgetElement(el)) return false;
+
+  if (lenis && typeof lenis.scrollTo === "function") {
+    try {
+      lenis.scrollTo(el, { offset, immediate: false, duration: 1.0 });
+      return true;
+    } catch {}
+  }
+
+  if (typeof el.scrollIntoView === "function") {
+    el.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+    return true;
+  }
+
+  const top = el.getBoundingClientRect().top + window.scrollY;
+  window.scrollTo({ top: Math.max(0, top + offset), behavior: "smooth" });
+  return true;
+}
+
+/**
  * Highlights a target DOM element with a smooth scroll and glowing spotlight overlay.
  */
 export function spotlightElement(el: HTMLElement, label?: string): void {
   try {
-    el.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+    smoothScrollTo(el);
     if (typeof (window as any).inspect === "function") {
       (window as any).inspect(el);
     }
