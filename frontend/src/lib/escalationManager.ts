@@ -55,6 +55,15 @@ export const TIER_METADATA: Record<ModelTier, TierInfo> = {
   },
 };
 
+export interface ModelProgressInfo {
+  active: boolean;
+  tier: ModelTier;
+  modelName: string;
+  size: string;
+  text: string;
+  percent: number;
+}
+
 export class EscalationManager {
   public currentTier: ModelTier = ModelTier.TIER_0_GEMINI_NANO;
   private tools: ToolDefinition[] = [];
@@ -72,20 +81,23 @@ export class EscalationManager {
 
   private onTierChange?: (newTier: TierInfo) => void;
   private onEscalationNotice?: (message: string) => void;
+  private onProgress?: (info: ModelProgressInfo) => void;
 
   constructor(options: {
     tools: ToolDefinition[];
     systemPrompt?: string;
     onTierChange?: (newTier: TierInfo) => void;
     onEscalationNotice?: (message: string) => void;
+    onProgress?: (info: ModelProgressInfo) => void;
   }) {
     this.tools = options.tools && options.tools.length > 0 ? options.tools : DEFAULT_BROWSER_TOOLS;
     this.systemPrompt = options.systemPrompt;
     this.onTierChange = options.onTierChange;
     this.onEscalationNotice = options.onEscalationNotice;
+    this.onProgress = options.onProgress;
 
-    // Start background prefetching 4s after page load
-    backgroundDownloader.startIdlePrefetch(4000);
+    // Start background prefetching only after 12s after page load so it never impacts initial page performance
+    backgroundDownloader.startIdlePrefetch(12000);
   }
 
   get currentTierInfo(): TierInfo {
@@ -121,34 +133,121 @@ export class EscalationManager {
   public async setTier(tier: ModelTier): Promise<void> {
     this.currentTier = tier;
     this.onTierChange?.(this.currentTierInfo);
+    const meta = TIER_METADATA[tier];
 
-    if (tier === ModelTier.TIER_0_GEMINI_NANO) {
-      if (!this.nanoEngine) {
-        const nano = new GeminiNanoEngine();
-        await nano.init(this.systemPrompt, this.tools);
-        this.nanoEngine = nano;
+    this.onProgress?.({
+      active: true,
+      tier,
+      modelName: meta.name,
+      size: meta.size,
+      text: `Initializing ${meta.name} (${meta.size})...`,
+      percent: 10,
+    });
+
+    try {
+      if (tier === ModelTier.TIER_0_GEMINI_NANO) {
+        if (!this.nanoEngine) {
+          const nano = new GeminiNanoEngine();
+          this.onProgress?.({
+            active: true,
+            tier,
+            modelName: meta.name,
+            size: meta.size,
+            text: "Connecting to Chrome Built-in Prompt API...",
+            percent: 50,
+          });
+          await nano.init(this.systemPrompt, this.tools);
+          this.nanoEngine = nano;
+        }
+      } else if (tier === ModelTier.TIER_1_MINILM_ROUTER) {
+        if (!this.compactEngine) {
+          this.compactEngine = new CompactEngine();
+        }
+        await this.compactEngine.initEmbedder((info) => {
+          this.onProgress?.({
+            active: true,
+            tier,
+            modelName: meta.name,
+            size: meta.size,
+            text: info.text,
+            percent: Math.round(info.progress * 100),
+          });
+        });
+      } else if (tier === ModelTier.TIER_1_5_LAYA_DECISION) {
+        if (!this.compactEngine) {
+          this.compactEngine = new CompactEngine();
+        }
+        await this.compactEngine.initEmbedder((info) => {
+          this.onProgress?.({
+            active: true,
+            tier,
+            modelName: meta.name,
+            size: meta.size,
+            text: `[1/2] ${info.text}`,
+            percent: Math.round(info.progress * 30),
+          });
+        });
+        await this.layaEngine.load((prog) => {
+          this.onProgress?.({
+            active: true,
+            tier,
+            modelName: meta.name,
+            size: meta.size,
+            text: `[2/2] Loading Laya Decision Head (~524 MB): ${Math.round(prog * 100)}%`,
+            percent: Math.round(30 + prog * 70),
+          });
+        });
+      } else if (tier === ModelTier.TIER_2_SMOLLM_GENERATIVE) {
+        if (!this.compactEngine) {
+          this.compactEngine = new CompactEngine();
+        }
+        await this.compactEngine.initEmbedder();
+        await this.compactEngine.loadGenerator((info) => {
+          this.onProgress?.({
+            active: true,
+            tier,
+            modelName: meta.name,
+            size: meta.size,
+            text: info.text,
+            percent: Math.round(info.progress * 100),
+          });
+        });
+      } else if (tier === ModelTier.TIER_3_GEMMA4_E2B) {
+        if (!this.gemmaEngine) {
+          this.gemmaEngine = new Gemma4Engine(undefined, {
+            onLoadProgress: (p) => {
+              this.onProgress?.({
+                active: true,
+                tier,
+                modelName: meta.name,
+                size: meta.size,
+                text: p.text || "Downloading WebGPU shader weights...",
+                percent: Math.round((p.progress || 0) * 100),
+              });
+            },
+          });
+          await this.gemmaEngine.load();
+        }
       }
-    } else if (tier === ModelTier.TIER_1_MINILM_ROUTER) {
-      if (!this.compactEngine) {
-        this.compactEngine = new CompactEngine();
-      }
-      await this.compactEngine.initEmbedder();
-    } else if (tier === ModelTier.TIER_1_5_LAYA_DECISION) {
-      if (!this.compactEngine) {
-        this.compactEngine = new CompactEngine();
-      }
-      await this.compactEngine.initEmbedder();
-    } else if (tier === ModelTier.TIER_2_SMOLLM_GENERATIVE) {
-      if (!this.compactEngine) {
-        this.compactEngine = new CompactEngine();
-      }
-      await this.compactEngine.initEmbedder();
-      await this.compactEngine.loadGenerator();
-    } else if (tier === ModelTier.TIER_3_GEMMA4_E2B) {
-      if (!this.gemmaEngine) {
-        this.gemmaEngine = new Gemma4Engine();
-        await this.gemmaEngine.load();
-      }
+
+      this.onProgress?.({
+        active: false,
+        tier,
+        modelName: meta.name,
+        size: meta.size,
+        text: `${meta.name} ready ⚡`,
+        percent: 100,
+      });
+    } catch (err) {
+      this.onProgress?.({
+        active: false,
+        tier,
+        modelName: meta.name,
+        size: meta.size,
+        text: err instanceof Error ? err.message : "Error loading model",
+        percent: 0,
+      });
+      throw err;
     }
   }
 

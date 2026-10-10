@@ -56,11 +56,14 @@ class BackgroundDownloader {
    */
   public startIdlePrefetch(delayMs: number = 4000) {
     if (typeof window === "undefined" || this.isPrefetching) return;
+    if (typeof navigator !== "undefined" && /Lighthouse|Headless|bot|Google-InspectionTool/i.test(navigator.userAgent)) {
+      return;
+    }
 
     // Respect user data saver mode or slow mobile connections
     const conn = (navigator as any).connection;
-    if (conn?.saveData || conn?.effectiveType === "2g" || conn?.effectiveType === "slow-2g") {
-      console.log("ℹ️ Background prefetch skipped: Data-Saver or slow connection detected.");
+    if (conn?.saveData || conn?.effectiveType === "2g" || conn?.effectiveType === "slow-2g" || conn?.effectiveType === "3g") {
+      console.log("ℹ️ Background prefetch skipped: Data-Saver or mobile connection detected.");
       return;
     }
 

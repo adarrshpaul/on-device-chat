@@ -29,6 +29,7 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
     sendMessage,
     engineStatus,
     currentTierInfo,
+    modelLoadingProgress,
     nanoSupported,
     activeSteps,
     setTier,
@@ -215,6 +216,7 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
             sessionsCount={sessionsList.length}
             canEscalate={canEscalate}
             showTierMenu={showTierMenu}
+            loadingProgress={modelLoadingProgress}
             onToggleTierMenu={() => setShowTierMenu(!showTierMenu)}
             onSelectTier={(tier) => {
               setTier(tier);
@@ -228,6 +230,36 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
           {/* Tab 1: Agent Chat */}
           {activeTab === "chat" && (
             <>
+              {/* Heavy Model Download Progress Banner */}
+              {modelLoadingProgress?.active && (
+                <div className="bg-[#0b1022] border-b border-indigo-500/40 p-3 text-xs text-indigo-200 flex flex-col gap-1.5 animate-in fade-in duration-150 select-none">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 font-medium min-w-0">
+                      <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse shrink-0" />
+                      <span className="text-white font-semibold truncate">
+                        Downloading {modelLoadingProgress.modelName}
+                      </span>
+                      <span className="text-[11px] text-indigo-300/80 font-mono shrink-0">
+                        ({modelLoadingProgress.size})
+                      </span>
+                    </div>
+                    <span className="font-mono text-indigo-300 font-bold shrink-0 ml-2">
+                      {Math.round(modelLoadingProgress.percent)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-900/90 rounded-full h-1.5 overflow-hidden border border-white/10">
+                    <div
+                      className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-full rounded-full transition-all duration-300 shadow-sm"
+                      style={{ width: `${Math.max(4, Math.min(100, modelLoadingProgress.percent))}%` }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-[10px] text-gray-400 font-mono">
+                    <span className="truncate">{modelLoadingProgress.text}</span>
+                    <span className="shrink-0 text-gray-500 ml-2">Persistent Cache</span>
+                  </div>
+                </div>
+              )}
+
               {/* Nano Help Banner (if Chrome AI unavailable) */}
               {!nanoSupported && showNanoHelp && (
                 <div className="bg-amber-950/70 border-b border-amber-800/50 p-2.5 text-[11px] text-amber-200 flex items-start justify-between gap-2">

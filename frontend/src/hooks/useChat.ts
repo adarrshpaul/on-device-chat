@@ -7,7 +7,7 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { EscalationManager, TierInfo, TIER_METADATA, ModelTier } from "../lib/escalationManager";
+import { EscalationManager, TierInfo, TIER_METADATA, ModelTier, ModelProgressInfo } from "../lib/escalationManager";
 import { backgroundDownloader, PreloadProgress } from "../lib/backgroundDownloader";
 import { AgentHarness } from "../lib/agentHarness";
 import { expertJudge, EvalMetrics, EvalTrace, AgentStepTrace } from "../lib/expertJudge";
@@ -48,6 +48,7 @@ export function useChat(config: Gemma4Config) {
   const [engineStatus, setEngineStatus] = useState<EngineStatus>("loading");
   const [currentTierInfo, setCurrentTierInfo] = useState<TierInfo>(TIER_METADATA[ModelTier.TIER_0_GEMINI_NANO]);
   const [prefetchStatus, setPrefetchStatus] = useState<PreloadProgress | null>(null);
+  const [modelLoadingProgress, setModelLoadingProgress] = useState<ModelProgressInfo | null>(null);
   const [nanoSupported, setNanoSupported] = useState<boolean>(false);
   const [nanoDiagnostic, setNanoDiagnostic] = useState<string>("");
 
@@ -170,6 +171,7 @@ export function useChat(config: Gemma4Config) {
       tools: config.tools || [],
       systemPrompt: config.systemPrompt,
       onTierChange: (tier) => setCurrentTierInfo(tier),
+      onProgress: (info) => setModelLoadingProgress(info),
       onEscalationNotice: (notice) => {
         setMessages((prev) => [
           ...prev,
@@ -459,6 +461,7 @@ export function useChat(config: Gemma4Config) {
     engineStatus,
     currentTierInfo,
     prefetchStatus,
+    modelLoadingProgress,
     nanoSupported,
     nanoDiagnostic,
     activeSteps,

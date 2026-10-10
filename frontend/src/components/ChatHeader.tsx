@@ -10,7 +10,7 @@ import {
   Award,
   ShieldCheck,
 } from "lucide-react";
-import { ModelTier, TierInfo, TIER_METADATA } from "../lib/escalationManager";
+import { ModelTier, TierInfo, TIER_METADATA, ModelProgressInfo } from "../lib/escalationManager";
 
 export type WidgetTab = "chat" | "navigator" | "history" | "evals";
 
@@ -21,6 +21,7 @@ interface ChatHeaderProps {
   sessionsCount?: number;
   canEscalate?: boolean;
   showTierMenu: boolean;
+  loadingProgress?: ModelProgressInfo | null;
   onToggleTierMenu: () => void;
   onSelectTier: (tier: ModelTier) => void;
   onEscalate: () => void;
@@ -35,6 +36,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   sessionsCount = 0,
   canEscalate = false,
   showTierMenu,
+  loadingProgress,
   onToggleTierMenu,
   onSelectTier,
   onEscalate,
@@ -250,6 +252,26 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
               </button>
             );
           })}
+        </div>
+      )}
+
+      {/* Heavy Model Download Progress Bar */}
+      {loadingProgress?.active && (
+        <div className="absolute -bottom-[22px] inset-x-0 bg-[#0d1222] border-b border-indigo-500/40 px-3 py-0.5 z-40 flex flex-col gap-0.5 shadow-lg animate-in fade-in slide-in-from-top-1 duration-150">
+          <div className="flex items-center justify-between text-[10px] font-mono leading-tight">
+            <span className="truncate flex items-center gap-1.5 min-w-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-ping shrink-0" />
+              <span className="text-indigo-300 font-semibold shrink-0">{loadingProgress.modelName}</span>
+              <span className="text-gray-400 truncate">{loadingProgress.text}</span>
+            </span>
+            <span className="text-indigo-300 font-bold shrink-0 ml-2">{Math.round(loadingProgress.percent)}%</span>
+          </div>
+          <div className="w-full bg-gray-800/90 rounded-full h-[3px] overflow-hidden">
+            <div
+              className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-full rounded-full transition-all duration-200"
+              style={{ width: `${Math.max(3, Math.min(100, loadingProgress.percent))}%` }}
+            />
+          </div>
         </div>
       )}
     </div>
