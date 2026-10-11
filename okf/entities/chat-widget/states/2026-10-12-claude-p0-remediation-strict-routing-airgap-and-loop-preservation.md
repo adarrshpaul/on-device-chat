@@ -1,8 +1,8 @@
 ---
 id: state_claude_p0_remediation_strict_routing_airgap_and_loop_preservation
-layer: current
+layer: historical
 valid_from: 2026-10-12T02:25:00Z
-valid_to: null
+valid_to: 2026-10-12T02:30:00Z
 entity: chat-widget
 ---
 
