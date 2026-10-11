@@ -19,7 +19,8 @@ export interface InFlightStepTrace {
   durationMs: number;
 }
 
-const STORAGE_KEY = "g4_inflight_agent_task";
+const PRIMARY_STORAGE_KEY = "eo_inflight_agent_task";
+const LEGACY_STORAGE_KEY = "g4_inflight_agent_task";
 const MAX_TASK_AGE_MS = 90_000; // 90 seconds timeout for page loads
 
 export interface InFlightTaskState {
@@ -46,7 +47,9 @@ export class NavPersistenceManager {
         ...task,
         createdAt: Date.now(),
       };
-      window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      const serialized = JSON.stringify(payload);
+      window.sessionStorage.setItem(PRIMARY_STORAGE_KEY, serialized);
+      window.sessionStorage.setItem(LEGACY_STORAGE_KEY, serialized);
     } catch (err) {
       console.warn("[NavPersistence] Failed to serialize in-flight task to sessionStorage:", err);
     }
@@ -58,7 +61,7 @@ export class NavPersistenceManager {
   static getPendingTask(): InFlightTaskState | null {
     try {
       if (typeof window === "undefined" || !window.sessionStorage) return null;
-      const raw = window.sessionStorage.getItem(STORAGE_KEY);
+      const raw = window.sessionStorage.getItem(PRIMARY_STORAGE_KEY) || window.sessionStorage.getItem(LEGACY_STORAGE_KEY);
       if (!raw) return null;
 
       const task = JSON.parse(raw) as InFlightTaskState;
@@ -82,7 +85,8 @@ export class NavPersistenceManager {
   static clearTask(): void {
     try {
       if (typeof window === "undefined" || !window.sessionStorage) return;
-      window.sessionStorage.removeItem(STORAGE_KEY);
+      window.sessionStorage.removeItem(PRIMARY_STORAGE_KEY);
+      window.sessionStorage.removeItem(LEGACY_STORAGE_KEY);
     } catch {
       // ignore
     }

@@ -1,8 +1,8 @@
 ---
 id: state_universal_cross_application_css_isolation_and_storage_immunity
-layer: current
+layer: history
 valid_from: 2026-10-11T18:00:00Z
-valid_to: null
+valid_to: 2026-10-11T22:00:00Z
 entity: chat-widget
 ---
 

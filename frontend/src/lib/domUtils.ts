@@ -7,7 +7,7 @@
 
 export function isWidgetElement(el: Element | null): boolean {
   if (!el) return false;
-  return !!el.closest?.("[data-g4-widget], .g4-widget-container, #gemma4-widget-root, #chat-widget, #g4-agent-spotlight");
+  return !!el.closest?.("[data-eo-widget], [data-g4-widget], .eo-widget-container, .g4-widget-container, #edge-operator-root, #gemma4-widget-root, #chat-widget, #eo-agent-spotlight, #g4-agent-spotlight");
 }
 
 /**

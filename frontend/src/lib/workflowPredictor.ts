@@ -39,7 +39,7 @@ export class WorkflowPredictor {
 
     // Candidate 1: Interactive Canvas / WebGL Game Autopilot
     const canvas = document.querySelector<HTMLCanvasElement>("canvas");
-    if (canvas && !canvas.closest?.("[data-g4-widget='true']")) {
+    if (canvas && !canvas.closest?.("[data-eo-widget='true'], [data-g4-widget='true']")) {
       candidates.push({
         id: `wf_pred_game_${Date.now()}`,
         name: `🎮 Play Game Autopilot`,
@@ -65,7 +65,7 @@ export class WorkflowPredictor {
     // Candidate 2: Prominent Interactive Action Buttons (play, start, add to cart, search, etc.)
     const actionButtons = Array.from(document.querySelectorAll("button, input[type='submit'], [role='button'], a.btn"))
       .filter((b) => {
-        if (b.closest?.("[data-g4-widget='true']")) return false;
+        if (b.closest?.("[data-eo-widget='true'], [data-g4-widget='true']")) return false;
         const rect = b.getBoundingClientRect();
         if (rect.width === 0 || rect.height === 0) return false;
         const txt = (b.textContent || b.getAttribute("aria-label") || (b as HTMLInputElement).value || "").trim();
@@ -98,11 +98,83 @@ export class WorkflowPredictor {
       });
     });
 
+    // Candidate 2.5: Industrial OT WBM Commit Actions (Set Values, Apply, Save to switch, Save to NVM, Commit)
+    const otCommitButtons = Array.from(document.querySelectorAll("button, input[type='submit'], input[type='button'], [role='button'], a.btn"))
+      .filter((b) => {
+        if (b.closest?.("[data-eo-widget='true'], [data-g4-widget='true']")) return false;
+        const rect = b.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) return false;
+        const txt = (b.textContent || b.getAttribute("aria-label") || (b as HTMLInputElement).value || "").trim();
+        return txt.length >= 3 && txt.length <= 32 && /^(?:set values|apply|save to switch|save configuration|save to nvm|save to flash|save & apply|save and apply|commit|write to eeprom|write to flash|save values|commit values|refresh values|apply changes|store to flash)\b/i.test(txt);
+      })
+      .slice(0, 2) as HTMLElement[];
+
+    otCommitButtons.forEach((btn, idx) => {
+      const rawText = (btn.textContent || btn.getAttribute("aria-label") || (btn as HTMLInputElement).value || "Commit").trim();
+      const cleanLabel = rawText.replace(/^[\p{Emoji}\p{Symbol}\s]+/u, "").slice(0, 22);
+      candidates.push({
+        id: `wf_pred_ot_commit_${idx}_${Date.now()}`,
+        name: `💾 Commit Configuration (${cleanLabel})`,
+        description: `Verified commit of configuration parameters to device memory (${cleanLabel}).`,
+        siteOrigin: host,
+        executionCount: 0,
+        createdAt: Date.now(),
+        tags: ["commit", "industrial", "wbm", "save", cleanLabel.toLowerCase()],
+        triggerPhrase: `commit ${cleanLabel.toLowerCase()}`,
+        steps: [
+          {
+            id: "step_1",
+            title: `Commit via ${cleanLabel}`,
+            action: "click",
+            target: getCleanElementSelector(btn),
+            delayMs: 800,
+            status: "idle",
+          },
+        ],
+      });
+    });
+
+    // Candidate 2.6: Industrial OT WBM Left-Tree Navigation Links
+    const treeNavLinks = Array.from(document.querySelectorAll("nav a, aside a, .tree a, .menu a, [role='tree'] [role='treeitem'], table td a"))
+      .filter((a) => {
+        if (a.closest?.("[data-eo-widget='true'], [data-g4-widget='true']")) return false;
+        const rect = a.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) return false;
+        const txt = (a.textContent || a.getAttribute("aria-label") || "").trim();
+        return txt.length >= 3 && txt.length <= 25 && /^(?:system|security|passwords|layer 2|layer 3|vlan|telecontrol|diagnostics|maintenance|load & save|load\/save|profinet|sntp|ethernet\/ip)\b/i.test(txt);
+      })
+      .slice(0, 3) as HTMLElement[];
+
+    treeNavLinks.forEach((navLink, idx) => {
+      const linkText = (navLink.textContent || navLink.getAttribute("aria-label") || "Section").trim();
+      const cleanSection = linkText.replace(/^[\p{Emoji}\p{Symbol}\s]+/u, "").slice(0, 20);
+      candidates.push({
+        id: `wf_pred_ot_nav_${idx}_${Date.now()}`,
+        name: `🗂️ Configure ${cleanSection}`,
+        description: `Navigate to ${cleanSection} configuration tree in device WBM.`,
+        siteOrigin: host,
+        executionCount: 0,
+        createdAt: Date.now(),
+        tags: ["navigation", "wbm", cleanSection.toLowerCase()],
+        triggerPhrase: `go to ${cleanSection.toLowerCase()}`,
+        steps: [
+          {
+            id: "step_1",
+            title: `Open ${cleanSection} Menu`,
+            action: "click",
+            target: getCleanElementSelector(navLink),
+            delayMs: 600,
+            status: "idle",
+          },
+        ],
+      });
+    });
+
     // Candidate 3: Verified File / Document Download
     const downloadEl = document.querySelector(
       "a[download], a[href*='resume' i], a[href*='cv' i], a[href*='.pdf' i], a[href*='.zip' i]"
     ) as HTMLElement | null;
-    if (downloadEl && !downloadEl.closest?.("[data-g4-widget='true']")) {
+    if (downloadEl && !downloadEl.closest?.("[data-eo-widget='true'], [data-g4-widget='true']")) {
       const rawText = (downloadEl.textContent || downloadEl.getAttribute("aria-label") || "File Download").trim();
       const cleanLabel = rawText.replace(/^[\p{Emoji}\p{Symbol}\s]+/u, "").slice(0, 24);
       candidates.push({
@@ -134,7 +206,7 @@ export class WorkflowPredictor {
     const submitBtn = document.querySelector(
       "button[type='submit'], input[type='submit'], form button"
     ) as HTMLElement | null;
-    if (messageInput && submitBtn && !messageInput.closest?.("[data-g4-widget='true']")) {
+    if (messageInput && submitBtn && !messageInput.closest?.("[data-eo-widget='true'], [data-g4-widget='true']")) {
       const btnLabel = (submitBtn.textContent || submitBtn.getAttribute("aria-label") || "Submit Form").trim().replace(/^[\p{Emoji}\p{Symbol}\s]+/u, "").slice(0, 20);
       candidates.push({
         id: `wf_pred_contact_${Date.now()}`,
@@ -162,7 +234,7 @@ export class WorkflowPredictor {
     const landmarks = Array.from(document.querySelectorAll("section[id], h2[id], div[id], [role='region'][id]"))
       .filter((el) => {
         const id = el.id.toLowerCase();
-        return !el.closest?.("[data-g4-widget='true']") && id.length >= 3 && !/^(header|footer|nav|root|app)$/i.test(id);
+        return !el.closest?.("[data-eo-widget='true'], [data-g4-widget='true']") && id.length >= 3 && !/^(header|footer|nav|root|app)$/i.test(id);
       })
       .slice(0, 4) as HTMLElement[];
     if (landmarks.length >= 2) {
@@ -195,7 +267,7 @@ export class WorkflowPredictor {
     const searchInput = document.querySelector(
       "input[type='search'], input[placeholder*='search' i], input[id*='search' i]"
     ) as HTMLElement | null;
-    if (searchInput && !searchInput.closest?.("[data-g4-widget='true']")) {
+    if (searchInput && !searchInput.closest?.("[data-eo-widget='true'], [data-g4-widget='true']")) {
       candidates.push({
         id: `wf_pred_search_${Date.now()}`,
         name: `🔍 Focus Search & Filter`,
@@ -220,7 +292,7 @@ export class WorkflowPredictor {
 
     // Candidate 7: Interactive Guided Tour across all detected sections
     const allSections = Array.from(document.querySelectorAll("section[id], [role='region'][id]"))
-      .filter((s) => (s as HTMLElement).id && !s.closest?.("[data-g4-widget='true']"))
+      .filter((s) => (s as HTMLElement).id && !s.closest?.("[data-eo-widget='true'], [data-g4-widget='true']"))
       .slice(0, 5) as HTMLElement[];
     if (allSections.length >= 2) {
       candidates.push({
@@ -247,7 +319,7 @@ export class WorkflowPredictor {
     const themeBtn = document.querySelector(
       "button[aria-label*='theme' i], button[title*='theme' i], [data-theme-toggle], .theme-toggle"
     ) as HTMLElement | null;
-    if (themeBtn && !themeBtn.closest?.("[data-g4-widget='true']")) {
+    if (themeBtn && !themeBtn.closest?.("[data-eo-widget='true'], [data-g4-widget='true']")) {
       candidates.push({
         id: `wf_pred_theme_${Date.now()}`,
         name: `🎨 Toggle Dark/Light Theme`,

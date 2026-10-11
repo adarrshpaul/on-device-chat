@@ -1,11 +1,11 @@
 /**
- * On-Device Browser Agent • Background Service Worker (Manifest V3)
+ * EdgeOperator • Background Service Worker (Manifest V3)
  * Handles global shortcuts, context menus, and active tab messaging.
  */
 
 // Initialize extension defaults on install
 chrome.runtime.onInstalled.addListener(() => {
-  console.log("[OnDeviceAgent] Background service worker initialized.");
+  console.log("[EdgeOperator] Background service worker initialized.");
 
   // Set default settings
   chrome.storage.sync.get(["autoInject", "defaultOpen"], (res) => {
@@ -20,7 +20,7 @@ chrome.runtime.onInstalled.addListener(() => {
   // Setup right-click Context Menus
   chrome.contextMenus.create({
     id: "g4_ask_agent",
-    title: "Ask On-Device AI Agent",
+    title: "Ask EdgeOperator",
     contexts: ["page", "selection", "link"]
   });
 

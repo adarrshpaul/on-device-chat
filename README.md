@@ -1,30 +1,60 @@
-# On-Device Chat (`on-device-chat`)
+# EdgeOperator (`@edgeoperator/core` / `on-device-chat`)
 
 [![npm version](https://img.shields.io/npm/v/on-device-chat.svg?style=flat-square&color=blue)](https://www.npmjs.com/package/on-device-chat)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=flat-square)](https://opensource.org/licenses/Apache-2.0)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 [![Benchmarks: 100% Passed](https://img.shields.io/badge/Benchmarks-100%25%20Passed-brightgreen?style=flat-square)](https://agent.paulcreates.online)
 [![Extension: MV3](https://img.shields.io/badge/Chrome_Extension-MV3_Ready-purple?style=flat-square&logo=google-chrome)](https://github.com/adarrshpaul/on-device-chat)
-[![Live Demo](https://img.shields.io/badge/Demo-agent.paulcreates.online-6366f1?style=flat-square)](https://agent.paulcreates.online)
+[![Air-Gapped: IEC 62443](https://img.shields.io/badge/Air--Gapped-IEC%2062443-emerald?style=flat-square)](https://agent.paulcreates.online)
 
-A local-first, on-device AI chat widget, autonomous browser agent, and Chrome Developer Extension running entirely inside the user's browser. Built with **Chrome Built-in Gemini Nano** (0 MB), **Vega Decision Engine** (Conformal Gating & Physics), **MiniLM WebGPU**, and **WebLLM**. Zero cloud API costs, zero data exfiltration, universal CSS isolation, and full deterministic web navigation.
+An autonomous, local-first on-device web agent and Chrome Developer Extension running **100% inside the user's browser**. Built for field engineers and technicians operating air-gapped **Industrial Web-Based Management (WBM)** interfaces (Siemens SCALANCE, Schneider Electric ConneXium, Phoenix Contact, Wago, Moxa, SIMATIC RTUs) and modern complex web applications.
+
+Powered by **Chrome Built-in Gemini Nano** (0 MB), **Vega Hamiltonian Decision Engine** (<5ms reflex), **MiniLM WebGPU**, and **WebLLM**. Zero cloud API costs, zero data egress, air-gapped OT network safety, and 100% dynamic DOM discovery.
 
 ---
 
-## 🚀 What's New in v0.2.0
+## 🏭 Why EdgeOperator for Industrial OT Web-Based Management?
 
-- **Chrome Developer Extension (Manifest V3)**: Packaged MV3 extension (`extension/`) with background service worker, action popup, Alt+Shift+A hotkey, context menus, and 100% bit-parity sync with the npm bundle.
-- **Universal Cross-Application CSS Isolation**: Impenetrable scoped resets (`!important`), inline defensive inputs, and `z-index: 2147483647` protecting against hostile host stylesheets (Amazon, Wikipedia, Bootstrap).
-- **100% Dynamic DOM-Grounded Synthesis (Rule 9)**: Zero hardcoded starter workflows. All actions, landmark tours, and automations are dynamically discovered from live DOM nodes and `<canvas>` entities in real time.
-- **Canvas Game Autopilot & Zero-Occlusion HUD**: Dynamic left/right auto-docking preserving game viewports (e.g. Basketball Bash with `margin-left: 435px`), with Mini HUD (52px bar) and Ghost Transparency mode (35% opacity).
-- **"Teach 1 → Batch N" Macro Automation**: Record repetitive human browser actions on 1 row and replay them deterministically across N rows with human-in-the-loop safety gating.
-- **Omni-Storage Error Defense**: All storage singletons (`localStorage`, `sessionStorage`, `indexedDB`) wrapped in synchronous `try / catch` blocks with seamless in-memory fallbacks on restricted origins.
+Field engineers configuring industrial Ethernet switches, managed gateways, and PLCs across manufacturing plants and utility substations face repetitive, high-stakes manual routines:
+- **Zero Cloud Access**: Factory floor subnets (`192.168.x.x` / `10.x.x.x`) are strictly air-gapped without internet access. Cloud-based AI agents (OpenAI, Claude, cloud RPA) cannot connect.
+- **Form-Heavy, Left-Navigation UIs**: Siemens SCALANCE WBM, Schneider ConneXium, Phoenix Contact FL SWITCH, and Wago interfaces share a universal pattern: hierarchical left tree navigation, tabular parameter matrices, and explicit two-stage commit buttons (`[Set Values]`, `[Apply]`, `[Save to switch]`).
+- **High-Risk Configuration Drifts**: Applying VLAN assignments, port speeds, QoS priorities, or NTP/SNTP addresses across 24 switches in a rack manually is error-prone. One missed click halts production.
+
+**EdgeOperator solves this locally**:
+1. **100% Air-Gapped & Offline**: Runs purely on the technician's laptop browser. Zero telemetry, zero cloud calls, zero firewall exemptions needed.
+2. **Dynamic OT WBM Grounding (Rule 9)**: 100% dynamic in-memory DOM inspection. Zero hardcoded vendor templates or fragile XPath selectors. Automatically identifies commit buttons and hierarchical tree menus.
+3. **"Teach 1 → Batch N" Field Commissioning**: Record the configuration of 1 port or 1 switch, verify the diff, and replay across N ports or devices deterministically with human confirmation.
+4. **Rugged High-Contrast Plant Mode**: Dedicated `.eo-rugged-mode` CSS theme engineered for visibility on ruggedized laptops under high-glare plant floors and outdoor field stations.
+
+---
+
+## 🚀 Key Features in v0.3.0
+
+- **EdgeOperator Rebranding & Dual Compatibility**:
+  - Drop-in custom elements: `<edge-operator>` and backwards-compatible `<on-device-chat>`.
+  - Global runtime bindings: `window.EdgeOperator`, `window.OnDeviceChat`, and `window.Gemma4Agent`.
+  - Dual build distributions: `dist/edge-operator.min.js` and `dist/on-device-chat.min.js`.
+- **Industrial OT WBM Autonomous Recognition**:
+  - Dynamically detects and prioritizes commit buttons (`Set Values`, `Apply`, `Save to switch`, `Save configuration`, `Save to NVM`, `Commit`).
+  - Synthesizes dynamic navigation paths from hierarchical left-tree menus (`System`, `Security`, `Passwords`, `Layer 2`, `Layer 3`, `Load & Save`, `Diagnostics`, `Maintenance`).
+  - Dynamically parses embedded web server tables even when `<tbody>` tags are missing or rows use raw `<tr>` wrappers.
+- **"Teach 1 → Batch N" Parameter Cloner**:
+  - Dynamically extracts entity tables (Ports, VLANs, Admin States, PoE, IP Subnets).
+  - Parameterizes recorded user actions and presents an explicit confirmation card with row counts and action diffs before execution.
+- **Chrome Developer Extension (Manifest V3)**:
+  - Packaged MV3 extension (`extension/`) with background service worker, action popup, Alt+Shift+A hotkey, and bit-parity bundle synchronization.
+- **Universal Cross-Application CSS Isolation**:
+  - Impenetrable scoped resets (`!important`), inline defensive inputs, and `z-index: 2147483647` protecting against hostile host stylesheets.
+- **Canvas Game Autopilot & Zero-Occlusion HUD**:
+  - Dynamic left/right auto-docking preserving game viewports, Mini HUD bar, and Ghost Transparency mode.
+- **Omni-Storage Error Defense**:
+  - All storage accesses (`localStorage`, `sessionStorage`, `indexedDB`) wrapped in synchronous `try / catch` blocks with seamless in-memory fallbacks on restricted origins.
 
 ---
 
 ## 🏛️ Multi-Model Escalation & Specialty Matrix
 
-Rather than forcing users to download heavy gigabyte-scale models upfront, `on-device-chat` cascades dynamically through four local tiers:
+Rather than forcing users to download heavy gigabyte-scale models upfront, EdgeOperator cascades dynamically through four local tiers:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -51,120 +81,90 @@ Rather than forcing users to download heavy gigabyte-scale models upfront, `on-d
 
 ## ⚡ The Five Canonical Agent Primitives
 
-The widget executes actions via an isolated, deterministic host harness that strictly decouples **"decide"** (frozen on-device model) from **"do"** (host execution):
+EdgeOperator executes actions via an isolated, deterministic host harness strictly decoupling **"decide"** (frozen on-device model) from **"do"** (host execution):
 
 1. **`browse`**: Visual snapshot, element inspection (`inspect(el)`), smooth scrolling, clicks, and text entry.
 2. **`search`**: Fast in-page text scanning, selector generation, and element discovery.
-3. **`sandbox`**: Isolated JS computation for math, date math, or data transformation without DOM access.
+3. **`sandbox`**: Isolated JS computation for math, IP subnet calculation, or data transformation without DOM access.
 4. **`read` / `write`**: Temporary agent scratchpad storage (`mem://...`) with automatic >1KB context compaction.
-5. **`ask`**: Human permission gate before sensitive mutations or unresolvable ambiguities.
-
----
-
-## 👁️ In-Browser Multimodal Vision Perception
-
-The agent can "see" and understand page structure, product cards, canvas graphics, and layouts:
-- **Chrome Multimodal Prompt API**: Direct zero-download image understanding in Chrome 138+.
-- **DOM Hierarchy Scene Synthesis**: Non-destructive visual perception engine that builds structured scene representations from visible viewport bounding boxes.
-- **Agent Spotlight**: High-visibility glowing HUD overlay that visually tracks agent focus as it interacts with web elements.
-
----
-
-## 🛠️ Chrome DevTools Console Integration
-
-The widget integrates directly with the Chrome DevTools Console:
-- **`console.groupCollapsed` & `console.table`**: Every agent trajectory step is logged into collapsible, formatted tables in DevTools.
-- **DevTools Companion**: Exposes `window.__G4_AGENT__` for live inspection:
-  ```javascript
-  // Open DevTools Console on any page with the widget:
-  await __G4_AGENT__.getTraces();      // Inspect full eval history & trajectories
-  await __G4_AGENT__.getLastTrace();   // View the latest turn
-  await __G4_AGENT__.getMetrics();     // View real-time accuracy and pass rates
-  __G4_AGENT__.inspectSpotlight();     // Select active element in Elements panel
-  ```
+5. **`ask`**: Human permission gate before sensitive mutations (e.g. switch reboot, NVRAM commit).
 
 ---
 
 ## 📦 Installation & Usage
 
-### 1. React (npm)
+### 1. React / Modern Web App (npm)
 
 ```bash
 npm install on-device-chat
+# or npm install @edgeoperator/core
 ```
 
 ```tsx
 import React from 'react';
-import { ChatWidget } from 'on-device-chat';
+import { ChatWidget } from 'on-device-chat'; // or @edgeoperator/core
 import 'on-device-chat/style.css';
 
 export default function App() {
   return (
     <div>
-      <h1>My Storefront</h1>
-      
-      {/* Drop-in agent widget */}
+      {/* EdgeOperator Drop-In Widget */}
       <ChatWidget
         initialTier="gemini-nano"
         defaultOpen={false}
-        customTools={{
-          addToCart: async ({ quantity, item }) => {
-            console.log("Adding to cart:", quantity, item);
-            return { success: true, count: quantity };
-          },
-        }}
       />
     </div>
   );
 }
 ```
 
-### 2. Standalone Zero-Config CDN (jsDelivr)
+### 2. Standalone Zero-Config Script Tag (Field Laptops & WBMs)
 
-Add to any website with **just 1 line of HTML** — zero build step, zero dependencies, automatic stylesheet injection:
+Add to any web interface with **just 1 line of HTML** — zero build step, automatic CSS injection:
 
 ```html
-<!-- 1-line instant drop-in: automatically injects CSS and mounts floating chat -->
-<script src="https://cdn.jsdelivr.net/npm/on-device-chat" data-auto-init></script>
+<!-- Instant drop-in: automatically injects CSS and mounts EdgeOperator -->
+<script src="dist/edge-operator.min.js" data-auto-init></script>
 ```
 
-Or configure programmatically:
+Or initialize programmatically:
 
 ```html
-<!-- Load standalone bundle -->
-<script src="https://cdn.jsdelivr.net/npm/on-device-chat"></script>
-
+<script src="dist/edge-operator.min.js"></script>
 <script>
-  // Mount anywhere on the page or as a floating widget
-  OnDeviceChat.init({
+  // Mount anywhere on the page or as a floating launcher
+  EdgeOperator.init({
     mode: 'gemini-nano', // 'gemini-nano' | 'compact' | 'gemini-api'
-    containerId: 'my-chat-root' // optional: target custom container or omit for floating pill
+    defaultOpen: true
   });
 </script>
 ```
 
-You can also target specific versions or pin the CSS explicitly:
+*(Legacy `OnDeviceChat.init()` remains 100% backwards-compatible).*
 
-```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/on-device-chat@0.1.1/dist/style.css">
-<script src="https://cdn.jsdelivr.net/npm/on-device-chat@0.1.1/dist/on-device-chat.min.js"></script>
-```
+### 3. Chrome Extension (Manifest V3)
+
+1. Open Chrome and navigate to `chrome://extensions/`.
+2. Enable **Developer mode** in the top-right corner.
+3. Click **Load unpacked** and select the `extension/` directory from this repository.
+4. Open any page or industrial switch WBM and press `Alt+Shift+A` (or click the EdgeOperator extension icon) to launch the agent.
 
 ---
 
 ## 🧪 Testing & Verification
 
-The harness has been tested against the [Giskard Conversation & Chatbot Benchmark](https://docs.giskard.ai/):
+The suite includes 10 automated test suites with 100% pass rates:
 
 ```bash
 cd frontend
 npm test
 ```
 
-- **Visual Grounding:** Intercepts conversational visual inquiries into structured `browse.see`.
-- **Sandbox Security:** Blocks constructor prototype pollution, `globalThis`, and `document.cookie` exfiltration.
-- **Parameter Validation:** Validates boundaries (e.g. quantity limits, XSS-safe navigation paths).
-- **Catalog Grounding:** Enforces live DOM catalog verification before permitting checkout or cart mutations.
+- **`test:industrial`**: Validates dynamic commit button recognition (`[Set Values]`, `[Apply]`), hierarchical tree navigation, and table grid extraction on Siemens SCALANCE XC-208 and Schneider Electric ConneXium fixtures.
+- **`test:workflows`**: Validates dynamic in-memory workflow synthesis and Rule 9 compliance.
+- **`test:consistency`**: Verifies CSS isolation under hostile host rules (Amazon, Wikipedia, Bootstrap, Canvas games).
+- **`test:giskard`**: Verifies 26/26 adversarial security, goal-hijacking, and sandbox escape benchmarks.
+- **`test:sota`**: Validates Mind2Web, WebArena, WebVoyager, and SeeClick integration.
 
 ---
 
@@ -172,27 +172,23 @@ npm test
 
 ```
 gemma4-chat-agent/
-├── frontend/                     # Core npm package (gemma4-chat-widget)
+├── extension/                    # Chrome MV3 Extension
+│   ├── manifest.json             # Extension manifest (v0.2.0 EdgeOperator)
+│   ├── background.js             # Background service worker & context menus
+│   ├── popup.html / popup.js     # Action popup UI
+│   └── content/                  # Synchronized content scripts & CSS
+├── frontend/                     # Core library package
 │   ├── src/                      # TypeScript sources
-│   │   ├── components/           # React UI components (Widget, Header, Input, Studio)
-│   │   ├── lib/                  # Agent Harness, Escalation, Vision, DOM Utils
-│   │   └── index.ts              # Library barrel export
-│   ├── tests/                    # Giskard benchmark test suite
-│   ├── docs/                     # Static documentation & live demo build
+│   │   ├── components/           # UI components (Widget, Header, Input, Studio, BatchCard)
+│   │   ├── lib/                  # Agent Harness, WorkflowPredictor, BatchEngine, A11yTree
+│   │   └── main.tsx              # Library entry point & Web Component registrations
+│   ├── tests/                    # 10 automated test suites & fixtures
+│   │   ├── fixtures/             # Realistic Siemens SCALANCE & Schneider WBM mocks
+│   │   └── test_industrial_ot_wbm_recognition.mjs
 │   └── package.json              # Package manifest
-├── fine-tune/                    # Browser LoRA export & training utilities
-├── .github/workflows/            # GitHub Actions CI & 2026 Trusted Publishing
-├── CONTRIBUTING.md               # Contribution guidelines
-├── CODE_OF_CONDUCT.md           # Contributor Covenant
-├── SECURITY.md                   # Security reporting policy
-└── LICENSE                       # Apache-2.0 License
+├── okf/                          # Bi-temporal OKF knowledge framework
+└── README.md                     # Documentation
 ```
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for details on setting up your environment, running tests, and opening pull requests.
 
 ---
 

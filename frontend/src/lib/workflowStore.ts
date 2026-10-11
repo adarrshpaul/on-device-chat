@@ -263,7 +263,7 @@ class WorkflowStoreImpl {
 
   private sanitizeLocalStorage(): void {
     try {
-      const raw = localStorage.getItem("g4_saved_workflows");
+      const raw = localStorage.getItem("eo_saved_workflows") || localStorage.getItem("g4_saved_workflows");
       if (raw) {
         const parsed = JSON.parse(raw) as WebWorkflow[];
         // Filter out any legacy static starters, fallbacks, or site-hardcoded starters
@@ -275,7 +275,9 @@ class WorkflowStoreImpl {
             !w.id.startsWith("wf_pred_showcase_") &&
             !w.id.startsWith("wf_ai_engram_")
         );
-        localStorage.setItem("g4_saved_workflows", JSON.stringify(userOnly));
+        const serialized = JSON.stringify(userOnly);
+        localStorage.setItem("eo_saved_workflows", serialized);
+        localStorage.setItem("g4_saved_workflows", serialized);
       }
     } catch {
       // ignore
@@ -284,7 +286,7 @@ class WorkflowStoreImpl {
 
   private loadFromLocalStorage(): void {
     try {
-      const raw = localStorage.getItem("g4_saved_workflows");
+      const raw = localStorage.getItem("eo_saved_workflows") || localStorage.getItem("g4_saved_workflows");
       if (raw) {
         const parsed = JSON.parse(raw) as WebWorkflow[];
         const userOnly = parsed.filter(
@@ -305,7 +307,9 @@ class WorkflowStoreImpl {
   private syncToLocalStorage(): void {
     try {
       const arr = Array.from(this.memoryCache.values()).filter((w) => !w.isSystemStarter);
-      localStorage.setItem("g4_saved_workflows", JSON.stringify(arr));
+      const serialized = JSON.stringify(arr);
+      localStorage.setItem("eo_saved_workflows", serialized);
+      localStorage.setItem("g4_saved_workflows", serialized);
     } catch {
       // ignore
     }

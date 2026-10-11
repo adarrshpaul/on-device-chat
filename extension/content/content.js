@@ -1,19 +1,19 @@
 /**
- * On-Device Browser Agent • Content Script Wrapper
- * Bridges host webpage DOM with on-device-chat engine and extension popups/shortcuts.
+ * EdgeOperator • Content Script Wrapper
+ * Bridges host webpage DOM with EdgeOperator engine and extension popups/shortcuts.
  */
 
 (function () {
-  console.log("[OnDeviceAgent] Content script loaded on:", window.location.hostname);
+  console.log("[EdgeOperator] Content script loaded on:", window.location.hostname);
 
   let isInitialized = false;
 
   // 1. Ensure Extension Stylesheet is Injected Locally (Zero CDN Dependency)
   function injectLocalStyles() {
-    if (document.getElementById("on-device-chat-styles")) return;
+    if (document.getElementById("edge-operator-styles") || document.getElementById("on-device-chat-styles")) return;
 
     const link = document.createElement("link");
-    link.id = "on-device-chat-styles";
+    link.id = "edge-operator-styles";
     link.rel = "stylesheet";
     link.href = chrome.runtime.getURL("content/style.css");
     (document.head || document.documentElement).appendChild(link);
@@ -24,26 +24,34 @@
     if (isInitialized) return;
     injectLocalStyles();
 
-    if (typeof window.OnDeviceChat === "undefined") {
-      console.warn("[OnDeviceAgent] window.OnDeviceChat not yet available.");
+    const agent = window.EdgeOperator || window.OnDeviceChat;
+    if (typeof agent === "undefined") {
+      console.warn("[EdgeOperator] window.EdgeOperator / window.OnDeviceChat not yet available.");
       return;
     }
 
     try {
-      window.OnDeviceChat.init({
-        containerId: "gemma4-widget-root",
-        defaultOpen: options.defaultOpen ?? false,
-      });
+      if (window.EdgeOperator) {
+        window.EdgeOperator.init({
+          containerId: "edge-operator-root",
+          defaultOpen: options.defaultOpen ?? false,
+        });
+      } else {
+        window.OnDeviceChat.init({
+          containerId: "edge-operator-root",
+          defaultOpen: options.defaultOpen ?? false,
+        });
+      }
       isInitialized = true;
-      console.log("[OnDeviceAgent] Agent widget successfully mounted.");
+      console.log("[EdgeOperator] EdgeOperator widget successfully mounted.");
     } catch (err) {
-      console.error("[OnDeviceAgent] Error initializing agent:", err);
+      console.error("[EdgeOperator] Error initializing agent:", err);
     }
   }
 
   // 3. Toggle Widget Open/Close
   function toggleWidget() {
-    const launcher = document.querySelector("#g4-floating-launcher, .g4-launcher-button, button[aria-label='Toggle AI Assistant'], button[aria-label='Open On-Device AI Chat']");
+    const launcher = document.querySelector("#eo-floating-launcher, #g4-floating-launcher, .eo-launcher-button, .g4-launcher-button, button[aria-label='Toggle AI Assistant'], button[aria-label='Open On-Device AI Chat'], button[aria-label='Open EdgeOperator']");
     if (launcher) {
       launcher.click();
       return true;
@@ -60,8 +68,9 @@
 
   // 4. Start Dynamic Macro Recording ("Teach 1 → Batch N")
   function startMacroRecording() {
-    if (window.OnDeviceChat && window.OnDeviceChat.MacroRecorder) {
-      window.OnDeviceChat.MacroRecorder.startRecording();
+    const agent = window.EdgeOperator || window.OnDeviceChat;
+    if (agent && agent.MacroRecorder) {
+      agent.MacroRecorder.startRecording();
       return { success: true };
     }
     return { success: false, error: "MacroRecorder not available" };
@@ -72,17 +81,18 @@
     let entitiesCount = 0;
     let isRecording = false;
 
-    if (window.OnDeviceChat && window.OnDeviceChat.EntityExtractor) {
+    const agent = window.EdgeOperator || window.OnDeviceChat;
+    if (agent && agent.EntityExtractor) {
       try {
-        const entities = window.OnDeviceChat.EntityExtractor.extractEntities();
+        const entities = agent.EntityExtractor.extractEntities();
         entitiesCount = entities.length;
       } catch (e) {
-        console.warn("[OnDeviceAgent] Could not count entities:", e);
+        console.warn("[EdgeOperator] Could not count entities:", e);
       }
     }
 
-    if (window.OnDeviceChat && window.OnDeviceChat.MacroRecorder) {
-      isRecording = window.OnDeviceChat.MacroRecorder.isRecording();
+    if (agent && agent.MacroRecorder) {
+      isRecording = agent.MacroRecorder.isRecording();
     }
 
     return {

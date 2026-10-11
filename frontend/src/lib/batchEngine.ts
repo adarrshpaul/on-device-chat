@@ -43,10 +43,11 @@ export class EntityExtractor {
     }
 
     // 2. Strategy A: Structured Table Rows (E-commerce orders, inventory, device tables, ERP rows)
-    const tableRows = document.querySelectorAll("table tbody tr");
+    const tableRows = document.querySelectorAll("table tbody tr, table tr");
     if (tableRows.length > 0) {
       tableRows.forEach((tr, idx) => {
         const el = tr as HTMLElement;
+        if (el.querySelector("th") && !el.querySelector("td")) return; // Skip pure header row
         const text = el.textContent?.trim() || "";
         if (!text || text.length < 2) return;
 
@@ -60,7 +61,11 @@ export class EntityExtractor {
         const status = statusEl?.textContent?.trim() || this.inferStatusFromText(text);
 
         const id = el.id || el.getAttribute("data-id") || `row_${idx + 1}`;
-        const selector = el.id ? `#${el.id}` : `table tbody tr:nth-child(${idx + 1})`;
+        const table = el.closest("table");
+        const tableId = table?.id ? `#${table.id} ` : table?.closest("main, form, [role='main']") ? `${table.closest("main, form, [role='main']")!.tagName.toLowerCase()} table ` : "";
+        const hasTbody = Boolean(table?.querySelector("tbody"));
+        const rowPath = hasTbody ? `tbody tr:nth-child(${idx + 1})` : `tr:nth-child(${idx + 1})`;
+        const selector = el.id ? `#${el.id}` : `${tableId}${rowPath}`.trim();
 
         if (!seenNames.has(cleanName)) {
           seenNames.add(cleanName);

@@ -46,7 +46,7 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
   const [dockPosition, setDockPosition] = useState<"left" | "right">(() => {
     try {
       if (typeof window !== "undefined" && window.localStorage) {
-        const saved = window.localStorage.getItem("g4_dock_position");
+        const saved = window.localStorage.getItem("eo_dock_position") || window.localStorage.getItem("g4_dock_position");
         if (saved === "left" || saved === "right") return saved;
       }
     } catch {}
@@ -67,7 +67,7 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
   const [showPermissionBanner, setShowPermissionBanner] = useState<boolean>(() => {
     try {
       if (typeof window !== "undefined" && window.localStorage) {
-        return window.localStorage.getItem("g4_ondevice_model_permission") === null;
+        return (window.localStorage.getItem("eo_ondevice_model_permission") || window.localStorage.getItem("g4_ondevice_model_permission")) === null;
       }
     } catch {}
     return false;
@@ -77,7 +77,7 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      const saved = localStorage.getItem("g4_dock_position");
+      const saved = localStorage.getItem("eo_dock_position") || localStorage.getItem("g4_dock_position");
       if (!saved) {
         const canvas = document.querySelector("canvas");
         if (canvas && window.innerWidth >= 800) {
@@ -96,6 +96,7 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
     setDockPosition((prev) => {
       const next = prev === "right" ? "left" : "right";
       try {
+        localStorage.setItem("eo_dock_position", next);
         localStorage.setItem("g4_dock_position", next);
       } catch {}
       return next;
@@ -425,16 +426,17 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
 
   return (
     <div
+      data-eo-widget="true"
       data-g4-widget="true"
-      className={`g4-widget-container fixed z-[2147483647] pointer-events-auto transition-all ${
+      className={`eo-widget-container g4-widget-container fixed z-[2147483647] pointer-events-auto transition-all ${
         isOpen
           ? isCompactMode
             ? dockPosition === "left"
               ? "bottom-4 left-4 sm:bottom-6 sm:left-6 flex flex-col items-start"
               : "bottom-4 right-4 sm:bottom-6 sm:right-6 flex flex-col items-end"
             : dockPosition === "left"
-            ? "g4-is-open bottom-0 left-0 right-0 sm:inset-auto sm:bottom-6 sm:left-6 flex flex-col items-start"
-            : "g4-is-open bottom-0 left-0 right-0 sm:inset-auto sm:bottom-6 sm:right-6 flex flex-col items-end"
+            ? "eo-is-open g4-is-open bottom-0 left-0 right-0 sm:inset-auto sm:bottom-6 sm:left-6 flex flex-col items-start"
+            : "eo-is-open g4-is-open bottom-0 left-0 right-0 sm:inset-auto sm:bottom-6 sm:right-6 flex flex-col items-end"
           : dockPosition === "left"
           ? "bottom-4 left-4 sm:bottom-6 sm:left-6 flex flex-col items-start"
           : "bottom-4 right-4 sm:bottom-6 sm:right-6 flex flex-col items-end"
@@ -449,7 +451,7 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
             <div className="flex flex-col min-w-0">
               <span className="font-semibold text-white text-[12px] truncate leading-tight">
-                {isLoading ? "⚡ AI Agent Executing..." : "🏀 AI Copilot Active"}
+                {isLoading ? "⚡ EdgeOperator Executing..." : "🏀 EdgeOperator Active"}
               </span>
               <span className="text-[10px] text-gray-400 truncate leading-tight">
                 {currentTierInfo.name} · Game & Canvas Visible
@@ -656,6 +658,7 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
                               <button
                                 onClick={async () => {
                                   try {
+                                    localStorage.setItem("eo_ondevice_model_permission", "granted");
                                     localStorage.setItem("g4_ondevice_model_permission", "granted");
                                   } catch {}
                                   setShowPermissionBanner(false);
@@ -670,6 +673,7 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
                               <button
                                 onClick={() => {
                                   try {
+                                    localStorage.setItem("eo_ondevice_model_permission", "declined");
                                     localStorage.setItem("g4_ondevice_model_permission", "declined");
                                   } catch {}
                                   setShowPermissionBanner(false);
@@ -1111,17 +1115,18 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
       {!isOpen && (
         <button
           id="g4-floating-launcher"
+          data-eo-launcher="true"
           onClick={() => {
             setIsOpen(true);
             setIsCompactMode(false);
           }}
-          className="g4-launcher-button relative group text-white rounded-[8px] flex items-center gap-2 cursor-pointer"
-          title="Open On-Device AI Assistant"
+          className="eo-launcher-button g4-launcher-button relative group text-white rounded-[8px] flex items-center gap-2 cursor-pointer"
+          title="Open EdgeOperator"
         >
           <div className="w-4 h-4 flex items-center justify-center shrink-0">
             <Sparkles size={15} />
           </div>
-          <span className="font-semibold text-xs pr-1 tracking-tight">AI Assistant</span>
+          <span className="font-semibold text-xs pr-1 tracking-tight">EdgeOperator</span>
           <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#0b0f19] shadow-[0_0_6px_rgba(52,211,153,0.9)]" />
         </button>
       )}

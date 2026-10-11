@@ -84,9 +84,11 @@ if (!fs.existsSync(srcJs) || !fs.existsSync(srcCss)) {
 
 // 5. Copy Bundles to Extension
 const destJs = path.resolve(contentDir, "on-device-chat.min.js");
+const destEdgeOpJs = path.resolve(contentDir, "edge-operator.min.js");
 const destCss = path.resolve(contentDir, "style.css");
 
 fs.copyFileSync(srcJs, destJs);
+fs.copyFileSync(srcJs, destEdgeOpJs);
 fs.copyFileSync(srcCss, destCss);
 
 // 6. Verify Checksum Parity

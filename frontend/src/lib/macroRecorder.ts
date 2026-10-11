@@ -8,6 +8,7 @@
 
 import type { WorkflowStep, BatchEntityItem, BatchProposal } from "./types";
 import { BatchProposalManager } from "./batchEngine";
+import { isWidgetElement } from "./domUtils";
 
 export interface RecordedDomAction {
   type: "click" | "input" | "change";
@@ -40,7 +41,7 @@ export class MacroRecorder {
     if (!target) return;
 
     // Ignore clicks inside chat widget or floating banners
-    if (target.closest("#gemma4-widget-root") || target.closest(".g4-widget-container") || target.closest("#g4-macro-recorder-banner")) {
+    if (isWidgetElement(target) || target.closest("#g4-macro-recorder-banner, #eo-macro-recorder-banner")) {
       return;
     }
 
@@ -53,7 +54,7 @@ export class MacroRecorder {
     const target = e.target as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
     if (!target) return;
 
-    if (target.closest("#gemma4-widget-root") || target.closest(".g4-widget-container") || target.closest("#g4-macro-recorder-banner")) {
+    if (isWidgetElement(target) || target.closest("#g4-macro-recorder-banner, #eo-macro-recorder-banner")) {
       return;
     }
 
@@ -448,6 +449,8 @@ export class MacroRecorder {
 
     this.bannerEl = document.createElement("div");
     this.bannerEl.id = "g4-macro-recorder-banner";
+    this.bannerEl.setAttribute("data-eo-widget", "true");
+    this.bannerEl.setAttribute("data-g4-widget", "true");
     this.bannerEl.style.cssText = `
       position: fixed;
       top: 16px;

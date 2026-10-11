@@ -13,8 +13,9 @@ import { StateDeltaVerifier } from "./lib/stateDeltaVerifier";
 import { AgentHarness } from "./lib/agentHarness";
 import { MacroRecorder } from "./lib/macroRecorder";
 import { BatchRunner, EntityExtractor, BatchProposalManager } from "./lib/batchEngine";
+import { WorkflowPredictor } from "./lib/workflowPredictor";
 
-export interface Gemma4Config {
+export interface EdgeOperatorConfig {
   /** DOM element ID to mount into (auto-created if missing) */
   containerId?: string;
   /** Whether the chat widget starts open (defaults to true when data-auto-init is used) */
@@ -29,11 +30,13 @@ export interface Gemma4Config {
   onToolCall?: (name: string, args: Record<string, unknown>) => Promise<unknown>;
   /** Optional Gemini API config (when mode='gemini-api' or for fallback) */
   geminiConfig?: GeminiApiConfig;
-  /** Optional WebLLM model ID when using mode='webllm' */
+  /** Optional WebLLm model ID when using mode='webllm' */
   webllmModelId?: string;
 }
 
-class Gemma4AgentImpl {
+export type Gemma4Config = EdgeOperatorConfig;
+
+class EdgeOperatorImpl {
   private root: ReturnType<typeof createRoot> | null = null;
   private container: HTMLElement | null = null;
 
@@ -42,24 +45,24 @@ class Gemma4AgentImpl {
    * Auto-selects between Chrome Gemini Nano (0 MB), Compact In-Browser Router (~15 MB),
    * or Gemini API.
    */
-  init(config: Gemma4Config = {}) {
+  init(config: EdgeOperatorConfig = {}) {
     if (this.root) {
-      console.warn("OnDeviceChat is already initialized.");
+      console.warn("EdgeOperator is already initialized.");
       return;
     }
 
     // Auto-inject CSS stylesheet from jsDelivr if not already present in document
-    if (typeof document !== "undefined" && !document.getElementById("on-device-chat-styles")) {
+    if (typeof document !== "undefined" && !document.getElementById("edge-operator-styles") && !document.getElementById("on-device-chat-styles")) {
       const link = document.createElement("link");
-      link.id = "on-device-chat-styles";
+      link.id = "edge-operator-styles";
       link.rel = "stylesheet";
-      link.href = "https://cdn.jsdelivr.net/npm/on-device-chat/dist/style.css";
+      link.href = "https://cdn.jsdelivr.net/npm/edge-operator/dist/style.css";
       document.head.appendChild(link);
     }
 
-    const containerId = config.containerId || "gemma4-widget-root";
+    const containerId = config.containerId || "edge-operator-root";
 
-    this.container = document.getElementById(containerId);
+    this.container = document.getElementById(containerId) || document.getElementById("gemma4-widget-root");
     if (!this.container) {
       this.container = document.createElement("div");
       this.container.id = containerId;
@@ -79,7 +82,7 @@ class Gemma4AgentImpl {
     if (this.root && this.container) {
       this.root.unmount();
       this.root = null;
-      if (this.container.id === "gemma4-widget-root") {
+      if (this.container.id === "edge-operator-root" || this.container.id === "gemma4-widget-root") {
         this.container.remove();
       }
       this.container = null;
@@ -88,7 +91,7 @@ class Gemma4AgentImpl {
 }
 
 // Export singleton to global scope for <script> embedding
-const instance = new Gemma4AgentImpl();
+const instance = new EdgeOperatorImpl();
 Object.assign(instance, {
   A11yTreeEngine,
   SomOverlayManager,
@@ -99,9 +102,11 @@ Object.assign(instance, {
   BatchRunner,
   EntityExtractor,
   BatchProposalManager,
+  WorkflowPredictor,
 });
 
 if (typeof window !== "undefined") {
+  (window as any).EdgeOperator = instance;
   (window as any).OnDeviceChat = instance;
   (window as any).Gemma4Agent = instance; // Backwards compatibility
   (window as any).A11yTreeEngine = A11yTreeEngine;
@@ -113,77 +118,83 @@ if (typeof window !== "undefined") {
   (window as any).BatchRunner = BatchRunner;
   (window as any).EntityExtractor = EntityExtractor;
   (window as any).BatchProposalManager = BatchProposalManager;
+  (window as any).WorkflowPredictor = WorkflowPredictor;
 
   /**
-   * Standard Web Component Custom Element: <on-device-chat>
+   * Standard Web Component Custom Element: <edge-operator> and <on-device-chat>
    * Implements Shadow DOM and Slots per W3C Web Components specifications:
    * - <slot name="header"> : Custom branded header slot
    * - <slot name="launcher"> : Custom floating trigger button slot
    * - Encapsulates styles and DOM tree from host framework collisions
    */
-  if (typeof customElements !== "undefined" && !customElements.get("on-device-chat")) {
-    class OnDeviceChatElement extends HTMLElement {
-      private shadow: ShadowRoot;
-      private mountPoint: HTMLDivElement;
-      private reactRoot: ReturnType<typeof createRoot> | null = null;
+  if (typeof customElements !== "undefined" && typeof HTMLElement !== "undefined") {
+    class EdgeOperatorElement extends HTMLElement {
+    private shadow: ShadowRoot;
+    private mountPoint: HTMLDivElement;
+    private reactRoot: ReturnType<typeof createRoot> | null = null;
 
-      constructor() {
-        super();
-        this.shadow = this.attachShadow({ mode: "open" });
+    constructor() {
+      super();
+      this.shadow = this.attachShadow({ mode: "open" });
 
-        // Slot projection container
-        this.shadow.innerHTML = `
-          <style>
-            :host {
-              display: block;
-              position: relative;
-              z-index: 2147483647;
-            }
-          </style>
-          <div id="shadow-mount-point"></div>
-        `;
-        this.mountPoint = this.shadow.querySelector("#shadow-mount-point") as HTMLDivElement;
-      }
-
-      connectedCallback() {
-        const defaultOpen = this.getAttribute("default-open") === "true";
-        const mode = (this.getAttribute("tier") || this.getAttribute("mode")) as any;
-
-        // Inject widget stylesheet into ShadowRoot
-        const externalStyle = document.getElementById("on-device-chat-styles");
-        if (externalStyle && externalStyle.tagName === "STYLE" && externalStyle.textContent) {
-          const styleEl = document.createElement("style");
-          styleEl.textContent = externalStyle.textContent;
-          this.shadow.appendChild(styleEl);
-        } else {
-          const link = document.createElement("link");
-          link.rel = "stylesheet";
-          link.href = (externalStyle as HTMLLinkElement)?.href || "https://cdn.jsdelivr.net/npm/on-device-chat/dist/style.css";
-          this.shadow.appendChild(link);
-        }
-
-        this.reactRoot = createRoot(this.mountPoint);
-        this.reactRoot.render(
-          <React.StrictMode>
-            <ChatWidget
-              config={{
-                defaultOpen,
-                mode,
-              }}
-            />
-          </React.StrictMode>
-        );
-      }
-
-      disconnectedCallback() {
-        if (this.reactRoot) {
-          this.reactRoot.unmount();
-          this.reactRoot = null;
-        }
-      }
+      // Slot projection container
+      this.shadow.innerHTML = `
+        <style>
+          :host {
+            display: block;
+            position: relative;
+            z-index: 2147483647;
+          }
+        </style>
+        <div id="shadow-mount-point"></div>
+      `;
+      this.mountPoint = this.shadow.querySelector("#shadow-mount-point") as HTMLDivElement;
     }
 
-    customElements.define("on-device-chat", OnDeviceChatElement);
+    connectedCallback() {
+      const defaultOpen = this.getAttribute("default-open") === "true";
+      const mode = (this.getAttribute("tier") || this.getAttribute("mode")) as any;
+
+      // Inject widget stylesheet into ShadowRoot
+      const externalStyle = document.getElementById("edge-operator-styles") || document.getElementById("on-device-chat-styles");
+      if (externalStyle && externalStyle.tagName === "STYLE" && externalStyle.textContent) {
+        const styleEl = document.createElement("style");
+        styleEl.textContent = externalStyle.textContent;
+        this.shadow.appendChild(styleEl);
+      } else {
+        const link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.href = (externalStyle as HTMLLinkElement)?.href || "https://cdn.jsdelivr.net/npm/edge-operator/dist/style.css";
+        this.shadow.appendChild(link);
+      }
+
+      this.reactRoot = createRoot(this.mountPoint);
+      this.reactRoot.render(
+        <React.StrictMode>
+          <ChatWidget
+            config={{
+              defaultOpen,
+              mode,
+            }}
+          />
+        </React.StrictMode>
+      );
+    }
+
+    disconnectedCallback() {
+      if (this.reactRoot) {
+        this.reactRoot.unmount();
+        this.reactRoot = null;
+      }
+    }
+  }
+
+    if (!customElements.get("edge-operator")) {
+      customElements.define("edge-operator", EdgeOperatorElement);
+    }
+    if (!customElements.get("on-device-chat")) {
+      customElements.define("on-device-chat", class extends EdgeOperatorElement {});
+    }
   }
 }
 

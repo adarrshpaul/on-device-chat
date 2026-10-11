@@ -5,9 +5,26 @@
 @source "./lib/**/*.{tsx,ts}";
 @source "./*.{tsx,ts}";
 
-/* Scoped variables and complete CSS isolation for the widget */
+/* Scoped variables and complete CSS isolation for EdgeOperator & Gemma 4 */
+.eo-widget-container,
 .g4-widget-container {
-  /* Premium Dark Obsidian & Sapphire Glass */
+  /* EdgeOperator Brand Variables */
+  --eo-primary: #6366f1;
+  --eo-primary-hover: #4f46e5;
+  --eo-primary-light: #818cf8;
+  --eo-primary-glow: rgba(99, 102, 241, 0.35);
+  --eo-bg-dark: #07090e;
+  --eo-bg-card: #0d121f;
+  --eo-bg-panel: rgba(13, 18, 31, 0.96);
+  --eo-bg-bubble: rgba(255, 255, 255, 0.05);
+  --eo-bg-user: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  --eo-text-main: #f8fafc;
+  --eo-text-muted: #94a3b8;
+  --eo-text-faint: #64748b;
+  --eo-border: rgba(255, 255, 255, 0.12);
+  --eo-border-hover: rgba(99, 102, 241, 0.5);
+
+  /* Backwards-Compatible Gemma 4 Variables */
   --g4-primary: #6366f1;
   --g4-primary-hover: #4f46e5;
   --g4-primary-light: #818cf8;
@@ -25,7 +42,7 @@
   
   /* Absolute typography enclosure - immune to host body/html styling */
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
-  color: var(--g4-text-main) !important;
+  color: var(--eo-text-main) !important;
   font-size: 14px !important;
   font-weight: 400 !important;
   line-height: 1.5 !important;
@@ -39,6 +56,27 @@
   -moz-osx-font-smoothing: grayscale !important;
   text-rendering: optimizeLegibility !important;
   z-index: 2147483647 !important;
+}
+
+/* Rugged Industrial Mode: High Contrast for Outdoor Sunlight and Toughbook screens */
+.eo-widget-container.eo-rugged-mode,
+.g4-widget-container.eo-rugged-mode {
+  --eo-primary: #3b82f6;
+  --eo-primary-hover: #2563eb;
+  --eo-primary-light: #60a5fa;
+  --eo-bg-dark: #000000;
+  --eo-bg-card: #0a0a0a;
+  --eo-bg-panel: rgba(10, 10, 10, 0.98);
+  --eo-border: rgba(255, 255, 255, 0.35);
+  --eo-text-main: #ffffff;
+  --eo-text-muted: #cbd5e1;
+  --g4-primary: #3b82f6;
+  --g4-bg-dark: #000000;
+  --g4-bg-card: #0a0a0a;
+  --g4-bg-panel: rgba(10, 10, 10, 0.98);
+  --g4-border: rgba(255, 255, 255, 0.35);
+  --g4-text-main: #ffffff;
+  --g4-text-muted: #cbd5e1;
 }
 
 /* Universal box-sizing reset for all descendants */

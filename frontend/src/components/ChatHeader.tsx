@@ -128,7 +128,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         />
 
         <span className="font-semibold text-white text-[13px] tracking-tight leading-none whitespace-nowrap shrink-0">
-          AI Copilot
+          EdgeOperator ⚡
         </span>
 
         <button
@@ -341,8 +341,8 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         <button
           onClick={onClose}
           className="text-gray-400 hover:text-white w-7 h-7 sm:w-6 sm:h-6 rounded-[6px] hover:bg-white/10 flex items-center justify-center transition-colors cursor-pointer"
-          title="Close Assistant"
-          aria-label="Close Assistant"
+          title="Close EdgeOperator"
+          aria-label="Close EdgeOperator"
         >
           <X size={15} />
         </button>

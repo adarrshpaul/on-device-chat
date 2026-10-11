@@ -978,7 +978,7 @@ export class EscalationManager {
     const lowerQuery = cleanQuery.toLowerCase().trim();
     if (!hasObservation && /^(hi|hello|hey|greetings|good\s+(morning|afternoon|evening))\b/i.test(lowerQuery)) {
       return JSON.stringify({
-        final: `Hello! I am your on-device AI Copilot running locally in your browser. I can navigate this website, inspect page elements, answer questions about its content, calculate math formulas, and execute browser actions.`
+        final: `Hello! I am EdgeOperator, your autonomous on-device web operator running locally in your browser. I can navigate this website, inspect page elements, answer questions about its content, calculate math formulas, and execute browser actions.`
       });
     }
     const isActionsInquiry = (q: string): boolean => {
@@ -1022,7 +1022,7 @@ export class EscalationManager {
         engineUsed: "Laya System 1 Intent Router (<10ms)",
         distribution: alternatives.slice(0, 4),
         needsClarification: true, // Enables direct clickable steering pills!
-        explanation: "Discovered active interactive capabilities and page anchors. Tap an option to steer the copilot immediately.",
+        explanation: "Discovered active interactive capabilities and page anchors. Tap an option to steer the operator immediately.",
       };
 
       let actionsMarkdown = `Here are the interactive actions I can perform on this website:\n\n`;

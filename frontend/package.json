@@ -1,20 +1,20 @@
 {
   "name": "on-device-chat",
   "version": "0.2.0",
-  "description": "Local-first on-device AI chat widget and autonomous browser agent powered by Chrome Built-in Gemini Nano, Gemma 4, and MiniLM",
+  "description": "Local-first on-device AI web operator for industrial OT Web-Based Management (WBM) and repetitive web workflows.",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "jsdelivr": "./dist/on-device-chat.min.js",
-  "unpkg": "./dist/on-device-chat.min.js",
+  "jsdelivr": "./dist/edge-operator.min.js",
+  "unpkg": "./dist/edge-operator.min.js",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./standalone": "./dist/on-device-chat.min.js",
+    "./standalone": "./dist/edge-operator.min.js",
     "./style.css": "./dist/style.css"
   },
   "files": [
@@ -23,13 +23,14 @@
     "LICENSE"
   ],
   "keywords": [
+    "edge-operator",
     "local-first",
     "on-device-ai",
     "gemini-nano",
     "chrome-ai",
     "web-agent",
+    "industrial-ot",
     "gemma4",
-    "agentic-ui",
     "chat-widget",
     "react-widget"
   ],
@@ -52,11 +53,11 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build && tsc -p tsconfig.build.json && vite build --config vite.standalone.config.ts && cp dist/on-device-chat.min.js dist/gemma4-agent.min.js && node scripts/sync-extension.mjs",
+    "build": "vite build && tsc -p tsconfig.build.json && vite build --config vite.standalone.config.ts && cp dist/on-device-chat.min.js dist/gemma4-agent.min.js && cp dist/on-device-chat.min.js dist/edge-operator.min.js && node scripts/sync-extension.mjs",
     "sync:extension": "node scripts/sync-extension.mjs",
     "build:extension": "npm run build && node scripts/sync-extension.mjs",
     "build:docs": "vite build --config vite.demo.config.ts",
-    "test": "npm run test:giskard && npm run test:grounding && npm run test:vega && npm run test:universal && npm run test:sota && npm run test:workflows && npm run test:specialty && npm run test:extension && npm run test:consistency",
+    "test": "npm run test:giskard && npm run test:grounding && npm run test:vega && npm run test:universal && npm run test:sota && npm run test:workflows && npm run test:specialty && npm run test:extension && npm run test:consistency && npm run test:industrial",
     "test:giskard": "node --experimental-strip-types tests/giskard_stress_test.mjs",
     "test:grounding": "node --experimental-strip-types tests/test_numeric_grounding_and_a11y.mjs",
     "test:vega": "node --experimental-strip-types tests/test_vega_engine.mjs",
@@ -67,6 +68,7 @@
     "test:specialty": "node tests/test_model_specialty_matrix.mjs",
     "test:extension": "node tests/test_chrome_extension_sync_and_wrapper.mjs",
     "test:consistency": "node tests/test_cross_application_ui_consistency.mjs",
+    "test:industrial": "node tests/test_industrial_ot_wbm_recognition.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "prepublishOnly": "npm run test:giskard && npm run lint && npm run build"

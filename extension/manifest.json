@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "On-Device Browser Agent • Teach 1 → Batch N",
+  "name": "EdgeOperator • Autonomous On-Device Web Operator",
   "version": "0.2.0",
-  "description": "Local-first on-device AI chat widget and autonomous browser agent powered by Chrome Built-in Gemini Nano, Gemma 4, and MiniLM",
+  "description": "Local-first on-device AI web operator for industrial OT Web-Based Management (WBM) and repetitive web workflows.",
   "author": "Adarrsh Paul <adarrsh@paulcreates.online>",
   "homepage_url": "https://agent.paulcreates.online",
   "icons": {
@@ -12,7 +12,7 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "On-Device Browser Agent",
+    "default_title": "EdgeOperator",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
@@ -31,6 +31,7 @@
         "content/style.css"
       ],
       "js": [
+        "content/edge-operator.min.js",
         "content/on-device-chat.min.js",
         "content/content.js"
       ],
@@ -52,7 +53,7 @@
         "default": "Alt+Shift+A",
         "mac": "Alt+Shift+A"
       },
-      "description": "Toggle Floating Agent Widget"
+      "description": "Toggle EdgeOperator"
     },
     "record_macro": {
       "suggested_key": {
@@ -66,6 +67,7 @@
     {
       "resources": [
         "content/style.css",
+        "content/edge-operator.min.js",
         "content/on-device-chat.min.js",
         "icons/*"
       ],

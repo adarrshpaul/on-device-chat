@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SCALANCE XC208 - Web Based Management</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 12px;
+      background-color: #f0f0f0;
+      color: #333;
+    }
+    .topbar {
+      background-color: #00646e;
+      color: white;
+      padding: 8px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .topbar h1 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: bold;
+    }
+    .topbar .info {
+      font-size: 11px;
+    }
+    .container {
+      display: flex;
+      min-height: calc(100vh - 40px);
+    }
+    .sidebar {
+      width: 220px;
+      background-color: #e5ebed;
+      border-right: 1px solid #b4c2c7;
+      padding: 10px;
+    }
+    .sidebar ul {
+      list-style-type: none;
+      padding-left: 12px;
+      margin: 4px 0;
+    }
+    .sidebar li {
+      margin: 4px 0;
+    }
+    .sidebar a {
+      color: #004b54;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .sidebar a:hover {
+      text-decoration: underline;
+    }
+    .content {
+      flex: 1;
+      padding: 20px;
+      background-color: #ffffff;
+    }
+    .content h2 {
+      margin-top: 0;
+      color: #00646e;
+      font-size: 15px;
+      border-bottom: 2px solid #00646e;
+      padding-bottom: 4px;
+    }
+    table.param-grid {
+      width: 100%;
+      max-width: 600px;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    table.param-grid td {
+      padding: 6px 10px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    table.param-grid td:first-child {
+      font-weight: bold;
+      width: 200px;
+      background-color: #f9fbfb;
+    }
+    input[type="text"], input[type="password"], select {
+      width: 220px;
+      padding: 3px 5px;
+      border: 1px solid #a0a0a0;
+      font-size: 12px;
+    }
+    .actions-bar {
+      margin-top: 25px;
+      display: flex;
+      gap: 12px;
+    }
+    .btn-commit {
+      background-color: #00646e;
+      color: white;
+      border: 1px solid #004b54;
+      padding: 6px 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .btn-refresh {
+      background-color: #e0e0e0;
+      color: #333;
+      border: 1px solid #b0b0b0;
+      padding: 6px 14px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>SIEMENS SCALANCE XC208</h1>
+    <div class="info">
+      Device: 192.168.1.10 | User: admin | <button style="background:none;border:none;color:white;cursor:pointer;text-decoration:underline;">Logout</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <nav class="sidebar">
+      <ul>
+        <li><a href="#information">Information</a></li>
+        <li>
+          <a href="#system">System</a>
+          <ul>
+            <li><a href="#general">General Settings</a></li>
+            <li><a href="#ip-config">IP Configuration</a></li>
+            <li><a href="#sntp">SNTP Client</a></li>
+          </ul>
+        </li>
+        <li>
+          <a href="#security">Security</a>
+          <ul>
+            <li><a href="#passwords">Passwords</a></li>
+            <li><a href="#users">Users & Roles</a></li>
+          </ul>
+        </li>
+        <li>
+          <a href="#layer2">Layer 2</a>
+          <ul>
+            <li><a href="#vlan">VLAN Settings</a></li>
+            <li><a href="#profinet">PROFINET Diagnostics</a></li>
+          </ul>
+        </li>
+        <li><a href="#maintenance">Maintenance</a></li>
+      </ul>
+    </nav>
+
+    <main class="content">
+      <h2>General System Configuration</h2>
+      <p>Configure device hostname, IP addressing parameters, and administrative policies.</p>
+
+      <form id="configForm">
+        <table class="param-grid">
+          <tbody>
+            <tr>
+              <td>Device Name:</td>
+              <td><input type="text" id="dev_name" name="dev_name" value="Switch_Rack_A1"></td>
+            </tr>
+            <tr>
+              <td>IP Address:</td>
+              <td><input type="text" id="ip_addr" name="ip_addr" value="192.168.1.10"></td>
+            </tr>
+            <tr>
+              <td>Subnet Mask:</td>
+              <td><input type="text" id="subnet_mask" name="subnet_mask" value="255.255.255.0"></td>
+            </tr>
+            <tr>
+              <td>Default Gateway:</td>
+              <td><input type="text" id="gateway" name="gateway" value="192.168.1.1"></td>
+            </tr>
+            <tr>
+              <td>NTP Server 1:</td>
+              <td><input type="text" id="ntp_srv" name="ntp_srv" value="10.10.1.50"></td>
+            </tr>
+            <tr>
+              <td>PROFINET IO:</td>
+              <td>
+                <select id="profinet_mode" name="profinet_mode">
+                  <option value="enabled" selected>Enabled</option>
+                  <option value="disabled">Disabled</option>
+                </select>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="actions-bar">
+          <button type="button" id="btn_set_values" class="btn-commit">Set Values</button>
+          <button type="button" id="btn_refresh" class="btn-refresh">Refresh</button>
+        </div>
+      </form>
+    </main>
+  </div>
+</body>
+</html>

@@ -1,5 +1,5 @@
 /**
- * On-Device Browser Agent • Action Popup Script
+ * EdgeOperator • Action Popup Script
  * Coordinates popup UI with active browser tab and extension storage.
  */
 
@@ -63,7 +63,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Check if URL is a restricted Chrome page
   const tabUrl = activeTab.url || "";
   if (tabUrl.startsWith("chrome://") || tabUrl.startsWith("chrome-extension://") || tabUrl.startsWith("edge://")) {
-    setDisconnectedUI("Restricted system page", "Browser internal pages cannot run web agents.");
+    setDisconnectedUI("Restricted system page", "Browser internal pages cannot run EdgeOperator.");
     disableActions();
     return;
   }

@@ -1,7 +1,7 @@
 export { default as ChatWidget } from './components/ChatWidget';
 export type { ChatWidgetProps } from './components/ChatWidget';
-export { default as Gemma4Agent } from './main';
-export type { Gemma4Config } from './main';
+export { default as EdgeOperator, default as Gemma4Agent, default as OnDeviceChat } from './main';
+export type { EdgeOperatorConfig, Gemma4Config } from './main';
 export { expertJudge } from './lib/expertJudge';
 export { AgentHarness, isFailureObservation } from './lib/agentHarness';
 export { PlannerAgent, MetaAgent } from './lib/plannerAgent';
