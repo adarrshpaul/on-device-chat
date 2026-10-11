@@ -257,16 +257,13 @@ export class ActionDispatcher {
    * Select a value from a <select> element
    */
   public static async select(element: HTMLSelectElement, value: string): Promise<boolean> {
-    let matchedOption: HTMLOptionElement | null = null;
-    const lower = value.toLowerCase();
-
-    for (let i = 0; i < element.options.length; i++) {
-      const opt = element.options[i];
-      if (opt.value.toLowerCase() === lower || opt.text.toLowerCase().includes(lower)) {
-        matchedOption = opt;
-        break;
-      }
-    }
+    const want = value.trim().toLowerCase();
+    const opts = Array.from(element.options);
+    const matchedOption =
+      opts.find((o) => o.value.toLowerCase() === want) ||
+      opts.find((o) => o.text.trim().toLowerCase() === want) ||
+      (want ? opts.find((o) => o.text.toLowerCase().includes(want)) : undefined) ||
+      null;
 
     if (matchedOption) {
       element.value = matchedOption.value;

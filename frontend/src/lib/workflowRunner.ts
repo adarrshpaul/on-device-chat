@@ -164,10 +164,26 @@ export class WorkflowRunner {
 
         spotlightElement(el, step.title || `Type: ${target}`);
         await this.sleep(350);
-        await ActionDispatcher.type(el, step.value || "");
+        await ActionDispatcher.type(el, step.value || "", { clearFirst: true, pressEnter: step.pressEnter });
         await this.sleep(800);
         const dt = Math.round(performance.now() - t0);
         return `Typed "${step.value}" into ${target} (${dt}ms)`;
+      }
+
+      case "select": {
+        const target = step.target;
+        if (!target) throw new Error("Missing dropdown target");
+        const el = smartQuerySelector(target);
+        if (!(el instanceof HTMLSelectElement)) throw new Error(`Dropdown "${target}" not found`);
+        spotlightElement(el, step.title || `Select: ${step.value}`);
+        await this.sleep(350);
+        if (!(await ActionDispatcher.select(el, step.value || ""))) {
+          const have = Array.from(el.options).map((o) => o.text.trim()).slice(0, 5).join(", ");
+          throw new Error(`Option "${step.value}" not in ${target} (have: ${have})`);
+        }
+        await this.sleep(800);
+        const dt = Math.round(performance.now() - t0);
+        return `Selected "${step.value}" in ${target} (${dt}ms)`;
       }
 
       case "verify": {

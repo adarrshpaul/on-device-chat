@@ -357,9 +357,11 @@ export interface ActionExecutionOutput {
 export interface WorkflowStep {
   id: string;
   title: string;
-  action: "tour" | "click" | "scroll" | "type" | "teleport" | "wait" | "verify" | "game_autopilot";
+  action: "tour" | "click" | "scroll" | "type" | "select" | "teleport" | "wait" | "verify" | "game_autopilot";
   target?: string;
   value?: string;
+  /** For type action: press Enter key after typing */
+  pressEnter?: boolean;
   delayMs?: number;
   status?: "idle" | "running" | "success" | "error";
   output?: string;

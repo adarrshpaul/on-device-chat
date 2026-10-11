@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Zap,
   Play,
@@ -12,10 +12,25 @@ import {
   X,
   Edit2,
   ArrowLeft,
+  Crosshair,
+  Wand2,
 } from "lucide-react";
 import { WebWorkflow, WorkflowStep } from "../lib/types";
 import { workflowStore } from "../lib/workflowStore";
 import { workflowRunner } from "../lib/workflowRunner";
+import { StepEditor } from "./WorkflowStepEditor";
+import {
+  PageScan,
+  PageFormGroup,
+  scanPage,
+  describeElement,
+  inferActionFor,
+  defaultStepTitle,
+  synthesizeFormSteps,
+  ACTION_TARGET_KINDS,
+  TARGET_REQUIRED,
+} from "../lib/pageFormExtractor";
+import { startElementPicker, previewElement } from "../lib/elementPicker";
 
 interface WorkflowStudioProps {
   onBackToChat?: () => void;
@@ -40,6 +55,25 @@ export const WorkflowStudio: React.FC<WorkflowStudioProps> = ({
   const [formSteps, setFormSteps] = useState<WorkflowStep[]>([]);
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
+
+  // Live Page Form & Element Scanning + Element Picker
+  const [pageScan, setPageScan] = useState<PageScan | null>(null);
+  const [pickingIdx, setPickingIdx] = useState<number | null>(null);
+  const stopPickerRef = useRef<(() => void) | null>(null);
+
+  const rescan = () => setPageScan(scanPage());
+  const stopPicker = () => {
+    stopPickerRef.current?.();
+    stopPickerRef.current = null;
+    setPickingIdx(null);
+  };
+
+  useEffect(() => {
+    if (showEditor) rescan();
+    else stopPicker();
+  }, [showEditor]);
+
+  useEffect(() => () => stopPickerRef.current?.(), []);
 
   useEffect(() => {
     loadWorkflows();
@@ -88,16 +122,7 @@ export const WorkflowStudio: React.FC<WorkflowStudioProps> = ({
     setFormName("");
     setFormDesc("");
     setFormTrigger("");
-    setFormSteps([
-      {
-        id: `step_${Date.now()}_1`,
-        title: "Scroll to Section",
-        action: "scroll",
-        target: "#about",
-        delayMs: 300,
-        status: "idle",
-      },
-    ]);
+    setFormSteps([]);
     setShowEditor(true);
   };
 
@@ -122,14 +147,75 @@ export const WorkflowStudio: React.FC<WorkflowStudioProps> = ({
       ...prev,
       {
         id: `step_${Date.now()}_${prev.length + 1}`,
-        title: "New Action Step",
-        action: "teleport",
-        target: "projects",
+        title: "",
+        action: "click",
+        target: "",
         delayMs: 300,
         status: "idle",
       },
     ]);
   };
+
+  const handlePickTarget = (idx: number) => {
+    const wasPicking = pickingIdx === idx;
+    stopPicker();
+    if (wasPicking) return;
+    setPickingIdx(idx);
+    stopPickerRef.current = startElementPicker({
+      onPick: (el) => {
+        const picked = describeElement(el);
+        setFormSteps((prev) => {
+          const next = [...prev];
+          const cur = next[idx];
+          if (!cur) return prev;
+          const action = ACTION_TARGET_KINDS[cur.action]?.includes(picked.kind) ? cur.action : inferActionFor(picked);
+          next[idx] = {
+            ...cur,
+            action,
+            target: picked.selector,
+            title: cur.title || defaultStepTitle(action, picked),
+            value: action === "select" && !cur.value ? (el as HTMLSelectElement).value : cur.value,
+          };
+          return next;
+        });
+        stopPickerRef.current = null;
+        setPickingIdx(null);
+        rescan();
+      },
+      onCancel: () => {
+        stopPickerRef.current = null;
+        setPickingIdx(null);
+      },
+    });
+  };
+
+  const handleAddFromPage = () => {
+    const idx = formSteps.length;
+    const newStep: WorkflowStep = {
+      id: `step_${Date.now()}_${idx + 1}`,
+      title: "",
+      action: "click",
+      target: "",
+      delayMs: 300,
+      status: "idle",
+    };
+    setFormSteps((prev) => [...prev, newStep]);
+    handlePickTarget(idx);
+  };
+
+  const handleFormulate = (form: PageFormGroup) => {
+    setFormSteps((prev) => [...prev, ...synthesizeFormSteps(form)]);
+    if (!formName.trim()) setFormName(`⚡ ${form.title}`);
+    if (!formDesc.trim()) {
+      setFormDesc(
+        `Fills ${form.fields.length} field${form.fields.length === 1 ? "" : "s"}${
+          form.submit ? ` and submits via “${form.submit.label}”` : ""
+        }`
+      );
+    }
+  };
+
+  const invalidSteps = formSteps.filter((s) => TARGET_REQUIRED.has(s.action) && !s.target?.trim()).length;
 
   const handleRemoveStep = (index: number) => {
     setFormSteps((prev) => prev.filter((_, i) => i !== index));
@@ -144,7 +230,7 @@ export const WorkflowStudio: React.FC<WorkflowStudioProps> = ({
   };
 
   const handleSaveWorkflow = async () => {
-    if (!formName.trim() || formSteps.length === 0) return;
+    if (!formName.trim() || formSteps.length === 0 || invalidSteps > 0) return;
 
     const newWf: WebWorkflow = {
       id: editingWorkflow?.id || `wf_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
@@ -288,6 +374,55 @@ export const WorkflowStudio: React.FC<WorkflowStudioProps> = ({
               </div>
             </div>
 
+            {/* Detected Page Forms & Inputs Strip */}
+            {pageScan && (
+              <div className="space-y-1.5 p-2 rounded-[6px] bg-black/30 border border-white/8">
+                <div className="flex items-center justify-between text-[10px] text-gray-400">
+                  <span>
+                    Detected: {pageScan.forms.length} forms · {pageScan.elements.length} interactive elements
+                  </span>
+                  <button
+                    onClick={rescan}
+                    title="Rescan active page elements"
+                    className="text-gray-400 hover:text-white cursor-pointer flex items-center gap-1"
+                  >
+                    <RefreshCw size={10} />
+                    <span>Rescan</span>
+                  </button>
+                </div>
+
+                {pageScan.forms.length > 0 ? (
+                  <div className="space-y-1">
+                    {pageScan.forms.slice(0, 4).map((form) => (
+                      <button
+                        key={form.key}
+                        onClick={() => handleFormulate(form)}
+                        onMouseEnter={() => previewElement(form.container)}
+                        onMouseLeave={() => previewElement(null)}
+                        className="group w-full flex items-center gap-2 p-1.5 rounded-[6px] bg-[#111626] border border-white/8 hover:border-purple-500/40 text-left cursor-pointer transition-colors"
+                      >
+                        <Wand2 size={12} className="text-purple-400 shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[11px] font-medium text-gray-100 truncate">{form.title}</div>
+                          <div className="text-[9px] text-gray-500 truncate">
+                            {form.fields.map((f) => f.label).join(" · ")}
+                            {form.submit ? ` → ${form.submit.label}` : ""}
+                          </div>
+                        </div>
+                        <span className="text-[9px] font-medium text-purple-300 opacity-0 group-hover:opacity-100 shrink-0">
+                          Build steps
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-gray-500">
+                    No multi-field forms detected. Add steps manually or pick elements from the page.
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Workflow Meta Fields */}
             <div className="space-y-2">
               <div>
@@ -330,84 +465,77 @@ export const WorkflowStudio: React.FC<WorkflowStudioProps> = ({
                 <span className="text-[11px] font-semibold text-gray-300">
                   Execution Steps ({formSteps.length})
                 </span>
-                <button
-                  onClick={handleAddStep}
-                  className="text-[10px] text-purple-400 hover:text-purple-300 flex items-center gap-1 cursor-pointer font-medium"
-                >
-                  <Plus size={11} />
-                  <span>Add Step</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleAddFromPage}
+                    className="text-[10px] text-cyan-300 hover:text-cyan-200 flex items-center gap-1 cursor-pointer font-medium"
+                    title="Click any element on the page to add a step"
+                  >
+                    <Crosshair size={11} />
+                    <span>Pick from page</span>
+                  </button>
+                  <button
+                    onClick={handleAddStep}
+                    className="text-[10px] text-purple-400 hover:text-purple-300 flex items-center gap-1 cursor-pointer font-medium"
+                  >
+                    <Plus size={11} />
+                    <span>Add Step</span>
+                  </button>
+                </div>
               </div>
 
-              <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                {formSteps.map((step, idx) => (
-                  <div
-                    key={step.id || idx}
-                    className="p-2 rounded bg-black/40 border border-white/8 space-y-1.5 text-[11px]"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-[10px] text-purple-300 font-bold">
-                        Step {idx + 1}
-                      </span>
-                      <button
-                        onClick={() => handleRemoveStep(idx)}
-                        className="text-gray-500 hover:text-rose-400 cursor-pointer"
-                        title="Remove step"
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-1.5">
-                      <div>
-                        <label className="text-[9px] text-gray-400 block">Action</label>
-                        <select
-                          value={step.action}
-                          onChange={(e) =>
-                            handleUpdateStep(idx, { action: e.target.value as any })
-                          }
-                          className="w-full bg-[#111626] border border-white/10 rounded px-1.5 py-1 text-[11px] text-white focus:outline-none"
-                        >
-                          <option value="scroll">scroll</option>
-                          <option value="teleport">teleport (engram)</option>
-                          <option value="click">click</option>
-                          <option value="type">type</option>
-                          <option value="verify">verify (noul)</option>
-                          <option value="wait">wait</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="text-[9px] text-gray-400 block">Target / Selector</label>
-                        <input
-                          type="text"
-                          value={step.target || ""}
-                          onChange={(e) => handleUpdateStep(idx, { target: e.target.value })}
-                          placeholder="#about, projects"
-                          className="w-full bg-[#111626] border border-white/10 rounded px-1.5 py-1 text-[11px] text-white focus:outline-none"
-                        />
-                      </div>
-                    </div>
+              <div className="space-y-2">
+                {formSteps.length === 0 ? (
+                  <div className="p-3 rounded border border-dashed border-white/10 text-center text-[10px] text-gray-500 space-y-1">
+                    <p>No execution steps yet.</p>
+                    <p className="text-[9px] text-gray-600">
+                      Use <span className="text-cyan-400 font-medium">Pick from page</span>, click{" "}
+                      <span className="text-purple-400 font-medium">Build steps</span> on a detected form, or click{" "}
+                      <span className="text-purple-400 font-medium">+ Add Step</span>.
+                    </p>
                   </div>
-                ))}
+                ) : (
+                  formSteps.map((step, idx) => (
+                    <StepEditor
+                      key={step.id || idx}
+                      step={step}
+                      index={idx}
+                      scan={pageScan}
+                      picking={pickingIdx === idx}
+                      onChange={(updates) => handleUpdateStep(idx, updates)}
+                      onRemove={() => handleRemoveStep(idx)}
+                      onPick={() => handlePickTarget(idx)}
+                    />
+                  ))
+                )}
               </div>
             </div>
 
             {/* Actions */}
-            <div className="flex justify-end gap-2 pt-2 border-t border-white/8">
-              <button
-                onClick={() => setShowEditor(false)}
-                className="px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 text-gray-300 text-xs cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveWorkflow}
-                disabled={!formName.trim() || formSteps.length === 0}
-                className="px-3 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium disabled:opacity-50 cursor-pointer shadow-sm"
-              >
-                Save Automation
-              </button>
+            <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/8">
+              {invalidSteps > 0 ? (
+                <span className="text-[10px] text-amber-400 flex items-center gap-1">
+                  <AlertCircle size={11} />
+                  <span>{invalidSteps} step(s) need a target</span>
+                </span>
+              ) : (
+                <span />
+              )}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowEditor(false)}
+                  className="px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 text-gray-300 text-xs cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveWorkflow}
+                  disabled={!formName.trim() || formSteps.length === 0 || invalidSteps > 0}
+                  className="px-3 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium disabled:opacity-50 cursor-pointer shadow-sm"
+                >
+                  Save Automation
+                </button>
+              </div>
             </div>
           </div>
         ) : null}

@@ -1,8 +1,8 @@
 ---
 id: state_model_selector_badge_and_header_declutter
-layer: current
+layer: historical
 valid_from: 2026-10-12T02:30:00Z
-valid_to: null
+valid_to: 2026-10-12T02:45:00Z
 entity: chat-widget
 ---
 
