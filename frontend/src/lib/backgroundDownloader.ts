@@ -56,6 +56,15 @@ class BackgroundDownloader {
    */
   public startIdlePrefetch(delayMs: number = 4000) {
     if (typeof window === "undefined" || this.isPrefetching) return;
+    
+    // Strict Air-Gap & IEC 62443 Mandate: Never auto-fetch from external origins if airgap mode or on-device permission is not granted
+    const isAirgap = (window as any).EO_AIRGAP === true ||
+      localStorage?.getItem("eo_airgap_mode") === "true" ||
+      !localStorage?.getItem("eo_ondevice_model_permission");
+    if (isAirgap) {
+      return;
+    }
+
     if (typeof navigator !== "undefined" && /Lighthouse|Headless|bot|Google-InspectionTool/i.test(navigator.userAgent)) {
       return;
     }

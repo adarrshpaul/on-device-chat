@@ -18,9 +18,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const FRONTEND_DIR = path.resolve(__dirname, "..");
-const FIXTURES_DIR = path.resolve(FRONTEND_DIR, "tests/fixtures");
 const DIST_DIR = path.resolve(FRONTEND_DIR, "dist");
-const ARTIFACTS_DIR = "/Users/adarrsh/.gemini/antigravity/brain/9028f61e-1ef0-48c8-a5b2-94daaec76136";
+const FIXTURES_DIR = path.resolve(FRONTEND_DIR, "tests/fixtures");
+const ARTIFACTS_DIR = process.env.ARTIFACTS_DIR || path.resolve(FRONTEND_DIR, "tests/results");
+if (!fs.existsSync(ARTIFACTS_DIR)) fs.mkdirSync(ARTIFACTS_DIR, { recursive: true });
 
 let passed = 0;
 let failed = 0;

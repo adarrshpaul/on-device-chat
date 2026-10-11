@@ -1,8 +1,8 @@
 ---
 id: state_edgeoperator_industrial_ot_wbm_and_dual_compatibility
-layer: current
+layer: history
 valid_from: 2026-10-11T22:00:00Z
-valid_to: null
+valid_to: 2026-10-12T02:25:00Z
 entity: chat-widget
 ---
 

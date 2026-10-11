@@ -115,8 +115,12 @@ export class EscalationManager {
     this.onEscalationNotice = options.onEscalationNotice;
     this.onProgress = options.onProgress;
 
-    // Start background prefetching only after 12s after page load so it never impacts initial page performance
-    backgroundDownloader.startIdlePrefetch(12000);
+    // Start background prefetching only after 12s after page load and ONLY if explicit user consent is stored
+    try {
+      if (typeof window !== "undefined" && localStorage.getItem("eo_ondevice_model_permission") === "granted" && !(window as any).EO_AIRGAP) {
+        backgroundDownloader.startIdlePrefetch(12000);
+      }
+    } catch {}
   }
 
   get currentTierInfo(): TierInfo {
@@ -464,25 +468,31 @@ export class EscalationManager {
       });
     }
 
-    // 2. Direct Theme Mode Switch & Toggle Action (100% Guaranteed State Sync)
+    // 2. Direct Theme Mode Switch & Toggle Action (Strict Grammar Gate)
     const isThemeToggleIntent = (q: string): { isTheme: boolean; mode: "dark" | "light" | "toggle" } => {
       const lower = q.toLowerCase().trim();
-      const hasDark = /\b(dark|night)\b/i.test(lower);
-      const hasLight = /\b(light|day)\b/i.test(lower);
-      const isSwitch = /\b(toggle|switch|change|flip)\b/i.test(lower);
-      const hasTheme = /\b(theme|mode|appearance)\b/i.test(lower);
+      // Exclude OT networking, switch ports, VLANs, and configuration queries
+      if (/\b(switch|toggle|change|set)\s+(?:port|vlan|ip|interface|config|subnet|gateway|profile|rule|setting|baud|duplex)/i.test(lower)) {
+        return { isTheme: false, mode: "toggle" };
+      }
+      if (/\b(ports?|interfaces?|switch|vlan|firmware|update|day|schedule|status|telemetry)\b/i.test(lower) && !/\b(theme|appearance|dark\s*mode|light\s*mode)\b/i.test(lower)) {
+        return { isTheme: false, mode: "toggle" };
+      }
 
-      if (hasDark && !hasLight) return { isTheme: true, mode: "dark" };
-      if (hasLight && !hasDark) return { isTheme: true, mode: "light" };
+      // Explicit dark mode intent
+      if (/\b(dark\s+theme|dark\s+mode|enable\s+dark|set\s+dark)\b/i.test(lower) || lower === "dark mode" || lower === "dark") {
+        return { isTheme: true, mode: "dark" };
+      }
+      // Explicit light mode intent
+      if (/\b(light\s+theme|light\s+mode|enable\s+light|set\s+light)\b/i.test(lower) || lower === "light mode" || lower === "light") {
+        return { isTheme: true, mode: "light" };
+      }
+      // Explicit toggle intent
       if (
-        isSwitch ||
-        hasTheme ||
-        /\b(dark\s+light|light\s+dark|darklight)\b/i.test(lower) ||
+        /\b(?:toggle|switch|change|flip)\s+(?:the\s+)?(?:theme|mode|appearance|dark\/light)\b/i.test(lower) ||
+        /\b(?:toggle\s+theme|switch\s+theme|change\s+theme)\b/i.test(lower) ||
         lower === "theme" ||
-        lower === "dark mode" ||
-        lower === "light mode" ||
-        lower === "dark" ||
-        lower === "light"
+        lower === "toggle theme"
       ) {
         return { isTheme: true, mode: "toggle" };
       }
@@ -552,13 +562,11 @@ export class EscalationManager {
         title: "Theme Mode Switch",
         selectedOption: `Theme switched to ${resolvedTheme} mode`,
         confidence: 1.0,
-        margin: 0.88,
+        margin: 1.0,
         primitive: "choice",
-        latencyMs: 8,
-        engineUsed: "DOM Motor Action (0 Tokens)",
+        engineUsed: "Rule: theme-toggle",
         distribution: [
           { label: `Switch to ${resolvedTheme}`, score: 1.0, isWinner: true },
-          { label: "Other Page Controls", score: 0.12, isWinner: false },
         ],
         hallucinationShield: {
           verified: true,
@@ -566,7 +574,7 @@ export class EscalationManager {
           evidenceSelector: cleanSel,
           probability: 1.0,
         },
-        explanation: `Theme switched to ${resolvedTheme} mode with 0 token latency and complete change detection sync.`,
+        explanation: `Theme switched to ${resolvedTheme} mode via deterministic theme grammar rule.`,
       };
       return JSON.stringify({
         final: `🎨 Successfully set the application theme to **${resolvedTheme}** mode!`,
@@ -575,13 +583,17 @@ export class EscalationManager {
       });
     }
 
-    // 2.5 Instant Viewport Scrolling Actions (<10ms, 0 tokens)
+    // 2.5 Strict Viewport Scrolling Actions
     const isScrollIntent = (q: string): { isScroll: boolean; direction: "down" | "up" | "top" | "bottom" } => {
       const lower = q.toLowerCase().trim();
-      if (/^(scroll\s+down|down|page\s+down|next\s+page)\b/i.test(lower)) return { isScroll: true, direction: "down" };
-      if (/^(scroll\s+up|up|page\s+up|previous\s+page)\b/i.test(lower)) return { isScroll: true, direction: "up" };
-      if (/^(scroll\s+to\s+top|top|to\s+top|scroll\s+top|home\s+top)\b/i.test(lower)) return { isScroll: true, direction: "top" };
-      if (/^(scroll\s+to\s+bottom|bottom|to\s+bottom|footer)\b/i.test(lower)) return { isScroll: true, direction: "bottom" };
+      // Exclude OT queries asking about ports, status, metrics, interfaces, or tables (e.g. "top 5 ports", "down interfaces")
+      if (/\b(ports?|interfaces?|switch|vlan|status|errors?|packets?|devices?|nodes?|logs?|counters?)\b/i.test(lower)) {
+        return { isScroll: false, direction: "down" };
+      }
+      if (/^(?:(?:please\s+)?scroll\s+down|page\s+down)$/i.test(lower) || /^(?:please\s+)?scroll\s+down\b/i.test(lower)) return { isScroll: true, direction: "down" };
+      if (/^(?:(?:please\s+)?scroll\s+up|page\s+up)$/i.test(lower) || /^(?:please\s+)?scroll\s+up\b/i.test(lower)) return { isScroll: true, direction: "up" };
+      if (/^(?:(?:please\s+)?scroll\s+to\s+(?:the\s+)?top|scroll\s+top)$/i.test(lower) || /^(?:please\s+)?scroll\s+to\s+(?:the\s+)?top\b/i.test(lower)) return { isScroll: true, direction: "top" };
+      if (/^(?:(?:please\s+)?scroll\s+to\s+(?:the\s+)?bottom|scroll\s+bottom)$/i.test(lower) || /^(?:please\s+)?scroll\s+to\s+(?:the\s+)?bottom\b/i.test(lower)) return { isScroll: true, direction: "bottom" };
       return { isScroll: false, direction: "down" };
     };
 
@@ -612,12 +624,11 @@ export class EscalationManager {
         title: "Viewport Smooth Scroll",
         selectedOption: label,
         confidence: 1.0,
-        margin: 0.85,
+        margin: 1.0,
         primitive: "choice",
-        latencyMs: 8,
-        engineUsed: "DOM Motor Action (0 Tokens)",
+        engineUsed: "Rule: viewport-scroll",
         distribution: [{ label, score: 1.0, isWinner: true }],
-        explanation: `Dispatched native smooth scroll to ${Math.round(targetY)}px with 0 prompt token overhead.`,
+        explanation: `Dispatched native smooth scroll to ${Math.round(targetY)}px via deterministic scroll grammar rule.`,
       };
 
       return JSON.stringify({
@@ -627,23 +638,32 @@ export class EscalationManager {
       });
     }
 
-    // 2.55 Universal Download & Document Action (<15ms, 0 tokens)
+    // 2.55 Safe File Download & Document Action Gate
     const isDownloadIntent = (q: string): { isDownload: boolean; target: string } => {
       const lower = q.replace(/^[\p{Emoji}\p{Symbol}\s]+/u, "").toLowerCase().trim();
-      const match = lower.match(/^(?:download|save|get|fetch|grab|export)\s+(?:the\s+|a\s+|an\s+|my\s+)?(.+)$/i) ||
+      // Safety exclude: OT configurations, hardware settings, device commits, status checks
+      if (/\b(?:save|get|fetch|set|export)\s+(?:config|configuration|changes|settings|nvm|flash|switch|profile|rule|port|vlan|status|telemetry|counters?)\b/i.test(lower)) {
+        return { isDownload: false, target: "" };
+      }
+      if (/^(?:how|why|what|when|where|who)\b/i.test(lower)) {
+        return { isDownload: false, target: "" };
+      }
+      // Require explicit download verb or file-export intent
+      const match = lower.match(/^(?:download|export)\s+(?:the\s+|a\s+|an\s+|my\s+)?(.+)$/i) ||
                     lower.match(/^(.+?)\s+(?:download|pdf)$/i);
       if (match && match[1]) {
         const raw = match[1].trim();
-        if (!/^(?:how|why|what|when|where|who)\b/i.test(lower)) {
+        // Disallow configuration commands disguised as download
+        if (!/\b(config|configuration|changes|switch|flash|nvm|port|status|rule|profile)\b/i.test(raw)) {
           return { isDownload: true, target: raw };
         }
       }
       if (/^(?:download|download\s+now)$/i.test(lower)) {
         return { isDownload: true, target: "file" };
       }
-      if (/\b(download\s+(?:resume|cv|pdf|file|paper|whitepaper|report))\b/i.test(lower)) {
-        const m = lower.match(/\b(?:download|get|save)\s+(?:the\s+|a\s+|an\s+|my\s+)?([a-z0-9_-]+)\b/i);
-        return { isDownload: true, target: m ? m[1] : "resume" };
+      if (/\b(?:download|export)\s+(?:the\s+|a\s+|an\s+|my\s+)?(resume|cv|pdf|file|paper|whitepaper|report|log|logs|audit\s+log|diagnostics|pcap|pcapng)\b/i.test(lower)) {
+        const m = lower.match(/\b(?:download|export)\s+(?:the\s+|a\s+|an\s+|my\s+)?([a-z0-9_-]+)\b/i);
+        return { isDownload: true, target: m ? m[1] : "document" };
       }
       return { isDownload: false, target: "" };
     };
@@ -656,17 +676,17 @@ export class EscalationManager {
       if (typeof document !== "undefined") {
         const targetClean = targetLower.replace(/[^a-z0-9_-]/g, "");
 
-        // 1. Direct attribute matching on download or href or aria-label
+        // 1. Direct attribute matching on download or href
         if (targetClean.length >= 2) {
           downloadEl = smartQuerySelector(
             `a[download*='${targetClean}' i], a[href*='${targetClean}' i], [aria-label*='${targetClean}' i][download]`
           );
         }
 
-        // 2. Full scan of interactive download candidates
+        // 2. Scan dedicated download links and explicit download buttons only
         if (!downloadEl) {
           const candidates = Array.from(
-            document.querySelectorAll("a[download], a[href*='.pdf' i], a[href*='resume' i], a[href*='cv' i], a[href*='download' i], button, a, [role='button']")
+            document.querySelectorAll("a[download], a[href*='.pdf' i], a[href*='resume' i], a[href*='cv' i], a[href*='download' i], button[aria-label*='download' i], button[title*='download' i], [role='button'][aria-label*='download' i]")
           ).filter((el) => !isWidgetElement(el)) as HTMLElement[];
 
           let bestScore = -1;
@@ -695,7 +715,7 @@ export class EscalationManager {
           }
         }
 
-        // 3. Fallback: any PDF or download link
+        // 3. Fallback: explicit PDF or download link
         if (!downloadEl) {
           downloadEl = smartQuerySelector("a[download], a[href$='.pdf' i], a[href*='.pdf' i], a[href*='resume' i]");
         }
@@ -724,13 +744,11 @@ export class EscalationManager {
           title: `Download Action: ${fileName}`,
           selectedOption: `Trigger download for ${fileName}`,
           confidence: 1.0,
-          margin: 0.95,
+          margin: 1.0,
           primitive: "choice",
-          latencyMs: 8,
-          engineUsed: "DOM Motor Action (0 Tokens)",
+          engineUsed: "Rule: file-download",
           distribution: [
             { label: `Download ${fileName}`, score: 1.0, isWinner: true },
-            { label: "Landmark Navigation", score: 0.05, isWinner: false },
           ],
           hallucinationShield: {
             verified: true,
@@ -738,7 +756,7 @@ export class EscalationManager {
             evidenceSelector: cleanSel,
             probability: 1.0,
           },
-          explanation: `Dispatched direct download execution to '${cleanSel}' (${fileName}) with 0 token overhead.`,
+          explanation: `Dispatched direct download execution to '${cleanSel}' (${fileName}) via deterministic file download grammar.`,
         };
 
         return JSON.stringify({
@@ -1370,24 +1388,21 @@ export class EscalationManager {
 
     // Tier 2: SmolLM2 Generative (80 MB Q4 ONNX WebGPU)
     if (this.currentTier === ModelTier.TIER_2_SMOLLM_GENERATIVE) {
-      if (hasObservation) {
-        return JSON.stringify({ final: lastObservation || "Completed action." });
-      }
       if (this.compactEngine?.isGeneratorReady) {
         const { answerWithGenerator } = await import("./pageQA");
-        const res = await answerWithGenerator(cleanQuery, this.compactEngine);
+        const queryWithObs = hasObservation
+          ? `${cleanQuery}\n\n[Previous Observation]: ${lastObservation}\nBased on this observation, synthesize the final answer or next action:`
+          : cleanQuery;
+        const res = await answerWithGenerator(queryWithObs, this.compactEngine);
         return JSON.stringify({ final: res.text });
       }
       return JSON.stringify({
-        final: `[SmolLM2-135M]: Generative weights are downloading into WebGPU (~80MB). Please wait for initialization.`,
+        final: hasObservation ? `Observation: ${lastObservation}` : `[SmolLM2-135M]: Generative weights are downloading into WebGPU (~80MB). Please wait for initialization.`,
       });
     }
 
     // Tier 3: Gemma 4 E2B Unified (600-800 MB)
     if (this.currentTier === ModelTier.TIER_3_GEMMA4_E2B) {
-      if (hasObservation) {
-        return JSON.stringify({ final: lastObservation || "Completed action." });
-      }
       if (this.gemmaEngine?.isLoaded) {
         try {
           const msgs = messages || [{ role: "user", content: cleanQuery }];
@@ -1407,7 +1422,7 @@ export class EscalationManager {
         }
       }
       return JSON.stringify({
-        final: `[Gemma 4 E2B]: Model weights are downloading into WebGPU (~600-800 MB). Please wait for initialization.`,
+        final: hasObservation ? `Observation: ${lastObservation}` : `[Gemma 4 E2B]: Model weights are downloading into WebGPU (~600-800 MB). Please wait for initialization.`,
       });
     }
 

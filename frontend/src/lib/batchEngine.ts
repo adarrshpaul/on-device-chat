@@ -242,15 +242,32 @@ export class MacroParameterizer {
         }
         if (sampleEntity.selector && templatedTarget === sampleEntity.selector) {
           templatedTarget = "{{entity_selector}}";
+        } else if (sampleEntity.selector && templatedTarget.startsWith(sampleEntity.selector)) {
+          templatedTarget = templatedTarget.replace(sampleEntity.selector, "{{entity_selector}}");
         }
         if (sampleEntity.id && templatedTarget.includes(sampleEntity.id)) {
           templatedTarget = templatedTarget.replace(sampleEntity.id, "{{entity_id}}");
         }
-      }
 
-      // If the target is a direct element ID or selector that matches a specific item, generalize it
-      if (templatedTarget && !templatedTarget.includes("{{")) {
-        templatedTarget = "{{entity_selector}}";
+        // Relative DOM descendant resolution if selector is not already templated
+        if (typeof document !== "undefined" && sampleEntity.selector && templatedTarget && !templatedTarget.includes("{{")) {
+          try {
+            const entEl = document.querySelector(sampleEntity.selector);
+            const tgtEl = document.querySelector(templatedTarget);
+            if (entEl && tgtEl && entEl.contains(tgtEl) && entEl !== tgtEl) {
+              const rel = tgtEl.getAttribute("name")
+                ? `input[name='${tgtEl.getAttribute("name")}'], select[name='${tgtEl.getAttribute("name")}']`
+                : tgtEl.getAttribute("data-action")
+                ? `[data-action='${tgtEl.getAttribute("data-action")}']`
+                : tgtEl.id
+                ? `#${tgtEl.id}`
+                : tgtEl.className
+                ? `.${tgtEl.className.trim().split(/\s+/).join(".")}`
+                : tgtEl.tagName.toLowerCase();
+              templatedTarget = `{{entity_selector}} ${rel}`.trim();
+            }
+          } catch {}
+        }
       }
 
       return {

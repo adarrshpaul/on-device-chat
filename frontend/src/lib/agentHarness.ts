@@ -63,6 +63,35 @@ export function isFailureObservation(obs: string): boolean {
   return patterns.some((p) => lower.includes(p));
 }
 
+export function isSafeNavigationUrl(url: string): boolean {
+  if (!url || typeof url !== "string") return false;
+  const trimmed = url.trim().toLowerCase();
+  if (
+    trimmed.startsWith("javascript:") ||
+    trimmed.startsWith("data:") ||
+    trimmed.startsWith("vbscript:") ||
+    trimmed.startsWith("file:") ||
+    trimmed.startsWith("blob:")
+  ) {
+    return false;
+  }
+  if (
+    trimmed.startsWith("#") ||
+    trimmed.startsWith("/") ||
+    trimmed.startsWith("./") ||
+    trimmed.startsWith("../")
+  ) {
+    return true;
+  }
+  try {
+    const origin = typeof window !== "undefined" ? window.location.href : "https://localhost";
+    const parsed = new URL(url, origin);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export class AgentHarness {
   private maxSteps: number;
   private onAskUser?: (question: string) => Promise<string>;
@@ -72,6 +101,8 @@ export class AgentHarness {
   private memoryStore: Map<string, string> = new Map();
   private currentUserGoal: string = "";
   private currentConversationHistory: Array<{ role: string; content: string }> = [];
+  private currentStepIndex: number = 0;
+  private currentTrajectory: AgentStepTrace[] = [];
   private activeAbortController: AbortController | null = null;
 
   constructor(config: HarnessConfig = {}) {
@@ -313,18 +344,22 @@ export class AgentHarness {
 
         // Check if element is a navigation link leading to another page
         const anchor = resolved.element.closest("a") as HTMLAnchorElement | null;
-        if (anchor && anchor.href && !anchor.href.startsWith("#") && !anchor.href.startsWith("javascript:")) {
-          NavPersistenceManager.saveTask({
-            id: `task_${Date.now()}`,
-            userGoal: this.currentUserGoal,
-            stepIndex: 1,
-            maxSteps: this.maxSteps,
-            trajectory: [],
-            conversationHistory: this.currentConversationHistory,
-            workingMemory: {},
-            originUrl: typeof window !== "undefined" ? window.location.href : "",
-            targetUrl: anchor.href,
-          });
+        if (anchor && anchor.href && isSafeNavigationUrl(anchor.href) && !anchor.href.startsWith("#")) {
+          const currentHref = typeof window !== "undefined" ? window.location.href : "";
+          const isDifferentPage = anchor.href !== currentHref && !anchor.href.startsWith(currentHref + "#");
+          if (isDifferentPage) {
+            NavPersistenceManager.saveTask({
+              id: `task_${Date.now()}`,
+              userGoal: this.currentUserGoal,
+              stepIndex: this.currentStepIndex + 1,
+              maxSteps: this.maxSteps,
+              trajectory: [...this.currentTrajectory],
+              conversationHistory: this.currentConversationHistory,
+              workingMemory: Object.fromEntries(this.memoryStore.entries()),
+              originUrl: currentHref,
+              targetUrl: anchor.href,
+            });
+          }
         }
 
         await ActionDispatcher.click(resolved.element);
@@ -439,25 +474,27 @@ export class AgentHarness {
       case "goto": {
         const url = String(rawArgs.url || rawArgs.href || selector || "").trim();
         if (!url) return "Error: URL or path required for navigate action.";
+        if (!isSafeNavigationUrl(url)) {
+          return `Error: Blocked navigation to unsafe scheme in "${url}". Only http:, https:, and relative routes are allowed.`;
+        }
         if (typeof window !== "undefined") {
-          // If hash navigation or relative path
+          // If hash navigation
           if (url.startsWith("#")) {
             window.location.hash = url;
             return `Navigated to hash anchor "${url}".`;
           }
-          if (!url.startsWith("#") && !url.startsWith("javascript:")) {
-            NavPersistenceManager.saveTask({
-              id: `task_${Date.now()}`,
-              userGoal: this.currentUserGoal,
-              stepIndex: 1,
-              maxSteps: this.maxSteps,
-              trajectory: [],
-              conversationHistory: this.currentConversationHistory,
-              workingMemory: {},
-              originUrl: window.location.href,
-              targetUrl: url,
-            });
-          }
+          const currentHref = window.location.href;
+          NavPersistenceManager.saveTask({
+            id: `task_${Date.now()}`,
+            userGoal: this.currentUserGoal,
+            stepIndex: this.currentStepIndex + 1,
+            maxSteps: this.maxSteps,
+            trajectory: [...this.currentTrajectory],
+            conversationHistory: this.currentConversationHistory,
+            workingMemory: Object.fromEntries(this.memoryStore.entries()),
+            originUrl: currentHref,
+            targetUrl: url,
+          });
           // Check for matching anchor element on page
           const link = document.querySelector(`a[href='${url}']`) as HTMLAnchorElement;
           if (link) {
@@ -932,6 +969,7 @@ export class AgentHarness {
     });
 
     const trajectory: AgentStepTrace[] = [];
+    this.currentTrajectory = trajectory;
     let lastToolCallSignature = "";
     let consecutiveFailures = 0;
     const failedCallSignatures = new Set<string>();
@@ -941,6 +979,7 @@ export class AgentHarness {
     let consecutiveZeroDeltaCalls = 0;
 
     for (let step = 0; step < this.maxSteps; step++) {
+      this.currentStepIndex = step;
       if (abortSignal.aborted) {
         return {
           final: `Execution was cancelled for new user action.`,

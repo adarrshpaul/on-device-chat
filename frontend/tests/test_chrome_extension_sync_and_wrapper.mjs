@@ -86,7 +86,8 @@ console.log("\n--- 3. Testing Content Script Configuration & Dependencies ---");
 assert(Array.isArray(manifest.content_scripts) && manifest.content_scripts.length > 0, "content_scripts array defined");
 const cs = manifest.content_scripts[0];
 assert(cs.matches.includes("<all_urls>"), "content_scripts matches <all_urls>");
-assert(cs.js.includes("content/on-device-chat.min.js"), "content_scripts includes bundled library on-device-chat.min.js");
+assert(cs.all_frames === true, "content_scripts enables all_frames for frameset compatibility");
+assert(cs.js.includes("content/edge-operator.min.js") || cs.js.includes("content/on-device-chat.min.js"), "content_scripts includes bundled agent library");
 assert(cs.js.includes("content/content.js"), "content_scripts includes wrapper content.js");
 assert(cs.css.includes("content/style.css"), "content_scripts includes style.css");
 

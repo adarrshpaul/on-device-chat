@@ -22,7 +22,7 @@ export class WorkflowPredictor {
   /**
    * Predict novel or adjacent workflows for the active page using Vega decision dynamics
    */
-  public static async predictWorkflows(limit: number = 3): Promise<PredictedWorkflowCandidate[]> {
+  public static async predictWorkflows(limit: number = 4): Promise<PredictedWorkflowCandidate[]> {
     if (typeof document === "undefined" || typeof window === "undefined") {
       return [];
     }
@@ -364,7 +364,8 @@ export class WorkflowPredictor {
 
     const downloadDesc = downloadEl ? (downloadEl.textContent?.trim() || downloadEl.getAttribute("aria-label") || "File Download") : "none";
     const canvasDesc = canvas ? "interactive canvas game present" : "no canvas";
-    const pageState = `Website: ${siteTitle} (${host}). Canvas: ${canvasDesc}. Available landmarks: ${landmarks.map((l) => l.id).join(", ")}. Primary actions: ${downloadDesc}, contact form: ${Boolean(messageInput)}, search: ${Boolean(searchInput)}. Stored workflows count: ${stored.length}.`;
+    const otDesc = otCommitButtons.length > 0 ? `Industrial OT WBM detected with commit action (${otCommitButtons.map(b => b.textContent?.trim() || (b as HTMLInputElement).value).join(", ")})` : "standard web page";
+    const pageState = `Website: ${siteTitle} (${host}). Mode: ${otDesc}. Canvas: ${canvasDesc}. Available landmarks: ${landmarks.map((l) => l.id).join(", ")}. Primary actions: ${downloadDesc}, contact form: ${Boolean(messageInput)}, search: ${Boolean(searchInput)}. Stored workflows count: ${stored.length}.`;
 
     try {
       const decision = await vegaDecisionEngine.decide(pageState, {
@@ -380,7 +381,11 @@ export class WorkflowPredictor {
 
       // Map candidates with their calibrated probabilities
       const scored: PredictedWorkflowCandidate[] = poolToScore.map((c) => {
-        const p = probs[c.id] ?? (1.0 / poolToScore.length);
+        let p = probs[c.id] ?? (1.0 / poolToScore.length);
+        if (c.tags?.includes("commit")) {
+          // Priority boost for physical OT commit controls on WBM interfaces
+          p += 0.15;
+        }
         return {
           workflow: c,
           confidence: Math.round(p * 100) / 100,

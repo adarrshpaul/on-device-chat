@@ -27,12 +27,12 @@
       "matches": [
         "<all_urls>"
       ],
+      "all_frames": true,
       "css": [
         "content/style.css"
       ],
       "js": [
         "content/edge-operator.min.js",
-        "content/on-device-chat.min.js",
         "content/content.js"
       ],
       "run_at": "document_idle"

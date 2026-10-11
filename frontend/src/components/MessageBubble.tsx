@@ -51,6 +51,29 @@ function formatToolSummary(trace: AgentStepTrace[]): string {
   return `executed ${trace.length} harness steps`;
 }
 
+export function sanitizeMarkdownHtml(html: string): string {
+  if (!html || typeof html !== "string") return "";
+  let clean = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "");
+  clean = clean.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "");
+  clean = clean.replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, "");
+  clean = clean.replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, "");
+  clean = clean.replace(/<embed\b[^>]*>/gi, "");
+  clean = clean.replace(/\son\w+\s*=\s*["'][^"']*["']/gi, "");
+  clean = clean.replace(/\son\w+\s*=\s*[^\s>]+/gi, "");
+  clean = clean.replace(/href\s*=\s*["']\s*(?:javascript|data|vbscript):[^"']*["']/gi, 'href="#"');
+  return clean;
+}
+
+const ALLOWED_PROSE_ACTIONS = new Set([
+  "run_workflow",
+  "view_trace",
+  "toggle_theme",
+  "explain_step",
+  "view_evals",
+  "select_option",
+  "copy_code",
+]);
+
 export default function MessageBubble({
   message,
   onFeedback,
@@ -72,6 +95,10 @@ export default function MessageBubble({
       e.stopPropagation();
       const raw = href.slice(7).trim();
       const [act, search] = raw.split("?");
+      if (!ALLOWED_PROSE_ACTIONS.has(act)) {
+        console.warn(`[MessageBubble] Blocked unauthorized action link from prose: "${act}"`);
+        return;
+      }
       const payload: Record<string, unknown> = {};
       if (search) {
         try {
@@ -108,7 +135,7 @@ export default function MessageBubble({
           <div
             className="g4-prose text-[12px]"
             onClick={handleProseClick}
-            dangerouslySetInnerHTML={{ __html: marked(message.content || "") as string }}
+            dangerouslySetInnerHTML={{ __html: sanitizeMarkdownHtml(marked(message.content || "") as string) }}
           />
         </div>
       </div>
@@ -237,7 +264,7 @@ export default function MessageBubble({
           <div
             className="g4-prose text-[16px] leading-[1.5] text-gray-100 w-full select-text"
             onClick={handleProseClick}
-            dangerouslySetInnerHTML={{ __html: marked(message.content) as string }}
+            dangerouslySetInnerHTML={{ __html: sanitizeMarkdownHtml(marked(message.content) as string) }}
           />
         )}
 
