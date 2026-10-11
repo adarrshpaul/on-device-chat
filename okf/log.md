@@ -1,5 +1,12 @@
 # OKF Transition Log
 
+## 2026-10-11T19:05:00Z - Strategic Brand & Domain Alignment: EdgeOperator for Industrial OT WBM
+- **Strategic Direction:** Established **EdgeOperator** as the definitive marketing brand and product identity.
+- **Industrial Target Vertical:** Autonomous browser operator for air-gapped Industrial Web-Based Management (WBM) interfaces (Siemens SCALANCE, Schneider Electric, Phoenix Contact, Wago, Moxa, SIMATIC RTU).
+- **Core Value Wedge:** "Teach 1 → Batch N" device commissioning across factory floor subnets (`192.168.x.x`), eliminating repetitive manual errors on static IPs, passwords, VLANs, and PROFINET/EtherNet/IP diagnostics.
+- **Air-Gap & Zero Cloud Mandate (IEC 62443):** Operates 100% on the field technician's laptop inside Chrome with 0 cloud API tokens, 0 server egress, and zero firewall modifications.
+- **UI Grounding Model:** Directly addresses the universal OT WBM pattern: Left hierarchical tree menu, form/table parameter blocks, and explicit commit buttons (`[Set Values]`, `[Apply]`, `[Refresh]`, `[Save to switch]`).
+
 ## 2026-10-11T18:00:00Z - Universal Cross-Application UI Consistency, CSS Immunity & Storage Defense
 - **User Request Addressed:** "DO SOEMTHIG SO THAT CHAT UI IS CONSISTENT ACROSS ALL APPLICATIONS, CAN WE DO TAHT ??"
 - **Universal CSS Isolation (`frontend/src/index.css`):**
