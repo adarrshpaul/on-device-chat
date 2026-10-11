@@ -3,202 +3,544 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Universal Web Agent & Chrome AI Expert Judge</title>
+    <title>EdgeOperator — On-Device AI Agent & Workflow Operator</title>
     <style>
+      :root {
+        --bg-main: #0b0f19;
+        --bg-card: #131b2e;
+        --border: #23304c;
+        --primary: #8b5cf6;
+        --primary-hover: #7c3aed;
+        --text: #f8fafc;
+        --text-muted: #94a3b8;
+        --accent: #38bdf8;
+      }
       body {
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-        background-color: #0f172a;
-        color: #f8fafc;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background-color: var(--bg-main);
+        color: var(--text);
         margin: 0;
-        padding: 2.5rem 1.5rem;
+        padding: 2rem 1.5rem;
       }
       .demo-container {
-        max-width: 860px;
+        max-width: 980px;
         margin: 0 auto;
-        background: #1e293b;
-        padding: 2.5rem;
-        border-radius: 16px;
-        box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.3);
-        border: 1px solid #334155;
+        space-y: 2rem;
       }
-      .badge {
-        display: inline-block;
-        background: #3b82f6;
-        color: white;
-        padding: 0.2rem 0.6rem;
+      .header-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.4);
+      }
+      .badge-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: rgba(139, 92, 246, 0.15);
+        border: 1px solid rgba(139, 92, 246, 0.35);
+        color: #c4b5fd;
+        padding: 0.25rem 0.65rem;
         border-radius: 9999px;
         font-size: 0.75rem;
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.05em;
       }
-      .catalog-grid {
+      .tier-banner {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(56, 189, 248, 0.1);
+        border: 1px solid rgba(56, 189, 248, 0.25);
+        color: #7dd3fc;
+        padding: 0.35rem 0.85rem;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        font-family: ui-monospace, monospace;
+      }
+      .btn-primary {
+        background: var(--primary);
+        color: white;
+        border: none;
+        padding: 0.55rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.85rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+      .btn-primary:hover {
+        background: var(--primary-hover);
+        transform: translateY(-1px);
+      }
+      .btn-secondary {
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid var(--border);
+        color: var(--text);
+        padding: 0.55rem 1rem;
+        border-radius: 8px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.85rem;
+      }
+      .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.14);
+      }
+      .section-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(440px, 1fr));
+        gap: 1.5rem;
         margin-top: 1.5rem;
       }
-      .card {
-        background: #0f172a;
-        border: 1px solid #334155;
-        border-radius: 12px;
-        padding: 1.25rem;
+      .showcase-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1.5rem;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
       }
-      button.btn-primary {
-        background: #6366f1;
+      .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      }
+      .card-title {
+        font-size: 1.05rem;
+        font-weight: 700;
         color: white;
-        border: none;
-        padding: 0.5rem 1rem;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .catalog-items {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+      .product-row {
+        background: rgba(11, 15, 25, 0.6);
+        border: 1px solid var(--border);
         border-radius: 8px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: background 0.2s;
+        padding: 0.75rem 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
       }
-      button.btn-primary:hover {
-        background: #4f46e5;
-      }
-      input.input-field {
-        background: #0f172a;
-        border: 1px solid #334155;
+      .input-field, select.input-field {
+        background: rgba(11, 15, 25, 0.8);
+        border: 1px solid var(--border);
         color: white;
-        padding: 0.6rem 1rem;
+        padding: 0.55rem 0.85rem;
         border-radius: 8px;
         width: 100%;
         box-sizing: border-box;
+        font-size: 0.85rem;
+      }
+      .input-field:focus {
+        outline: none;
+        border-color: var(--primary);
+      }
+      .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+      }
+      .table-custom {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.8rem;
+      }
+      .table-custom th {
+        text-align: left;
+        color: var(--text-muted);
+        padding: 0.5rem;
+        border-bottom: 1px solid var(--border);
+      }
+      .table-custom td {
+        padding: 0.5rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
       }
       .state-panel {
-        margin-top: 2rem;
+        margin-top: 1.5rem;
         padding: 1.25rem;
-        background: #0f172a;
-        border: 1px solid #334155;
-        border-radius: 10px;
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        font-family: ui-monospace, monospace;
         font-size: 0.85rem;
       }
     </style>
   </head>
   <body>
     <div class="demo-container">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <span class="badge">Host Web Application</span>
-          <h1 style="margin: 0.5rem 0 0 0; font-size: 1.75rem;">NextGen E-Commerce Portal</h1>
-        </div>
-        <div style="text-align: right;">
-          <div style="font-size: 0.85rem; color: #94a3b8;">Cart Items</div>
-          <div id="cart-count" style="font-size: 1.5rem; font-weight: bold; color: #38bdf8;">0</div>
-        </div>
-      </div>
-
-      <p style="color: #94a3b8; font-size: 0.95rem; margin-top: 0.75rem;">
-        The agent harness in the bottom right wraps frozen on-device LLMs (Chrome Gemini Nano / MiniLM / SmolLM2 / Gemma 4) with 5 primitives: <code>browse</code>, <code>sandbox</code>, <code>read/write</code>, <code>search</code>, and <code>ask</code>. It generates Chrome AI Expert Judge evals automatically on every interaction.
-      </p>
-
-      <div style="margin-top: 1.5rem;">
-        <input id="search-input" class="input-field" placeholder="Search catalog items (try: 'headphones', 'smartwatch')..." />
-      </div>
-
-      <div class="catalog-grid">
-        <div class="card">
+      <!-- Header Banner -->
+      <div class="header-card">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
           <div>
-            <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem;">Ultra ANC Headphones</h3>
-            <p style="color: #94a3b8; font-size: 0.85rem; margin: 0 0 1rem 0;">Spatial audio, 40hr battery life.</p>
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+              <span class="badge-chip">EdgeOperator v0.2.0</span>
+              <span id="tier-badge" class="tier-banner">⚡ Engine: Initializing...</span>
+            </div>
+            <h1 style="margin: 0; font-size: 2rem; font-weight: 800; background: linear-gradient(135deg, #ffffff, #a5b4fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+              On-Device AI Agent & Workflow Operator
+            </h1>
+            <p style="color: var(--text-muted); margin: 0.5rem 0 0 0; font-size: 0.95rem; max-width: 650px;">
+              Local-first in-browser agent powered by <strong>Chrome Gemini Nano</strong>, <strong>Vega Decision Engine</strong>, and <strong>WebLLM</strong>. Zero cloud API costs. Prompts never leave the browser.
+            </p>
           </div>
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-weight: bold; color: #38bdf8;">$199.99</span>
-            <button id="btn-add-headphones" class="btn-primary" onclick="updateCart(1)">Add to Cart</button>
-          </div>
-        </div>
 
-        <div class="card">
-          <div>
-            <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem;">Titanium Smartwatch</h3>
-            <p style="color: #94a3b8; font-size: 0.85rem; margin: 0 0 1rem 0;">ECG sensor, sapphire glass display.</p>
-          </div>
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-weight: bold; color: #38bdf8;">$299.99</span>
-            <button id="btn-add-watch" class="btn-primary" onclick="updateCart(1)">Add to Cart</button>
-          </div>
-        </div>
-
-        <div class="card">
-          <div>
-            <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem;">Mechanical Keyboard</h3>
-            <p style="color: #94a3b8; font-size: 0.85rem; margin: 0 0 1rem 0;">Hot-swappable switches, PBT keycaps.</p>
-          </div>
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-weight: bold; color: #38bdf8;">$129.99</span>
-            <button id="btn-add-keyboard" class="btn-primary" onclick="updateCart(1)">Add to Cart</button>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button id="btn-launch-workflows" class="btn-primary" onclick="openWorkflowsStudio()">
+              ⚡ Automations Studio
+            </button>
+            <button id="btn-launch-chat" class="btn-secondary" onclick="openChatCopilot()">
+              💬 Chat Copilot
+            </button>
           </div>
         </div>
       </div>
 
+      <!-- Live Capability Showcases Grid -->
+      <div class="section-grid">
+        <!-- CARD 1: Store & Repeated Clicks (x3) -->
+        <div class="showcase-card" data-testid="showcase-store">
+          <div>
+            <div class="card-header">
+              <h2 class="card-title">🛒 1. Repeated Clicks & SPA Resilience</h2>
+              <span style="font-size: 0.8rem; color: var(--text-muted);">
+                Cart: <strong id="cart-count" style="color: var(--accent); font-size: 1rem;">0</strong>
+              </span>
+            </div>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0;">
+              Tests multi-click workflows (e.g. "Add to Cart ×3"). The button simulates real SPA state (sets <code>aria-busy="true"</code> for 150ms) while EdgeOperator re-acquires the element sequentially.
+            </p>
+
+            <div class="catalog-items">
+              <div class="product-row" id="product-headphones">
+                <div>
+                  <div style="font-weight: 600; font-size: 0.9rem;">Ultra ANC Headphones</div>
+                  <div style="color: var(--accent); font-weight: bold; font-size: 0.85rem;">$199.99</div>
+                </div>
+                <button
+                  id="btn-add-headphones"
+                  class="btn-primary"
+                  data-testid="add-headphones-btn"
+                  onclick="updateCart('Ultra ANC Headphones', 199.99, this)"
+                >
+                  Add to Cart
+                </button>
+              </div>
+
+              <div class="product-row" id="product-watch">
+                <div>
+                  <div style="font-weight: 600; font-size: 0.9rem;">Titanium Smartwatch</div>
+                  <div style="color: var(--accent); font-weight: bold; font-size: 0.85rem;">$299.99</div>
+                </div>
+                <button
+                  id="btn-add-watch"
+                  class="btn-primary"
+                  data-testid="add-watch-btn"
+                  onclick="updateCart('Titanium Smartwatch', 299.99, this)"
+                >
+                  Add to Cart
+                </button>
+              </div>
+
+              <div class="product-row" id="product-keyboard">
+                <div>
+                  <div style="font-weight: 600; font-size: 0.9rem;">Mechanical Keyboard</div>
+                  <div style="color: var(--accent); font-weight: bold; font-size: 0.85rem;">$129.99</div>
+                </div>
+                <button
+                  id="btn-add-keyboard"
+                  class="btn-primary"
+                  data-testid="add-keyboard-btn"
+                  onclick="updateCart('Mechanical Keyboard', 129.99, this)"
+                >
+                  Add to Cart
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top: 1rem; pt: 0.75rem; border-top: 1px solid rgba(255, 255, 255, 0.06);">
+            <button class="btn-secondary" style="width: 100%;" onclick="runRepeatClickDemo()">
+              ▶ Run "Add Headphones ×3" Repeat Workflow
+            </button>
+          </div>
+        </div>
+
+        <!-- CARD 2: Form Synthesis ("⚡ Build steps") -->
+        <div class="showcase-card" data-testid="showcase-forms">
+          <div>
+            <div class="card-header">
+              <h2 class="card-title">⚡ 2. Dynamic Form Synthesis</h2>
+              <span class="badge-chip">Zero Selectors</span>
+            </div>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0;">
+              Workflow Studio scans this shipping form, extracts labels, datalists, and selects, and synthesizes 1-click repeatable form fillers with 0 hardcoded paths.
+            </p>
+
+            <form id="shipping-form" onsubmit="event.preventDefault(); submitOrder();" style="display: flex; flex-direction: column; gap: 0.65rem;">
+              <div class="form-grid">
+                <div>
+                  <label style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 0.25rem;">Recipient Name</label>
+                  <input id="ship-name" class="input-field" placeholder="e.g. Sarah Connor" required />
+                </div>
+                <div>
+                  <label style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 0.25rem;">Destination City</label>
+                  <input id="ship-city" list="cities-list" class="input-field" placeholder="Choose city..." required />
+                  <datalist id="cities-list">
+                    <option value="San Francisco"></option>
+                    <option value="Berlin"></option>
+                    <option value="Tokyo"></option>
+                    <option value="London"></option>
+                  </datalist>
+                </div>
+              </div>
+
+              <div>
+                <label style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 0.25rem;">Shipping Method</label>
+                <select id="ship-method" class="input-field">
+                  <option value="standard">Standard Courier (3-5 days)</option>
+                  <option value="express">Express Priority Air (Next day)</option>
+                  <option value="freight">Industrial Cargo</option>
+                </select>
+              </div>
+
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem;">
+                <input type="checkbox" id="ship-gift" />
+                <label for="ship-gift" style="font-size: 0.8rem; color: var(--text-muted);">Include tamper-evident security seal</label>
+              </div>
+
+              <button type="submit" id="btn-submit-order" class="btn-primary" style="margin-top: 0.5rem;">
+                Confirm Shipping Order
+              </button>
+            </form>
+          </div>
+
+          <div style="margin-top: 1rem; pt: 0.75rem; border-top: 1px solid rgba(255, 255, 255, 0.06);">
+            <button class="btn-secondary" style="width: 100%;" onclick="openWorkflowsStudio()">
+              ⚡ Open Studio to "Build steps" from this form
+            </button>
+          </div>
+        </div>
+
+        <!-- CARD 3: Element Picker Crosshair (⌖) Playground -->
+        <div class="showcase-card" data-testid="showcase-picker">
+          <div>
+            <div class="card-header">
+              <h2 class="card-title">⌖ 3. Interactive Element Picker</h2>
+              <span class="badge-chip">Clickable Ancestor Resolver</span>
+            </div>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0;">
+              Try clicking the Crosshair in Workflow Studio and hovering over nested children (icons, badge chips). EdgeOperator cleanly resolves the target clickable container.
+            </p>
+
+            <div style="display: flex; flex-direction: column; gap: 0.75rem; background: rgba(11, 15, 25, 0.5); padding: 1rem; border-radius: 8px; border: 1px solid var(--border);">
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <button id="promo-btn-1" class="btn-primary" onclick="triggerPromo('VIP Early Access')">
+                  <span style="pointer-events: none;">✨</span>
+                  <span style="font-weight: bold; pointer-events: none;">VIP Early Access</span>
+                </button>
+                <button id="promo-btn-2" class="btn-secondary" onclick="triggerPromo('Export Telemetry')">
+                  <span>📥</span>
+                  <span>Export Telemetry</span>
+                </button>
+              </div>
+
+              <div id="picker-target-box" style="padding: 0.75rem; background: rgba(139, 92, 246, 0.08); border: 1px dashed rgba(139, 92, 246, 0.4); border-radius: 6px; font-size: 0.8rem; color: #c4b5fd;">
+                <strong>Test Landmark Box:</strong> Pick this box to create a verified landmark scroll or observation step.
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top: 1rem; pt: 0.75rem; border-top: 1px solid rgba(255, 255, 255, 0.06);">
+            <button class="btn-secondary" style="width: 100%;" onclick="openWorkflowsStudio()">
+              ⌖ Launch Workflow Studio & Try Picker
+            </button>
+          </div>
+        </div>
+
+        <!-- CARD 4: Teach 1 -> Batch N Inventory Grid -->
+        <div class="showcase-card" data-testid="showcase-batch">
+          <div>
+            <div class="card-header">
+              <h2 class="card-title">📋 4. 'Teach 1 → Batch N' Macro Grid</h2>
+              <span class="badge-chip">Sibling Extraction</span>
+            </div>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0;">
+              Demonstrate an action on Row 1 (e.g. Click Edit → Save). EdgeOperator extracts sibling rows into a parameterized macro with human gate confirmation.
+            </p>
+
+            <table class="table-custom" id="inventory-table">
+              <thead>
+                <tr>
+                  <th>SKU</th>
+                  <th>Product</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr id="row-101">
+                  <td><code>SKU-101</code></td>
+                  <td>Heavyweight Tee</td>
+                  <td><span style="color: #4ade80;">Active</span></td>
+                  <td><button class="btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;" onclick="editRow(101)">Edit</button></td>
+                </tr>
+                <tr id="row-102">
+                  <td><code>SKU-102</code></td>
+                  <td>Vintage Washed</td>
+                  <td><span style="color: #fbbf24;">Pending</span></td>
+                  <td><button class="btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;" onclick="editRow(102)">Edit</button></td>
+                </tr>
+                <tr id="row-103">
+                  <td><code>SKU-103</code></td>
+                  <td>French Terry</td>
+                  <td><span style="color: #4ade80;">Active</span></td>
+                  <td><button class="btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;" onclick="editRow(103)">Edit</button></td>
+                </tr>
+                <tr id="row-104">
+                  <td><code>SKU-104</code></td>
+                  <td>Raw Hem Pocket</td>
+                  <td><span style="color: #4ade80;">Active</span></td>
+                  <td><button class="btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;" onclick="editRow(104)">Edit</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div style="margin-top: 1rem; pt: 0.75rem; border-top: 1px solid rgba(255, 255, 255, 0.06);">
+            <button class="btn-secondary" style="width: 100%;" onclick="openChatCopilot()">
+              💬 Ask Chat: "Batch edit inventory items"
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Telemetry State Bar -->
       <div class="state-panel">
         <div style="color: #a855f7; font-weight: bold; margin-bottom: 0.5rem;">[Live App State Telemetry]</div>
-        <div>Current Route: <span id="current-path" style="color: #38bdf8;">/products</span></div>
-        <div>Cart Total: <span id="cart-total" style="color: #4ade80;">$0.00</span></div>
-        <div>Last Action: <span id="last-action" style="color: #f59e0b;">App Initialized</span></div>
+        <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
+          <div>Cart Items: <span id="telemetry-cart-count" style="color: var(--accent); font-weight: bold;">0</span></div>
+          <div>Cart Total: <span id="cart-total" style="color: #4ade80; font-weight: bold;">$0.00</span></div>
+          <div>Last Event: <span id="last-action" style="color: #f59e0b;">Demo Page Initialized</span></div>
+        </div>
       </div>
     </div>
 
-    <!-- The widget container -->
+    <!-- The Mount Target -->
     <div id="chat-widget"></div>
 
     <script>
-      function updateCart(qty) {
-        const countEl = document.getElementById('cart-count');
-        const current = parseInt(countEl.innerText) || 0;
-        const next = current + qty;
-        countEl.innerText = next;
-        document.getElementById('cart-total').innerText = '$' + (next * 149.99).toFixed(2);
-        document.getElementById('last-action').innerText = 'Added ' + qty + ' item(s) to cart';
+      let cartTotal = 0;
+      let cartItems = 0;
+
+      function updateCart(name, price, btn) {
+        if (btn) {
+          btn.setAttribute('aria-busy', 'true');
+          setTimeout(() => btn.removeAttribute('aria-busy'), 150);
+        }
+        cartItems++;
+        cartTotal += price;
+        document.getElementById('cart-count').innerText = cartItems;
+        document.getElementById('telemetry-cart-count').innerText = cartItems;
+        document.getElementById('cart-total').innerText = '$' + cartTotal.toFixed(2);
+        document.getElementById('last-action').innerText = 'Added "' + name + '" ($' + price.toFixed(2) + ') to cart';
+      }
+
+      function submitOrder() {
+        const name = document.getElementById('ship-name').value;
+        const city = document.getElementById('ship-city').value;
+        document.getElementById('last-action').innerText = 'Order confirmed for ' + name + ' (' + city + ')';
+        alert('Order submitted successfully for ' + name + '!');
+      }
+
+      function triggerPromo(name) {
+        document.getElementById('last-action').innerText = 'Promo triggered: ' + name;
+      }
+
+      function editRow(id) {
+        document.getElementById('last-action').innerText = 'Editing Row ' + id;
+      }
+
+      function openWorkflowsStudio() {
+        if (window.EdgeOperator) {
+          window.EdgeOperator.open({ panel: 'workflows' });
+        }
+      }
+
+      function openChatCopilot() {
+        if (window.EdgeOperator) {
+          window.EdgeOperator.open({ panel: 'chat' });
+        }
+      }
+
+      async function runRepeatClickDemo() {
+        if (window.EdgeOperator?.workflowRunner) {
+          const step = {
+            id: 'demo_headphones_repeat',
+            title: 'Add Headphones (×3)',
+            action: 'click',
+            target: '#btn-add-headphones',
+            repeatCount: 3,
+            repeatIntervalMs: 350,
+          };
+          const wf = {
+            id: 'wf_demo_repeat',
+            name: 'Add Headphones 3 Times',
+            description: 'Demonstrates repeated clicks with resilient re-acquisition',
+            steps: [step],
+          };
+          await window.EdgeOperator.workflowRunner.runWorkflow(wf);
+        } else {
+          // Direct fallback click
+          const btn = document.getElementById('btn-add-headphones');
+          for (let i = 0; i < 3; i++) {
+            btn.click();
+            await new Promise(r => setTimeout(r, 350));
+          }
+        }
       }
     </script>
 
     <script type="module">
       import '/src/main.tsx'
       
-      window.addEventListener('load', () => {
-        if (window.Gemma4Agent) {
-          window.Gemma4Agent.init({
+      window.addEventListener('load', async () => {
+        if (window.EdgeOperator) {
+          window.EdgeOperator.init({
             containerId: 'chat-widget',
             mode: 'auto',
-            systemPrompt: 'You are an autonomous AI web copilot equipped with 5 primitives (browse, sandbox, read/write, search, ask) to assist the user on this portal.',
-            tools: [
-              {
-                type: 'function',
-                function: {
-                  name: 'addToCart',
-                  description: 'Add quantity of items to the shopping cart',
-                  parameters: { type: 'object', properties: { quantity: { type: 'integer' } }, required: ['quantity'] }
-                }
-              },
-              {
-                type: 'function',
-                function: {
-                  name: 'navigateTo',
-                  description: 'Navigate to a page on the site',
-                  parameters: { type: 'object', properties: { path: { type: 'string' } }, required: ['path'] }
-                }
-              }
-            ],
-            onToolCall: async (name, args) => {
-              if (name === 'addToCart') {
-                const qty = parseInt(args.quantity) || 1;
-                updateCart(qty);
-                return { success: true, cartCount: parseInt(document.getElementById('cart-count').innerText) };
-              }
-              if (name === 'navigateTo') {
-                document.getElementById('current-path').innerText = args.path;
-                document.getElementById('last-action').innerText = 'Navigated to ' + args.path;
-                return { navigated: true, path: args.path };
-              }
-              return { error: 'Unknown function' };
-            }
+            defaultOpen: false,
+            systemPrompt: 'You are EdgeOperator, an autonomous on-device AI web assistant with 5 primitives (browse, sandbox, read/write, search, ask). You help users automate workflows on this site with 0 cloud token costs.',
           });
+
+          // Detect active engine tier for display banner
+          setTimeout(() => {
+            const banner = document.getElementById('tier-badge');
+            if (banner) {
+              const hasNano = typeof window !== 'undefined' && Boolean(window.ai?.languageModel);
+              if (hasNano) {
+                banner.innerText = '⚡ Engine: Chrome Gemini Nano (0 MB)';
+              } else {
+                banner.innerText = '⚡ Engine: Vega Reflex (<5ms) & MiniLM WebGPU';
+              }
+            }
+          }, 500);
         }
       });
     </script>

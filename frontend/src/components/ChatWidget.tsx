@@ -92,6 +92,35 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
     }
   }, []);
 
+  // Programmatic API events: EdgeOperator.open({ panel: 'workflows' | 'chat' }) / EdgeOperator.close()
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleOpen = (e: Event) => {
+      const detail = (e as CustomEvent).detail || {};
+      setIsOpen(true);
+      if (detail.panel === "workflows") {
+        setActiveTab("workflows");
+      } else if (detail.panel === "chat") {
+        setActiveTab("chat");
+      }
+    };
+    const handleClose = () => {
+      setIsOpen(false);
+    };
+
+    window.addEventListener("eo:open", handleOpen);
+    window.addEventListener("edgeoperator:open", handleOpen);
+    window.addEventListener("eo:close", handleClose);
+    window.addEventListener("edgeoperator:close", handleClose);
+
+    return () => {
+      window.removeEventListener("eo:open", handleOpen);
+      window.removeEventListener("edgeoperator:open", handleOpen);
+      window.removeEventListener("eo:close", handleClose);
+      window.removeEventListener("edgeoperator:close", handleClose);
+    };
+  }, []);
+
   const toggleDock = useCallback(() => {
     setDockPosition((prev) => {
       const next = prev === "right" ? "left" : "right";

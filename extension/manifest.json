@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "EdgeOperator • Autonomous On-Device Web Operator",
   "version": "0.2.0",
-  "description": "Local-first on-device AI web operator for industrial OT Web-Based Management (WBM) and repetitive web workflows.",
+  "description": "On-device AI agent & chat widget for any website: Chrome Gemini Nano, WebGPU, WebLLM. Record-and-replay browser automation, zero API cost, prompts never leave the browser.",
   "author": "Adarrsh Paul <adarrsh@paulcreates.online>",
   "homepage_url": "https://agent.paulcreates.online",
   "icons": {

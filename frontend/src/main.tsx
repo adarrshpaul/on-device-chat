@@ -37,7 +37,25 @@ export interface EdgeOperatorConfig {
 
 export type Gemma4Config = EdgeOperatorConfig;
 
+export const EDGE_OPERATOR_VERSION = "0.2.0";
+
+export function getStyleHref(): string {
+  if (typeof document !== "undefined") {
+    const existing = document.getElementById("edge-operator-styles") || document.getElementById("on-device-chat-styles");
+    if (existing && (existing as HTMLLinkElement).href) return (existing as HTMLLinkElement).href;
+    const curScript = document.currentScript as HTMLScriptElement | null;
+    if (curScript?.src) {
+      try {
+        const u = new URL(curScript.src);
+        return new URL("style.css", u).href;
+      } catch {}
+    }
+  }
+  return `https://cdn.jsdelivr.net/npm/on-device-chat@${EDGE_OPERATOR_VERSION}/dist/style.css`;
+}
+
 class EdgeOperatorImpl {
+  readonly version = EDGE_OPERATOR_VERSION;
   private root: ReturnType<typeof createRoot> | null = null;
   private container: HTMLElement | null = null;
 
@@ -52,12 +70,12 @@ class EdgeOperatorImpl {
       return;
     }
 
-    // Auto-inject CSS stylesheet from jsDelivr if not already present in document
+    // Auto-inject CSS stylesheet if not already present in document
     if (typeof document !== "undefined" && !document.getElementById("edge-operator-styles") && !document.getElementById("on-device-chat-styles")) {
       const link = document.createElement("link");
       link.id = "edge-operator-styles";
       link.rel = "stylesheet";
-      link.href = "https://cdn.jsdelivr.net/npm/edge-operator/dist/style.css";
+      link.href = getStyleHref();
       document.head.appendChild(link);
     }
 
@@ -76,6 +94,23 @@ class EdgeOperatorImpl {
         <ChatWidget config={config} />
       </React.StrictMode>
     );
+  }
+
+  /** Open the agent widget with optional target panel */
+  open(options?: { panel?: "chat" | "workflows" }) {
+    if (!this.root) {
+      this.init({ defaultOpen: true });
+    }
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("eo:open", { detail: options || {} }));
+    }
+  }
+
+  /** Close the agent widget */
+  close() {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("eo:close"));
+    }
   }
 
   /** Remove the widget and free memory */
@@ -169,7 +204,7 @@ if (typeof window !== "undefined") {
       } else {
         const link = document.createElement("link");
         link.rel = "stylesheet";
-        link.href = (externalStyle as HTMLLinkElement)?.href || "https://cdn.jsdelivr.net/npm/edge-operator/dist/style.css";
+        link.href = (externalStyle as HTMLLinkElement)?.href || getStyleHref();
         this.shadow.appendChild(link);
       }
 
