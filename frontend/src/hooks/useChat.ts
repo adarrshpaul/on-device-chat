@@ -14,10 +14,15 @@ import { expertJudge, EvalMetrics, EvalTrace, AgentStepTrace } from "../lib/expe
 import { recipeStore, SiteMacroRecipe } from "../lib/recipeStore";
 import { pageActionInferer, PageAnalysisResult } from "../lib/pageActionInferer";
 import { sessionStore, ChatSession } from "../lib/sessionStore";
-import type { DecisionTrace, ActionExecutionOutput } from "../lib/types";
+import type { DecisionTrace, ActionExecutionOutput, WebWorkflow, BatchProposal } from "../lib/types";
 import { workflowRunner } from "../lib/workflowRunner";
 import { workflowStore } from "../lib/workflowStore";
 import { ensembleDecisionEngine } from "../lib/ensembleDecision";
+import { NavPersistenceManager } from "../lib/navPersistence";
+import { batchRunner, BatchProposalManager } from "../lib/batchEngine";
+import { MacroRecorder } from "../lib/macroRecorder";
+import { CanvasGameController, GameProgressEvent } from "../lib/canvasGameController";
+import { CanvasInspector } from "../lib/canvasInspector";
 import type { Gemma4Config } from "../main";
 
 export interface DisplayMessage {
@@ -39,6 +44,8 @@ export interface DisplayMessage {
   durationMs?: number;
   decision?: DecisionTrace;
   actionOutput?: ActionExecutionOutput;
+  batchProposal?: BatchProposal;
+  gameProgress?: GameProgressEvent & { isFinished?: boolean; summary?: string };
 }
 
 export type EngineStatus = "idle" | "loading" | "ready" | "generating" | "error";
@@ -50,7 +57,7 @@ export function useChat(config: Gemma4Config) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [engineStatus, setEngineStatus] = useState<EngineStatus>("loading");
-  const [currentTierInfo, setCurrentTierInfo] = useState<TierInfo>(TIER_METADATA[ModelTier.TIER_0_GEMINI_NANO]);
+  const [currentTierInfo, setCurrentTierInfo] = useState<TierInfo>(TIER_METADATA[ModelTier.TIER_1_5_LAYA_DECISION]);
   const [prefetchStatus, setPrefetchStatus] = useState<PreloadProgress | null>(null);
   const [modelLoadingProgress, setModelLoadingProgress] = useState<ModelProgressInfo | null>(null);
   const [nanoSupported, setNanoSupported] = useState<boolean>(false);
@@ -63,6 +70,7 @@ export function useChat(config: Gemma4Config) {
   const [siteMacros, setSiteMacros] = useState<SiteMacroRecipe[]>([]);
   const [isJudging, setIsJudging] = useState(false);
   const [pageAnalysis, setPageAnalysis] = useState<PageAnalysisResult | null>(null);
+  const [isRecordingMacro, setIsRecordingMacro] = useState<boolean>(false);
 
   const escalationManagerRef = useRef<EscalationManager | null>(null);
   const harnessRef = useRef<AgentHarness | null>(null);
@@ -171,6 +179,7 @@ export function useChat(config: Gemma4Config) {
 
   // Initialize Escalation Manager and Agent Harness
   useEffect(() => {
+    CanvasInspector.initBridge();
     const manager = new EscalationManager({
       tools: config.tools || [],
       systemPrompt: config.systemPrompt,
@@ -190,7 +199,10 @@ export function useChat(config: Gemma4Config) {
     });
 
     escalationManagerRef.current = manager;
-    setEngineStatus("loading");
+    // System 1 (DOM navigation, site tour, page summary, and BM25 extractive search)
+    // is instantly ready without waiting for 15MB neural weight downloads.
+    setEngineStatus("ready");
+    setCurrentTierInfo(manager.currentTierInfo);
 
     manager
       .init()
@@ -201,9 +213,9 @@ export function useChat(config: Gemma4Config) {
         setNanoDiagnostic(manager.nanoDiagnostic);
       })
       .catch((err) => {
-        console.error("EscalationManager init error:", err);
-        setError(err instanceof Error ? err.message : "Engine initialization error");
-        setEngineStatus("error");
+        console.warn("Background model initialization notice:", err);
+        // Engine remains ready because System 1 and lexical BM25 Q&A function 100% offline
+        setEngineStatus("ready");
       });
 
     // Build custom host tools map from config.onToolCall
@@ -242,6 +254,23 @@ export function useChat(config: Gemma4Config) {
     // Initial evals telemetry load
     refreshEvalsData();
 
+    // Check for pending in-flight task from previous page navigation
+    const pendingTask = NavPersistenceManager.getPendingTask();
+    if (pendingTask) {
+      NavPersistenceManager.clearTask();
+      const resumeNotice: DisplayMessage = {
+        id: `resume_${Date.now()}`,
+        role: "assistant",
+        content: `📍 Navigated to **${typeof window !== "undefined" ? window.location.pathname : "page"}**. Resuming task: *"${pendingTask.userGoal}"*...`,
+      };
+      setMessages((prev) => [...prev, resumeNotice]);
+      setTimeout(() => {
+        if (harnessRef.current && escalationManagerRef.current) {
+          sendMessage(pendingTask.userGoal);
+        }
+      }, 500);
+    }
+
     return () => {
       unsubscribePrefetch();
       manager.destroy();
@@ -272,12 +301,25 @@ export function useChat(config: Gemma4Config) {
    * Run a saved multi-step automation workflow
    */
   const runSavedWorkflow = useCallback(
-    async (workflowId: string, fromUserQuery?: string) => {
-      const workflows = await workflowStore.getWorkflowsForOrigin();
-      const wf = workflows.find((w) => w.id === workflowId);
-      if (!wf) return;
+    async (workflowOrId: string | WebWorkflow, fromUserQuery?: string) => {
+      let wf: WebWorkflow | undefined;
+      if (typeof workflowOrId === "object" && workflowOrId !== null) {
+        wf = workflowOrId;
+      } else if (typeof workflowOrId === "string") {
+        const workflows = await workflowStore.getWorkflowsForOrigin();
+        wf = workflows.find((w) => w.id === workflowOrId);
+        if (!wf) {
+          wf = (await workflowStore.findWorkflowByTrigger(workflowOrId)) || undefined;
+        }
+      }
+
+      if (!wf) {
+        console.warn("[useChat] runSavedWorkflow: workflow not found for:", workflowOrId);
+        return;
+      }
 
       setIsLoading(true);
+      const wfContainerId = `wf_exec_${Date.now()}`;
       const msgsToAdd: DisplayMessage[] = [];
       if (fromUserQuery) {
         msgsToAdd.push({
@@ -286,48 +328,217 @@ export function useChat(config: Gemma4Config) {
           content: fromUserQuery,
         });
       }
+
+      const initialStepLines = wf.steps
+        .map((s: any, i: number) => `${i === 0 ? "👁️" : "○"} **Step ${i + 1}**: ${s.title}`)
+        .join("\n");
+
       msgsToAdd.push({
-        id: `wf_start_${Date.now()}`,
+        id: wfContainerId,
         role: "assistant",
-        content: `Executing workflow: **${wf.name}** (${wf.steps.length} steps)...`,
+        content: `🧭 **Human Web Navigation: ${wf.name}**\n\n${initialStepLines}`,
         isMacro: true,
       });
       setMessages((prev) => [...prev, ...msgsToAdd]);
 
-      const res = await workflowRunner.runWorkflow(wf, {
-        onStepUpdate: (idx, step) => {
-          if (step.output) {
-            const stepMsg: DisplayMessage = {
-              id: `wf_step_${Date.now()}_${idx}`,
-              role: "assistant",
-              actionOutput: {
-                id: `act_${Date.now()}_${idx}`,
-                action: step.action,
-                target: step.target || "page",
-                status: step.status === "error" ? "error" : "success",
-                outputSummary: step.output,
-                durationMs: step.delayMs || 250,
-                timestamp: Date.now(),
-              },
-            };
-            setMessages((prev) => [...prev, stepMsg]);
-          }
-        },
-      });
+      try {
+        const res = await workflowRunner.runWorkflow(wf, {
+          onStepUpdate: (idx, step) => {
+            setMessages((prev) =>
+              prev.map((m) => {
+                if (m.id === wfContainerId) {
+                  const stepLines = wf.steps.map((s: any, i: number) => {
+                    if (i < idx || (i === idx && step.status === "success")) {
+                      return `✓ **Step ${i + 1}**: ${s.title} *(observed)*`;
+                    } else if (i === idx && step.status === "running") {
+                      return `👁️ **Step ${i + 1}**: ${s.title} *(viewing with human gaze...)*`;
+                    } else if (i === idx && step.status === "error") {
+                      return `✗ **Step ${i + 1}**: ${s.title} *(failed)*`;
+                    } else {
+                      return `○ **Step ${i + 1}**: ${s.title}`;
+                    }
+                  });
+                  return {
+                    ...m,
+                    content: `🧭 **Human Web Navigation: ${wf.name}**\n\n${stepLines.join("\n")}`,
+                  };
+                }
+                return m;
+              })
+            );
+          },
+        });
 
-      const finishMsg: DisplayMessage = {
-        id: `wf_end_${Date.now()}`,
-        role: "assistant",
-        content: res.success
-          ? `✓ Finished workflow **${wf.name}** (${wf.steps.length} steps completed deterministically with 0 prompt tokens).`
-          : `✗ Workflow stopped with error: ${res.error}`,
-        isMacro: true,
-      };
-      setMessages((prev) => [...prev, finishMsg]);
-      setIsLoading(false);
+        setMessages((prev) =>
+          prev.map((m) => {
+            if (m.id === wfContainerId) {
+              const stepLines = wf.steps
+                .map((s: any, i: number) => `✓ **Step ${i + 1}**: ${s.title}`)
+                .join("\n");
+              return {
+                ...m,
+                content: res.success
+                  ? `✓ **Human Web Navigation Complete: ${wf.name}**\n\n${stepLines}\n\n*All ${wf.steps.length} landmarks visited with human gaze & zero prompt tokens.*`
+                  : `✗ **Navigation encountered error**: ${res.error}\n\n${stepLines}`,
+              };
+            }
+            return m;
+          })
+        );
+      } catch (err: any) {
+        console.error("[useChat] Error running saved workflow:", err);
+        setMessages((prev) =>
+          prev.map((m) => {
+            if (m.id === wfContainerId) {
+              return {
+                ...m,
+                content: `⚠️ **Workflow execution ended**: ${err?.message || "Execution error"}`,
+              };
+            }
+            return m;
+          })
+        );
+      } finally {
+        setIsLoading(false);
+      }
     },
     []
   );
+
+  /**
+   * Execute batch proposal across confirmed entities with human confirmation gate
+   */
+  const executeBatchProposal = useCallback(
+    async (proposalToRun: BatchProposal) => {
+      setIsLoading(true);
+      setError(null);
+
+      // Update message state to show running status
+      setMessages((prev) =>
+        prev.map((m) => {
+          if (m.batchProposal?.id === proposalToRun.id) {
+            return {
+              ...m,
+              batchProposal: { ...proposalToRun, executionStatus: "running" },
+            };
+          }
+          return m;
+        })
+      );
+
+      try {
+        const result = await batchRunner.executeBatch(proposalToRun, {
+          onEntityProgress: (idx, entity) => {
+            setMessages((prev) =>
+              prev.map((m) => {
+                if (m.batchProposal?.id === proposalToRun.id) {
+                  const updated = [...m.batchProposal.entities];
+                  updated[idx] = { ...entity };
+                  return {
+                    ...m,
+                    batchProposal: {
+                      ...m.batchProposal,
+                      entities: updated,
+                    },
+                  };
+                }
+                return m;
+              })
+            );
+          },
+        });
+
+        setMessages((prev) =>
+          prev.map((m) => {
+            if (m.batchProposal?.id === proposalToRun.id) {
+              return {
+                ...m,
+                content: `✓ **Batch Action Completed**\n\n${result.summary}`,
+                batchProposal: {
+                  ...proposalToRun,
+                  entities: result.entities,
+                  executionStatus: "completed",
+                  succeededCount: result.succeededCount,
+                  failedCount: result.failedCount,
+                },
+              };
+            }
+            return m;
+          })
+        );
+      } catch (err: any) {
+        console.error("[useChat] Batch execution error:", err);
+        setError(err?.message || "Batch execution error");
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
+  const cancelBatchProposal = useCallback((proposalId: string) => {
+    batchRunner.cancel();
+    setMessages((prev) =>
+      prev.map((m) => {
+        if (m.batchProposal?.id === proposalId) {
+          return {
+            ...m,
+            content: `Cancelled batch proposal for ${m.batchProposal.title}.`,
+            batchProposal: {
+              ...m.batchProposal,
+              executionStatus: "cancelled",
+            },
+          };
+        }
+        return m;
+      })
+    );
+  }, []);
+
+  const abortBatchExecution = useCallback(() => {
+    batchRunner.cancel();
+    setIsLoading(false);
+  }, []);
+
+  /**
+   * Start macro recording on Item 1 ("Teach 1 → Batch N")
+   */
+  const startMacroRecording = useCallback((customPrompt?: string) => {
+    setIsRecordingMacro(true);
+
+    const userPrompt = customPrompt || "Record macro workflow on item 1";
+    const userMsg: DisplayMessage = {
+      id: `user_${Date.now()}`,
+      role: "user",
+      content: userPrompt,
+    };
+
+    const instructMsg: DisplayMessage = {
+      id: `asst_${Date.now()}`,
+      role: "assistant",
+      content: "🔴 **Recording Workflow on Item 1**\n\nPerform your actions directly on the first item in the page (e.g. click edit, change text/status, click save).\n\nThe agent is capturing your relative DOM actions and will generalize them across all sibling entities.\n\nWhen finished, click **Done Recording ✔** on the floating banner at the top of your screen.",
+    };
+
+    setMessages((prev) => [...prev, userMsg, instructMsg]);
+
+    MacroRecorder.startRecording({
+      onProposalReady: (proposal: BatchProposal) => {
+        setIsRecordingMacro(false);
+        const completionMsg: DisplayMessage = {
+          id: `asst_${Date.now()}`,
+          role: "assistant",
+          content: `⚡ **Macro Recorded Successfully**\n\nCaptured **${proposal.templateSteps.length} interaction steps** on the demonstrated item. Discovered **${proposal.entities.length} sibling entities** on this page.\n\nReview the proposed batch updates in the confirmation gate below:`,
+          batchProposal: proposal,
+        };
+        setMessages((prev) => [...prev, completionMsg]);
+      },
+    });
+  }, []);
+
+  const stopMacroRecording = useCallback(() => {
+    setIsRecordingMacro(false);
+    MacroRecorder.stopRecording();
+  }, []);
 
   /**
    * Run multi-model ensemble consensus decision evaluation
@@ -346,15 +557,135 @@ export function useChat(config: Gemma4Config) {
     async (content: string) => {
       if (!content.trim()) return;
 
-      // Check if user intent matches a saved automation workflow
-      const matchedWf = await workflowStore.findMatchingWorkflow("*", content);
-      if (matchedWf && !content.includes("?")) {
-        await runSavedWorkflow(matchedWf.id, content);
+      const cleanLower = content.toLowerCase().trim();
+
+      // Check if user requests macro recording demonstration ("Teach 1 -> Batch N")
+      if (
+        /\b(record macro|record workflow|watch me|watch what i do|teach 1|teach macro|record action|start recording)\b/i.test(cleanLower) ||
+        cleanLower.startsWith("/record")
+      ) {
+        startMacroRecording(content);
         return;
       }
 
-      if (!escalationManagerRef.current || !harnessRef.current || engineStatus !== "ready") {
-        setError("AI Engine is still loading. Please wait a moment.");
+      // Check if user requests batch operations across multiple entities
+      if (
+        /\b(batch|bulk|for all|apply to all|update all|process all|all items|all devices|all rows|all projects|all entities)\b/i.test(cleanLower) ||
+        cleanLower.startsWith("/batch")
+      ) {
+        const userMsg: DisplayMessage = {
+          id: `user_${Date.now()}`,
+          role: "user",
+          content,
+        };
+        const proposal = BatchProposalManager.createProposal({
+          intent: content,
+          siteOrigin: typeof window !== "undefined" ? window.location.origin : "localhost",
+        });
+
+        const assistantMsg: DisplayMessage = {
+          id: `asst_${Date.now()}`,
+          role: "assistant",
+          content: `📦 **Batch Action Proposal Generated**\n\nI identified **${proposal.entities.length} items** in the active DOM. Review and configure the items in the **Human Confirmation Gate** below, then approve execution.`,
+          batchProposal: proposal,
+        };
+
+        setMessages((prev) => [...prev, userMsg, assistantMsg]);
+        return;
+      }
+
+      // Check if user requests autonomous game playing / canvas autopilot
+      if (
+        /\b(play game|play basketball|start game|play the game|game autopilot|autopilot game|score more|get more score|score points|beat high score|score baskets|basketball)\b/i.test(cleanLower) ||
+        cleanLower.startsWith("/play")
+      ) {
+        const userMsg: DisplayMessage = {
+          id: `user_${Date.now()}`,
+          role: "user",
+          content,
+        };
+
+        const asstMsgId = `asst_${Date.now()}`;
+        const initialGameMsg: DisplayMessage = {
+          id: asstMsgId,
+          role: "assistant",
+          content: `🏀 **Autonomous Game Autopilot Initialized**\n\nI have engaged the 60Hz physics trajectory optimizer on the active canvas game. Live scoring and combo updates stream below:`,
+          gameProgress: {
+            elapsedSec: 0,
+            score: 0,
+            deltaScore: 0,
+            combo: 0,
+            totalJumps: 0,
+            turbo: false,
+            statusText: "Analyzing canvas physics & launching gameplay...",
+          },
+        };
+
+        setMessages((prev) => [...prev, userMsg, initialGameMsg]);
+        setIsLoading(true);
+        setError(null);
+
+        try {
+          const result = await CanvasGameController.playGame({
+            durationSec: 35,
+            targetScore: 100,
+            onProgress: (evt) => {
+              setMessages((prev) =>
+                prev.map((m) => {
+                  if (m.id === asstMsgId) {
+                    return {
+                      ...m,
+                      gameProgress: { ...evt },
+                    };
+                  }
+                  return m;
+                })
+              );
+            },
+          });
+
+          setMessages((prev) =>
+            prev.map((m) => {
+              if (m.id === asstMsgId) {
+                return {
+                  ...m,
+                  content: `🏆 **Game Match Complete!**\n\nAchieved **${result.finalScore} points** across **${result.totalJumps} jumps** (Max Combo: **x${result.maxCombo}**).\n\n*${result.summary}*`,
+                  gameProgress: {
+                    elapsedSec: result.durationSec,
+                    score: result.finalScore,
+                    deltaScore: 0,
+                    combo: result.maxCombo,
+                    totalJumps: result.totalJumps,
+                    turbo: result.maxCombo >= 3,
+                    statusText: "Match finished successfully.",
+                    isFinished: true,
+                    summary: result.summary,
+                  },
+                };
+              }
+              return m;
+            })
+          );
+        } catch (err: any) {
+          setError(`Game Autopilot error: ${err?.message || err}`);
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      // Only execute workflow if user explicitly types an automation command (e.g. /wf, run workflow)
+      if (cleanLower.startsWith("/wf ") || cleanLower.startsWith("run workflow")) {
+        const queryTerm = cleanLower.replace(/^\/(?:wf|workflow)\s+|^run\s+workflow\s+/i, "");
+        const matchedWf = await workflowStore.findMatchingWorkflow("*", queryTerm);
+        if (matchedWf) {
+          await runSavedWorkflow(matchedWf, content);
+          return;
+        }
+      }
+
+      if (!escalationManagerRef.current || !harnessRef.current) {
+        setError("AI Engine is initializing. Please wait a moment.");
         return;
       }
 
@@ -372,6 +703,12 @@ export function useChat(config: Gemma4Config) {
       try {
         const activeTier = escalationManagerRef.current.currentTier;
 
+        // Pass prior dialogue history to prevent amnesic execution
+        const conversationHistory = messages.map((m) => ({
+          role: m.role,
+          content: m.content || "",
+        }));
+
         // Run the universal harness loop wrapping the text function
         const harnessResult = await harnessRef.current.runLoop(
           content,
@@ -379,7 +716,8 @@ export function useChat(config: Gemma4Config) {
             const prompt = msgs.map((m) => `${m.role}: ${m.content}`).join("\n");
             return await escalationManagerRef.current!.predictText(prompt, msgs);
           },
-          activeTier
+          activeTier,
+          conversationHistory
         );
 
         const assistantMsg: DisplayMessage = {
@@ -410,14 +748,23 @@ export function useChat(config: Gemma4Config) {
         });
         await refreshSessions();
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : "Failed to execute harness loop";
+        const msg = err instanceof Error ? err.message : "Failed to execute request";
+        console.error("[useChat] Error executing harness loop:", err);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `err_${Date.now()}`,
+            role: "assistant",
+            content: `⚠️ I encountered an issue processing your request: ${msg}. Please try asking about specific sections, features, or actions on this page.`,
+          },
+        ]);
         setError(msg);
       } finally {
         setIsLoading(false);
         setActiveSteps([]);
       }
     },
-    [currentSessionId, engineStatus, messages, refreshEvalsData, refreshSessions]
+    [currentSessionId, messages, refreshEvalsData, refreshSessions, runSavedWorkflow]
   );
 
   /**
@@ -589,5 +936,11 @@ export function useChat(config: Gemma4Config) {
     executeDirectAction,
     runSavedWorkflow,
     evaluateEnsembleDecision,
+    executeBatchProposal,
+    cancelBatchProposal,
+    abortBatchExecution,
+    isRecordingMacro,
+    startMacroRecording,
+    stopMacroRecording,
   };
 }

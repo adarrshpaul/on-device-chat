@@ -62,6 +62,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               isReady ? "Ask about this page..." : "Initializing local engine..."
             }
             disabled={!isReady}
+            style={{
+              backgroundColor: "transparent",
+              color: "#f8fafc",
+              border: "none",
+              outline: "none",
+              boxShadow: "none",
+              WebkitAppearance: "none",
+            }}
             className="flex-1 bg-transparent text-white placeholder-gray-500 px-1 py-1 text-[16px] leading-[1.5] focus:outline-none disabled:opacity-50 min-w-0"
           />
         </div>

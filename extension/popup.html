@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>On-Device Browser Agent</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <!-- Header -->
+    <header class="popup-header">
+      <div class="brand">
+        <img src="icons/icon48.png" alt="Logo" class="brand-icon">
+        <div class="brand-text">
+          <div class="title-row">
+            <span class="title">On-Device Agent</span>
+            <span class="version-tag" id="ext-version">v0.1.9</span>
+          </div>
+          <span class="subtitle">Autonomous Web Assistant</span>
+        </div>
+      </div>
+      <div class="status-badge" id="status-badge">
+        <span class="status-dot"></span>
+        <span class="status-text" id="status-text">Connected</span>
+      </div>
+    </header>
+
+    <!-- Page Context Card -->
+    <section class="page-card">
+      <div class="page-meta">
+        <div class="page-domain-row">
+          <svg class="globe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="2" y1="12" x2="22" y2="12"></line>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+          </svg>
+          <span class="page-domain" id="page-domain">Detecting page...</span>
+        </div>
+        <div class="page-title" id="page-title">Loading tab context...</div>
+      </div>
+
+      <div class="metrics-row">
+        <div class="metric-item">
+          <span class="metric-value" id="entity-count">—</span>
+          <span class="metric-label">Entities</span>
+        </div>
+        <div class="metric-item">
+          <span class="metric-value" id="engine-model">Gemini Nano</span>
+          <span class="metric-label">Local Engine</span>
+        </div>
+        <div class="metric-item">
+          <span class="metric-value text-emerald" id="privacy-level">100% Private</span>
+          <span class="metric-label">Telemetry</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quick Action Deck -->
+    <section class="actions-section">
+      <button class="btn btn-primary" id="btn-toggle-chat">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+        <div class="btn-content">
+          <span class="btn-label">Open Chat Assistant</span>
+          <span class="btn-hint">Shortcut: Alt+Shift+A</span>
+        </div>
+      </button>
+
+      <button class="btn btn-macro" id="btn-record-macro">
+        <svg class="btn-icon lightning" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+        </svg>
+        <div class="btn-content">
+          <span class="btn-label" id="macro-btn-label">⚡ Teach 1 → Batch N Macro</span>
+          <span class="btn-hint" id="macro-btn-hint">Record action on 1 item & replicate across all</span>
+        </div>
+      </button>
+    </section>
+
+    <!-- Settings & Preferences -->
+    <section class="settings-section">
+      <div class="setting-item">
+        <div class="setting-info">
+          <span class="setting-title">Auto-mount Widget</span>
+          <span class="setting-desc">Inject floating launcher on all pages</span>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="toggle-autoinject" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <span class="setting-title">Auto-expand Chat</span>
+          <span class="setting-desc">Open chat panel immediately upon navigation</span>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="toggle-defaultopen">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="popup-footer">
+      <span class="footer-note">Zero-cloud • Local client inference</span>
+      <div class="footer-links">
+        <a href="https://agent.paulcreates.online" target="_blank" rel="noreferrer" class="footer-link">Documentation</a>
+        <span class="footer-divider">•</span>
+        <a href="https://github.com/adarrshpaul/on-device-chat" target="_blank" rel="noreferrer" class="footer-link">GitHub</a>
+      </div>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

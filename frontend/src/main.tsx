@@ -11,6 +11,8 @@ import { SomOverlayManager } from "./lib/somOverlay";
 import { ActionDispatcher } from "./lib/actionDispatcher";
 import { StateDeltaVerifier } from "./lib/stateDeltaVerifier";
 import { AgentHarness } from "./lib/agentHarness";
+import { MacroRecorder } from "./lib/macroRecorder";
+import { BatchRunner, EntityExtractor, BatchProposalManager } from "./lib/batchEngine";
 
 export interface Gemma4Config {
   /** DOM element ID to mount into (auto-created if missing) */
@@ -92,7 +94,11 @@ Object.assign(instance, {
   SomOverlayManager,
   ActionDispatcher,
   StateDeltaVerifier,
-  AgentHarness
+  AgentHarness,
+  MacroRecorder,
+  BatchRunner,
+  EntityExtractor,
+  BatchProposalManager,
 });
 
 if (typeof window !== "undefined") {
@@ -103,6 +109,10 @@ if (typeof window !== "undefined") {
   (window as any).ActionDispatcher = ActionDispatcher;
   (window as any).StateDeltaVerifier = StateDeltaVerifier;
   (window as any).AgentHarness = AgentHarness;
+  (window as any).MacroRecorder = MacroRecorder;
+  (window as any).BatchRunner = BatchRunner;
+  (window as any).EntityExtractor = EntityExtractor;
+  (window as any).BatchProposalManager = BatchProposalManager;
 
   /**
    * Standard Web Component Custom Element: <on-device-chat>
@@ -127,7 +137,7 @@ if (typeof window !== "undefined") {
             :host {
               display: block;
               position: relative;
-              z-index: 999999;
+              z-index: 2147483647;
             }
           </style>
           <div id="shadow-mount-point"></div>
@@ -140,11 +150,17 @@ if (typeof window !== "undefined") {
         const mode = (this.getAttribute("tier") || this.getAttribute("mode")) as any;
 
         // Inject widget stylesheet into ShadowRoot
-        const link = document.createElement("link");
-        link.rel = "stylesheet";
-        const externalStyle = document.getElementById("on-device-chat-styles") as HTMLLinkElement;
-        link.href = externalStyle?.href || "https://cdn.jsdelivr.net/npm/on-device-chat/dist/style.css";
-        this.shadow.appendChild(link);
+        const externalStyle = document.getElementById("on-device-chat-styles");
+        if (externalStyle && externalStyle.tagName === "STYLE" && externalStyle.textContent) {
+          const styleEl = document.createElement("style");
+          styleEl.textContent = externalStyle.textContent;
+          this.shadow.appendChild(styleEl);
+        } else {
+          const link = document.createElement("link");
+          link.rel = "stylesheet";
+          link.href = (externalStyle as HTMLLinkElement)?.href || "https://cdn.jsdelivr.net/npm/on-device-chat/dist/style.css";
+          this.shadow.appendChild(link);
+        }
 
         this.reactRoot = createRoot(this.mountPoint);
         this.reactRoot.render(

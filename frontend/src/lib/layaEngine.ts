@@ -282,9 +282,42 @@ export class LayaDecisionEngine {
    */
   async routeAgentAction(
     userGoal: string,
-    pageContext: string,
+    _pageContext?: string,
     availableTools: string[] = ["browse", "search", "read", "sandbox", "final"]
   ): Promise<{ selectedTool: string; confidence: number; reason: string; decisionTrace?: DecisionTrace }> {
+    // 1. Guard: Informational and Knowledge Questions route directly to Direct Q&A (final)
+    const goalLower = userGoal.toLowerCase().trim();
+    const isQuestion =
+      goalLower.includes("?") ||
+      /^(who|what|where|when|why|how|which|whose|whom)\b/i.test(goalLower) ||
+      /^(is|are|was|were|can|could|would|will|do|does|did|tell|explain|describe)\b/i.test(goalLower) ||
+      /\b(who is|what is|tell me about|explain|describe|what does|how does)\b/i.test(goalLower);
+
+    const isExplicitAction = /^(open|click|go to|goto|navigate|visit|view|show|scroll|press|select|tap|type|toggle|switch)\b/i.test(goalLower);
+
+    if (isQuestion && !isExplicitAction) {
+      const decisionTrace: DecisionTrace = {
+        type: "system1_gate",
+        title: "Agent Tool Gate: Direct Q&A (final)",
+        selectedOption: "Tool: final (Direct Q&A)",
+        confidence: 0.95,
+        margin: 0.8,
+        latencyMs: 2,
+        engineUsed: "Laya Calibrated Gate (<5ms)",
+        distribution: [
+          { label: "Tool: final", score: 0.95, isWinner: true },
+          { label: "Tool: search", score: 0.22, isWinner: false },
+          { label: "Tool: browse", score: 0.05, isWinner: false },
+        ],
+      };
+      return {
+        selectedTool: "final",
+        confidence: 0.95,
+        reason: "User goal is an informational question; routed directly to Q&A (final)",
+        decisionTrace,
+      };
+    }
+
     const defaultCriteria: Record<string, string> = {
       browse: "Click, type into form, scroll, or inspect interactive DOM elements on this page",
       search: "Find specific text, keywords, headings, or product listings on the page",
@@ -311,7 +344,8 @@ export class LayaDecisionEngine {
       },
     };
 
-    const state = `User Goal: "${userGoal}"\nActive Page Context: "${pageContext.slice(0, 400)}"`;
+    // State focused on User Goal to prevent background page text from contaminating tool routing
+    const state = `Goal: "${userGoal}"`;
     const res = await this.predictDecision(state, questions);
     const action = res.answers["action"];
 

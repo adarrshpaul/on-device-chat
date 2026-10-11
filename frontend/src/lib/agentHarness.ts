@@ -28,6 +28,7 @@ import { A11yTreeEngine } from "./a11yTree";
 import { SomOverlayManager } from "./somOverlay";
 import { ActionDispatcher } from "./actionDispatcher";
 import { StateDeltaVerifier } from "./stateDeltaVerifier";
+import { NavPersistenceManager } from "./navPersistence";
 
 export type { HarnessToolCall };
 
@@ -47,6 +48,21 @@ export interface HarnessConfig {
   customToolDefs?: ToolDefinition[];
 }
 
+export function isFailureObservation(obs: string): boolean {
+  const lower = (obs || "").toLowerCase();
+  const patterns = [
+    "not found",
+    "0 results",
+    "0 occurrences",
+    "error:",
+    "syntax error",
+    "failed:",
+    "unknown tool",
+    "does not appear",
+  ];
+  return patterns.some((p) => lower.includes(p));
+}
+
 export class AgentHarness {
   private maxSteps: number;
   private onAskUser?: (question: string) => Promise<string>;
@@ -55,6 +71,7 @@ export class AgentHarness {
   private customToolDefs: ToolDefinition[];
   private memoryStore: Map<string, string> = new Map();
   private currentUserGoal: string = "";
+  private currentConversationHistory: Array<{ role: string; content: string }> = [];
   private activeAbortController: AbortController | null = null;
 
   constructor(config: HarnessConfig = {}) {
@@ -273,6 +290,17 @@ export class AgentHarness {
       }
 
       case "click": {
+        // SeeClick / ScreenSpot Pattern: Support normalized coordinate clicking [normX, normY]
+        if (rawArgs.normX !== undefined && rawArgs.normY !== undefined) {
+          const before = StateDeltaVerifier.captureSnapshot();
+          const ok = await ActionDispatcher.clickCoordinates(Number(rawArgs.normX), Number(rawArgs.normY));
+          const after = StateDeltaVerifier.captureSnapshot();
+          const delta = StateDeltaVerifier.computeDelta(before, after);
+          return ok
+            ? `Successfully clicked at normalized coordinates (${rawArgs.normX}, ${rawArgs.normY}). State transition: ${delta.summary}.`
+            : `Click failed at coordinates (${rawArgs.normX}, ${rawArgs.normY}): no target element found at location.`;
+        }
+
         const rawTarget = rawArgs.target !== undefined ? rawArgs.target : (rawArgs.targetId !== undefined ? rawArgs.targetId : (rawArgs.id !== undefined ? rawArgs.id : selector));
         if (rawTarget === undefined || rawTarget === "") return "Error: target [ID] or selector required for click action.";
         const resolved = ActionDispatcher.resolveTarget(rawTarget);
@@ -282,6 +310,23 @@ export class AgentHarness {
         highlightElement(resolved.element, "Clicked");
 
         const before = StateDeltaVerifier.captureSnapshot();
+
+        // Check if element is a navigation link leading to another page
+        const anchor = resolved.element.closest("a") as HTMLAnchorElement | null;
+        if (anchor && anchor.href && !anchor.href.startsWith("#") && !anchor.href.startsWith("javascript:")) {
+          NavPersistenceManager.saveTask({
+            id: `task_${Date.now()}`,
+            userGoal: this.currentUserGoal,
+            stepIndex: 1,
+            maxSteps: this.maxSteps,
+            trajectory: [],
+            conversationHistory: this.currentConversationHistory,
+            workingMemory: {},
+            originUrl: typeof window !== "undefined" ? window.location.href : "",
+            targetUrl: anchor.href,
+          });
+        }
+
         await ActionDispatcher.click(resolved.element);
         const after = StateDeltaVerifier.captureSnapshot();
         const delta = StateDeltaVerifier.computeDelta(before, after);
@@ -384,6 +429,12 @@ export class AgentHarness {
         return tourResult.guideMarkdown;
       }
 
+      case "play_game":
+      case "playgame":
+      case "play": {
+        return this.primitivePlayGame(rawArgs);
+      }
+
       case "navigate":
       case "goto": {
         const url = String(rawArgs.url || rawArgs.href || selector || "").trim();
@@ -393,6 +444,19 @@ export class AgentHarness {
           if (url.startsWith("#")) {
             window.location.hash = url;
             return `Navigated to hash anchor "${url}".`;
+          }
+          if (!url.startsWith("#") && !url.startsWith("javascript:")) {
+            NavPersistenceManager.saveTask({
+              id: `task_${Date.now()}`,
+              userGoal: this.currentUserGoal,
+              stepIndex: 1,
+              maxSteps: this.maxSteps,
+              trajectory: [],
+              conversationHistory: this.currentConversationHistory,
+              workingMemory: {},
+              originUrl: window.location.href,
+              targetUrl: url,
+            });
           }
           // Check for matching anchor element on page
           const link = document.querySelector(`a[href='${url}']`) as HTMLAnchorElement;
@@ -416,9 +480,57 @@ export class AgentHarness {
         return `Hovered over element "${selector}".`;
       }
 
+      case "download": {
+        const rawTarget = rawArgs.target !== undefined ? rawArgs.target : (rawArgs.targetId !== undefined ? rawArgs.targetId : (rawArgs.id !== undefined ? rawArgs.id : selector));
+        let el: HTMLElement | null = null;
+        if (rawTarget) {
+          el = ActionDispatcher.resolveTarget(rawTarget).element;
+        }
+        if (!el && typeof document !== "undefined") {
+          el = smartQuerySelector("a[download], a[href*='.pdf' i], a[href*='resume' i], a[href*='cv' i], [aria-label*='download' i]");
+        }
+        if (!el) {
+          return "Download failed: No matching download element found on this page.";
+        }
+        highlightElement(el, "Downloaded");
+        await ActionDispatcher.click(el);
+        if (el instanceof HTMLAnchorElement && el.href) {
+          try { el.click(); } catch {}
+        }
+        const cleanSel = getCleanElementSelector(el);
+        const fileName = el.getAttribute("download") || (el as HTMLAnchorElement).href?.split("/").pop() || el.textContent?.trim() || "file";
+        return `Successfully triggered download for "${fileName}" (${cleanSel}).`;
+      }
+
       default:
-        return `Unknown browse action "${action}". Allowed: inspect, snapshot, explore, map, overview, click, type, scroll, navigate, hover, extract, see, ocr.`;
+        return `Unknown browse action "${action}". Allowed: inspect, snapshot, explore, map, overview, click, type, scroll, navigate, hover, extract, see, ocr, download, play_game.`;
     }
+  }
+
+  /** Primitive: playGame — Real-time continuous game controller */
+  private async primitivePlayGame(args: Record<string, unknown> = {}): Promise<string> {
+    const durationSec = typeof args.durationSec === "number" ? args.durationSec : 30;
+    const targetScore = typeof args.targetScore === "number" ? args.targetScore : 100;
+
+    const { CanvasGameController } = await import("./canvasGameController");
+    const result = await CanvasGameController.playGame({
+      durationSec,
+      targetScore,
+      abortSignal: this.activeAbortController?.signal,
+      onProgress: (evt) => {
+        if (this.onStepProgress) {
+          this.onStepProgress(1, "playGame", `Score: ${evt.score} (Combo x${evt.combo}) — ${evt.statusText}`);
+        }
+      },
+    });
+
+    return JSON.stringify({
+      finalScore: result.finalScore,
+      totalJumps: result.totalJumps,
+      maxCombo: result.maxCombo,
+      durationSec: result.durationSec,
+      summary: result.summary,
+    });
   }
 
   /** Primitive 4: search */
@@ -517,15 +629,12 @@ export class AgentHarness {
           const matchNonCatalog = goalLower.match(/\b(?:add|buy|get|purchase)\s+(?:\d+\s+)?(.+?)(?:\s+(?:to\s+(?:my\s+)?cart|please|now))?$/i);
           if (matchNonCatalog && matchNonCatalog[1]) {
             const requestedItem = matchNonCatalog[1].trim().toLowerCase();
-            const genericWords = ["item", "items", "product", "products", "one", "this", "it", "to", "cart", "a", "an", "the"];
-            const categoryNouns = ["watch", "headphones", "headphone", "keyboard", "keyboards", "shoes", "phone", "laptop", "accessory", "gear", "device"];
-            if (!genericWords.includes(requestedItem) && requestedItem.length > 2) {
-              const itemWords = requestedItem.split(/\s+/).filter(w => !genericWords.includes(w));
-              // Distinguish specific model/brand words from generic category nouns
-              const specificWords = itemWords.filter(w => !categoryNouns.includes(w));
-              const termsToCheck = specificWords.length > 0 ? specificWords : itemWords;
-              const existsOnPage = termsToCheck.some(w => catalogTexts.includes(w));
-              if (!existsOnPage && termsToCheck.length > 0) {
+            const genericWords = ["item", "items", "product", "products", "one", "this", "it", "to", "cart", "a", "an", "the", "my", "please", "now"];
+            const itemWords = requestedItem.split(/\s+/).filter((w) => !genericWords.includes(w) && w.length > 2);
+            if (itemWords.length > 0) {
+              const pageBodyText = typeof document !== "undefined" && document.body ? document.body.innerText.toLowerCase() : "";
+              const existsOnPage = itemWords.some((w) => catalogTexts.includes(w) || pageBodyText.includes(w));
+              if (!existsOnPage) {
                 return JSON.stringify({
                   error: `Catalog verification failed: "${requestedItem}" is not available in the store catalog on this page.`,
                 });
@@ -573,8 +682,15 @@ export class AgentHarness {
         return this.primitiveAsk(args);
 
       // First-Class Direct Browser Primitives
+      case "playGame":
+      case "play_game":
+      case "play":
+      case "autopilot":
+        return this.primitivePlayGame(args);
       case "click":
         return this.primitiveBrowse({ action: "click", ...args });
+      case "download":
+        return this.primitiveBrowse({ action: "download", ...args });
       case "type":
       case "fill":
       case "input":
@@ -649,15 +765,28 @@ export class AgentHarness {
   }
 
   /**
+   * Check if a tool observation indicates failure
+   */
+  public static isFailureObservation(obs: string): boolean {
+    return isFailureObservation(obs);
+  }
+
+  private isFailureObservation(obs: string): boolean {
+    return isFailureObservation(obs);
+  }
+
+  /**
    * Run the harness loop wrapping the given text-generation model function.
    * "The model stays a text function. The harness is the loop, the tools, the memory, and the permission check."
    */
   async runLoop(
     userGoal: string,
     modelPredictor: (messages: Array<{ role: string; content: string }>) => Promise<string>,
-    activeTier: ModelTier = ModelTier.TIER_0_GEMINI_NANO
+    activeTier: ModelTier = ModelTier.TIER_0_GEMINI_NANO,
+    conversationHistory: Array<{ role: string; content: string }> = []
   ): Promise<HarnessExecutionResult> {
     this.currentUserGoal = userGoal;
+    this.currentConversationHistory = conversationHistory;
     const startTime = performance.now();
     const siteOrigin = typeof window !== "undefined" ? window.location.origin : "web";
 
@@ -672,56 +801,69 @@ export class AgentHarness {
       if (matchingMacro) {
         console.log(`[Harness] Found compiled site macro for "${userGoal}". Executing deterministically!`);
         const trajectory: AgentStepTrace[] = [];
+        let macroFailed = false;
 
         for (let i = 0; i < matchingMacro.actions.length; i++) {
           const action = matchingMacro.actions[i];
           const stepStart = performance.now();
           const obs = await this.executeTool(action.tool, action.args);
+          const duration = Math.round(performance.now() - stepStart);
+
+          if (this.isFailureObservation(obs)) {
+            console.warn(`[Harness] Macro step ${i + 1} failed: "${obs}". Purging broken macro.`);
+            macroFailed = true;
+            try { await recipeStore.deleteMacro(matchingMacro.id); } catch {}
+            break;
+          }
+
           trajectory.push({
             step: i + 1,
             tool: action.tool,
             args: action.args,
             observationSummary: obs.slice(0, 150),
-            durationMs: Math.round(performance.now() - stepStart),
+            durationMs: duration,
           });
           if (this.onStepProgress) {
             this.onStepProgress(i + 1, action.tool, obs);
           }
         }
 
-        matchingMacro.executionCount++;
-        matchingMacro.lastSuccessAt = Date.now();
-        await recipeStore.saveMacroRecipe(matchingMacro);
+        if (!macroFailed && trajectory.length > 0) {
+          matchingMacro.executionCount++;
+          matchingMacro.lastSuccessAt = Date.now();
+          await recipeStore.saveMacroRecipe(matchingMacro);
 
-        const finalMsg = `Executed verified site recipe for "${userGoal}" (${matchingMacro.actions.length} steps).`;
-        const macroDecision: DecisionTrace = {
-          type: "macro",
-          title: "Host Recipe Verified (System 1)",
-          selectedOption: `Execute "${matchingMacro.triggerPhrase}"`,
-          confidence: 1.0,
-          margin: 0.88,
-          primitive: "choice",
-          latencyMs: Math.round(performance.now() - startTime),
-          engineUsed: "Host Recipe Store (0 Tokens)",
-          distribution: [
-            { label: `Recipe: "${matchingMacro.triggerPhrase}"`, score: 1.0, isWinner: true },
-            { label: "Search Page Elements", score: 0.12, isWinner: false },
-            { label: "Site Tour", score: 0.08, isWinner: false },
-          ],
-          hallucinationShield: {
-            verified: true,
-            check: `Verified deterministic ${matchingMacro.actions.length}-step macro on live site`,
-            probability: 1.0,
-          },
-          explanation: `Executed cached zero-token verified recipe for "${matchingMacro.triggerPhrase}". 100% deterministic, 0 hallucination risk.`,
-        };
-        return {
-          final: finalMsg,
-          trajectory,
-          isMacro: true,
-          totalDurationMs: Math.round(performance.now() - startTime),
-          decision: macroDecision,
-        };
+          const finalMsg = `Executed verified site recipe for "${userGoal}" (${matchingMacro.actions.length} steps).`;
+          const macroDecision: DecisionTrace = {
+            type: "macro",
+            title: "Host Recipe Verified (System 1)",
+            selectedOption: `Execute "${matchingMacro.triggerPhrase}"`,
+            confidence: 1.0,
+            margin: 0.88,
+            primitive: "choice",
+            latencyMs: Math.round(performance.now() - startTime),
+            engineUsed: "Host Recipe Store (0 Tokens)",
+            distribution: [
+              { label: `Recipe: "${matchingMacro.triggerPhrase}"`, score: 1.0, isWinner: true },
+              { label: "Search Page Elements", score: 0.12, isWinner: false },
+              { label: "Site Tour", score: 0.08, isWinner: false },
+            ],
+            hallucinationShield: {
+              verified: true,
+              check: `Verified deterministic ${matchingMacro.actions.length}-step macro on live site`,
+              probability: 1.0,
+            },
+            explanation: `Executed cached zero-token verified recipe for "${matchingMacro.triggerPhrase}". 100% deterministic, 0 hallucination risk.`,
+          };
+          return {
+            final: finalMsg,
+            trajectory,
+            isMacro: true,
+            totalDurationMs: Math.round(performance.now() - startTime),
+            decision: macroDecision,
+          };
+        }
+        // If macro failed or was empty, fall through into the dynamic harness loop!
       }
     }
 
@@ -750,8 +892,44 @@ export class AgentHarness {
     const systemPrompt = await this.getHarnessPrompt(userGoal);
     const messages: Array<{ role: string; content: string }> = [
       { role: "system", content: systemPrompt },
-      { role: "user", content: `Task Goal: "${userGoal}"\nInitial State: scrollY=${workingMemory.currentScrollY}, origin=${siteOrigin}${initialCandidatesNotice}` },
     ];
+
+    // OpenHarness Pattern: Auto-Compacted Context Window Management
+    // Bounds conversation tokens for lightweight on-device models while preserving prior user goals
+    if (conversationHistory.length > 0) {
+      const validTurns = conversationHistory.filter(
+        (m) => (m.role === "user" || m.role === "assistant") && m.content
+      );
+
+      // Extract up to 5 prior completed goals (MAX_TRACKED_USER_GOALS = 5)
+      const userGoals = validTurns
+        .filter((m) => m.role === "user")
+        .map((m) => m.content.slice(0, 80))
+        .slice(-5);
+
+      // Keep last 4 turns verbatim for prompt resolution
+      const recentTurns = validTurns.slice(-4);
+      if (recentTurns.length > 0) {
+        const dialogSummary = recentTurns
+          .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.content.slice(0, 250)}`)
+          .join("\n");
+
+        let contextBlock = `Prior Dialogue Context:\n${dialogSummary}`;
+        if (userGoals.length > 1) {
+          contextBlock = `Prior User Goals: [${userGoals.join(" -> ")}]\n${contextBlock}`;
+        }
+
+        messages.push({
+          role: "system",
+          content: contextBlock,
+        });
+      }
+    }
+
+    messages.push({
+      role: "user",
+      content: `Task Goal: "${userGoal}"\nInitial State: scrollY=${workingMemory.currentScrollY}, origin=${siteOrigin}${initialCandidatesNotice}`,
+    });
 
     const trajectory: AgentStepTrace[] = [];
     let lastToolCallSignature = "";
@@ -759,22 +937,8 @@ export class AgentHarness {
     const failedCallSignatures = new Set<string>();
     let lastScrollY = workingMemory.currentScrollY;
 
-    // Patterns that indicate a tool call failed / returned nothing useful
-    const FAILURE_PATTERNS = [
-      "not found",
-      "0 results",
-      "0 occurrences",
-      "error:",
-      "syntax error",
-      "failed:",
-      "unknown tool",
-      "does not appear",
-    ];
-
-    const isFailureObservation = (obs: string): boolean => {
-      const lower = obs.toLowerCase();
-      return FAILURE_PATTERNS.some((p) => lower.includes(p));
-    };
+    let consecutiveIdenticalCalls = 0;
+    let consecutiveZeroDeltaCalls = 0;
 
     for (let step = 0; step < this.maxSteps; step++) {
       if (abortSignal.aborted) {
@@ -810,12 +974,26 @@ export class AgentHarness {
             const scene = VisionService.extractVisualScene();
             cleanFinal = `Viewing "${scene.title}"${scene.headings[0] ? ` (${scene.headings[0]})` : ""}${scene.items.length > 0 ? `, featuring items such as ${scene.items.slice(0, 2).join(' and ')}` : ""}.`;
           }
+        } else if (
+          cleanFinal.startsWith("[1]") ||
+          cleanFinal.includes('button "Toggle Theme"') ||
+          cleanFinal.includes("Interactive a11y tree")
+        ) {
+          const scene = VisionService.extractVisualScene();
+          cleanFinal = `I inspected the current page elements for "${scene.title}". If you would like me to navigate, click a control, or find information, please let me know!`;
         }
 
         // Strands Pattern: Automatic Macro Compilation
         // When a multi-step trajectory successfully achieves a user action without failures,
         // automatically compile and save it into recipeStore as a zero-latency deterministic site macro.
+        const hasUnstableSelector = trajectory.some((t) => {
+          const args = t.args as any;
+          const sel = String(args?.selector || args?.target || "");
+          return /^\s*\[?\d+\]?\s*$/.test(sel) || /^\d+$/.test(String(args?.targetId ?? ""));
+        });
+
         if (
+          !hasUnstableSelector &&
           isActionGoal(userGoal) &&
           trajectory.length >= 2 &&
           consecutiveFailures === 0 &&
@@ -881,6 +1059,7 @@ export class AgentHarness {
         }
 
         SomOverlayManager.clearBadges();
+        NavPersistenceManager.clearTask();
         return {
           final: cleanFinal,
           trajectory,
@@ -890,44 +1069,18 @@ export class AgentHarness {
         };
       }
 
-      // Cycle detector: Prevent model from calling identical tool and args consecutively
+      // Check if this exact call signature is repeated consecutively
       const currentCallSignature = `${decision.tool}:${JSON.stringify(decision.args)}`;
-      if (currentCallSignature === lastToolCallSignature) {
-        const lastStep = trajectory[trajectory.length - 1];
-        let successOutput = lastStep?.observationSummary
-          ? lastStep.observationSummary
-          : `Action "${decision.tool}" completed successfully.`;
-
-        if (successOutput.includes("[selector:") || successOutput.startsWith("[selector:")) {
-          const visionStep = trajectory.find((t) => t.observationSummary?.includes("[Visual Observation"));
-          if (visionStep) {
-            successOutput = visionStep.observationSummary.replace(/^\[Visual Observation \([^)]+\)\]:\s*/, "");
-          } else {
-            const scene = VisionService.extractVisualScene();
-            successOutput = `Viewing "${scene.title}"${scene.headings[0] ? ` (${scene.headings[0]})` : ""}${scene.items.length > 0 ? `, featuring items such as ${scene.items.slice(0, 2).join(' and ')}` : ""}.`;
-          }
-        }
-
-        const duration = Math.round(performance.now() - startTime);
-        const trace: EvalTrace = {
-          id: `trace_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-          timestamp: Date.now(),
-          siteOrigin,
-          userGoal,
-          trajectory,
-          finalOutput: successOutput,
-          activeTier,
-        };
-        await expertJudge.logTrace(trace);
-
-        return {
-          final: successOutput,
-          trajectory,
-          isMacro: false,
-          totalDurationMs: duration,
-        };
-      }
+      const isIdenticalCall = currentCallSignature === lastToolCallSignature;
       lastToolCallSignature = currentCallSignature;
+      if (isIdenticalCall) {
+        consecutiveIdenticalCalls++;
+        if (consecutiveIdenticalCalls >= 3) {
+          failedCallSignatures.add(currentCallSignature);
+        }
+      } else {
+        consecutiveIdenticalCalls = 0;
+      }
 
       // Fix 3: Skip previously-failed identical calls — don't retry what already broke
       if (failedCallSignatures.has(currentCallSignature)) {
@@ -965,9 +1118,64 @@ export class AgentHarness {
         continue;
       }
 
-      // Host runs the tool ("capability is a function the host runs")
-      const observation = await this.executeTool(decision.tool, decision.args);
+      // Host runs the tool with pre/post environment state delta capture (bounded by OpenHarness 8s watchdog)
+      const beforeState = StateDeltaVerifier.captureSnapshot();
+      let observation: string;
+      try {
+        observation = await Promise.race([
+          this.executeTool(decision.tool, decision.args),
+          new Promise<string>((_, reject) =>
+            setTimeout(() => reject(new Error(`Tool ${decision.tool} timed out after 8000ms`)), 8000)
+          ),
+        ]);
+      } catch (err: any) {
+        observation = `Error executing tool "${decision.tool}": ${err?.message || "Execution timeout"}`;
+      }
+      const afterState = StateDeltaVerifier.captureSnapshot();
+      const stateDelta = StateDeltaVerifier.computeDelta(beforeState, afterState);
       const stepDuration = Math.round(performance.now() - stepStart);
+
+      // Cycle detector: Prevent model from calling identical tool and args consecutively IF it produces zero state change
+      if (isIdenticalCall && !stateDelta.hasStateChanged) {
+        consecutiveZeroDeltaCalls++;
+        if (consecutiveZeroDeltaCalls >= 2) {
+          const lastStep = trajectory[trajectory.length - 1];
+          let successOutput = lastStep?.observationSummary
+            ? lastStep.observationSummary
+            : `Action "${decision.tool}" completed (no further state changes detected).`;
+
+          if (successOutput.includes("[selector:") || successOutput.startsWith("[selector:")) {
+            const visionStep = trajectory.find((t) => t.observationSummary?.includes("[Visual Observation"));
+            if (visionStep) {
+              successOutput = visionStep.observationSummary.replace(/^\[Visual Observation \([^)]+\)\]:\s*/, "");
+            } else {
+              const scene = VisionService.extractVisualScene();
+              successOutput = `Viewing "${scene.title}"${scene.headings[0] ? ` (${scene.headings[0]})` : ""}${scene.items.length > 0 ? `, featuring items such as ${scene.items.slice(0, 2).join(' and ')}` : ""}.`;
+            }
+          }
+
+          const duration = Math.round(performance.now() - startTime);
+          const trace: EvalTrace = {
+            id: `trace_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+            timestamp: Date.now(),
+            siteOrigin,
+            userGoal,
+            trajectory,
+            finalOutput: successOutput,
+            activeTier,
+          };
+          await expertJudge.logTrace(trace);
+
+          return {
+            final: successOutput,
+            trajectory,
+            isMacro: false,
+            totalDurationMs: duration,
+          };
+        }
+      } else {
+        consecutiveZeroDeltaCalls = 0;
+      }
 
       // DevTools Console API Telemetry: Structured group & table logging
       if (typeof console !== "undefined" && typeof console.groupCollapsed === "function") {
@@ -997,7 +1205,7 @@ export class AgentHarness {
       }
 
       // Fix 2: Track consecutive failures
-      if (isFailureObservation(observation)) {
+      if (this.isFailureObservation(observation)) {
         consecutiveFailures++;
         failedCallSignatures.add(currentCallSignature);
 
@@ -1100,6 +1308,7 @@ export class AgentHarness {
     await expertJudge.logTrace(trace);
 
     SomOverlayManager.clearBadges();
+    NavPersistenceManager.clearTask();
     return {
       final: maxStepMsg,
       trajectory,

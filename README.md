@@ -3,14 +3,26 @@
 [![npm version](https://img.shields.io/npm/v/on-device-chat.svg?style=flat-square&color=blue)](https://www.npmjs.com/package/on-device-chat)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=flat-square)](https://opensource.org/licenses/Apache-2.0)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
-[![Benchmarks: 26/26 Passed](https://img.shields.io/badge/Giskard%20Evals-26%2F26%20Passed-brightgreen?style=flat-square)](https://docs.giskard.ai/)
+[![Benchmarks: 100% Passed](https://img.shields.io/badge/Benchmarks-100%25%20Passed-brightgreen?style=flat-square)](https://agent.paulcreates.online)
+[![Extension: MV3](https://img.shields.io/badge/Chrome_Extension-MV3_Ready-purple?style=flat-square&logo=google-chrome)](https://github.com/adarrshpaul/on-device-chat)
 [![Live Demo](https://img.shields.io/badge/Demo-agent.paulcreates.online-6366f1?style=flat-square)](https://agent.paulcreates.online)
 
-A local-first, on-device AI chat widget and autonomous browser agent running entirely inside the user's browser. Built with **Chrome Built-in Gemini Nano** (0 MB), **Transformers.js WebGPU** (MiniLM / SmolLM2), and **WebLLM** (Gemma 4 E2B). Zero cloud API costs, zero data exfiltration, and full deterministic web navigation.
+A local-first, on-device AI chat widget, autonomous browser agent, and Chrome Developer Extension running entirely inside the user's browser. Built with **Chrome Built-in Gemini Nano** (0 MB), **Vega Decision Engine** (Conformal Gating & Physics), **MiniLM WebGPU**, and **WebLLM**. Zero cloud API costs, zero data exfiltration, universal CSS isolation, and full deterministic web navigation.
 
 ---
 
-## 🏛️ 4-Tier Progressive Escalation Hierarchy
+## 🚀 What's New in v0.2.0
+
+- **Chrome Developer Extension (Manifest V3)**: Packaged MV3 extension (`extension/`) with background service worker, action popup, Alt+Shift+A hotkey, context menus, and 100% bit-parity sync with the npm bundle.
+- **Universal Cross-Application CSS Isolation**: Impenetrable scoped resets (`!important`), inline defensive inputs, and `z-index: 2147483647` protecting against hostile host stylesheets (Amazon, Wikipedia, Bootstrap).
+- **100% Dynamic DOM-Grounded Synthesis (Rule 9)**: Zero hardcoded starter workflows. All actions, landmark tours, and automations are dynamically discovered from live DOM nodes and `<canvas>` entities in real time.
+- **Canvas Game Autopilot & Zero-Occlusion HUD**: Dynamic left/right auto-docking preserving game viewports (e.g. Basketball Bash with `margin-left: 435px`), with Mini HUD (52px bar) and Ghost Transparency mode (35% opacity).
+- **"Teach 1 → Batch N" Macro Automation**: Record repetitive human browser actions on 1 row and replay them deterministically across N rows with human-in-the-loop safety gating.
+- **Omni-Storage Error Defense**: All storage singletons (`localStorage`, `sessionStorage`, `indexedDB`) wrapped in synchronous `try / catch` blocks with seamless in-memory fallbacks on restricted origins.
+
+---
+
+## 🏛️ Multi-Model Escalation & Specialty Matrix
 
 Rather than forcing users to download heavy gigabyte-scale models upfront, `on-device-chat` cascades dynamically through four local tiers:
 

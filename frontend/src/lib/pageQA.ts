@@ -6,7 +6,7 @@
  * re-ranked with MiniLM sentence embeddings (Reciprocal Rank Fusion). No text is generated, so
  * nothing can be hallucinated. The reply states which ranking method was actually used.
  */
-import { getPageDigest, getIndex, searchIndex, describeDigest, buildContextBlock, tokenize, ScoredChunk } from "./pageContext";
+import { getPageDigest, getIndex, searchIndex, buildContextBlock, tokenize, ScoredChunk } from "./pageContext";
 import { CompactEngine, cosineSimilarity } from "./compactEngine";
 
 export interface PageAnswer {
@@ -61,32 +61,83 @@ const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n).trimEnd() +
 export async function answerFromPage(query: string, engine?: CompactEngine): Promise<PageAnswer> {
   const digest = getPageDigest();
   if (!digest.chunks.length) {
-    return { text: `I couldn't read any text on this page (it may still be loading, or its content is rendered in a canvas/iframe I can't read).\n\n${describeDigest(digest)}`, method: "none", passages: [] };
+    return {
+      text: `I couldn't read any text on this page (it may still be loading, or its content is rendered in a canvas/iframe).\n\nIf you have a question about this website, please let me know!`,
+      method: "none",
+      passages: [],
+    };
   }
   const { method, passages } = await rankPassages(query, engine, 3);
   const queryTerms = Array.from(new Set(tokenize(query)));
 
-  if (!passages.length) {
+  // Filter out low-confidence spurious hits (threshold: semantic >= 0.35 or BM25 lexical score >= 1.2)
+  const relevantPassages = passages.filter((p) => {
+    const sem = p.semantic ?? 0;
+    const lex = p.score ?? 0;
+    return sem >= 0.35 || lex >= 1.2;
+  });
+
+  if (!relevantPassages.length) {
+    const siteTitle = digest.title || "this website";
+    const siteDesc = digest.description ? ` (${digest.description})` : "";
+    const cleanTerms = queryTerms.filter(
+      (t) =>
+        ![
+          "who",
+          "what",
+          "where",
+          "when",
+          "why",
+          "how",
+          "the",
+          "this",
+          "page",
+          "site",
+          "tell",
+          "about",
+          "is",
+          "are",
+          "you",
+          "there",
+          "any",
+        ].includes(t.toLowerCase())
+    );
+    const termNotice =
+      cleanTerms.length > 0 ? `mention of "${cleanTerms.join('", "')}"` : "information matching your query";
+    const outlineSuggestions = (digest.outline || []).slice(0, 3).map((o) => `"${o.text}"`).join(", ");
+    const suggestionText = outlineSuggestions
+      ? `\n\nTopics and sections on this page include: ${outlineSuggestions}.`
+      : "";
+
     return {
-      method,
-      passages,
+      method: "none",
+      passages: [],
       text:
-        `No passage on this page contains the terms from your question${queryTerms.length ? ` (${queryTerms.join(", ")})` : ""}.\n\n` +
-        `${describeDigest(digest)}\n\n` +
-        `_Method: keyword search${engine?.isExtractorReady ? "" : " (semantic model not loaded)"}; this tier extracts passages and does not generate text._`,
+        `I searched the current website, but found no ${termNotice}.\n\n` +
+        `This site is **${siteTitle}**${siteDesc}.${suggestionText}\n\n` +
+        `Feel free to ask about any topic, feature, or section on this page!`,
     };
   }
 
-  const lines = passages.map((p, i) => {
-    const conf = p.semantic !== undefined ? ` _(semantic similarity ${(p.semantic * 100).toFixed(0)}%${p.score ? `, keyword score ${p.score.toFixed(1)}` : ""})_` : ` _(keyword score ${p.score.toFixed(1)})_`;
+  const lines = relevantPassages.map((p, i) => {
+    const conf =
+      p.semantic !== undefined
+        ? ` _(semantic relevance ${(p.semantic * 100).toFixed(0)}%${p.score ? `, keyword score ${p.score.toFixed(1)}` : ""})_`
+        : ` _(keyword score ${p.score.toFixed(1)})_`;
     return `${i + 1}. ${p.heading ? `**${clip(p.heading, 70)}** — ` : ""}${clip(p.text, 380)}${conf}`;
   });
+
   const methodLabel =
-    method === "keyword+semantic" ? "keyword (BM25) + semantic (MiniLM) ranking" : method === "semantic" ? "semantic (MiniLM) ranking only — no keyword overlap" : "keyword (BM25) ranking" + (engine?.isExtractorReady ? "" : "; semantic model not loaded yet");
+    method === "keyword+semantic"
+      ? "keyword (BM25) + semantic (MiniLM) ranking"
+      : method === "semantic"
+      ? "semantic (MiniLM) ranking"
+      : "keyword (BM25) ranking";
+
   return {
     method,
-    passages,
-    text: `From **${digest.title || digest.url}** — closest passages:\n\n${lines.join("\n")}\n\n_Method: ${methodLabel}. Verbatim excerpts; no text generated._`,
+    passages: relevantPassages,
+    text: `From **${digest.title || digest.url}**:\n\n${lines.join("\n")}\n\n_Retrieved via ${methodLabel}._`,
   };
 }
 

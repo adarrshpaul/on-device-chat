@@ -80,25 +80,33 @@ class ExpertJudgeSuite {
     if (typeof window === "undefined" || !window.indexedDB) return;
 
     if (!this.isReadyPromise) {
-      this.isReadyPromise = new Promise((resolve, reject) => {
-        const req = indexedDB.open(this.dbName, this.dbVersion);
+      this.isReadyPromise = new Promise((resolve) => {
+        try {
+          const req = indexedDB.open(this.dbName, this.dbVersion);
 
-        req.onupgradeneeded = (e: any) => {
-          const db = e.target.result as IDBDatabase;
-          if (!db.objectStoreNames.contains("traces")) {
-            const store = db.createObjectStore("traces", { keyPath: "id" });
-            store.createIndex("by_origin", "siteOrigin", { unique: false });
-            store.createIndex("by_tier", "activeTier", { unique: false });
-            store.createIndex("by_feedback", "humanFeedback", { unique: false });
-          }
-        };
+          req.onupgradeneeded = (e: any) => {
+            const db = e.target.result as IDBDatabase;
+            if (!db.objectStoreNames.contains("traces")) {
+              const store = db.createObjectStore("traces", { keyPath: "id" });
+              store.createIndex("by_origin", "siteOrigin", { unique: false });
+              store.createIndex("by_tier", "activeTier", { unique: false });
+              store.createIndex("by_feedback", "humanFeedback", { unique: false });
+            }
+          };
 
-        req.onsuccess = () => {
-          this.db = req.result;
+          req.onsuccess = () => {
+            this.db = req.result;
+            resolve();
+          };
+
+          req.onerror = () => {
+            console.warn("[ExpertJudge] IndexedDB error, operating in memory");
+            resolve();
+          };
+        } catch {
+          console.warn("[ExpertJudge] IndexedDB access denied, operating in memory");
           resolve();
-        };
-
-        req.onerror = () => reject(req.error);
+        }
       });
     }
 

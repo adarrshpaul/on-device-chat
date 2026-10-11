@@ -1,0 +1,77 @@
+{
+  "manifest_version": 3,
+  "name": "On-Device Browser Agent • Teach 1 → Batch N",
+  "version": "0.2.0",
+  "description": "Local-first on-device AI chat widget and autonomous browser agent powered by Chrome Built-in Gemini Nano, Gemma 4, and MiniLM",
+  "author": "Adarrsh Paul <adarrsh@paulcreates.online>",
+  "homepage_url": "https://agent.paulcreates.online",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "On-Device Browser Agent",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "css": [
+        "content/style.css"
+      ],
+      "js": [
+        "content/on-device-chat.min.js",
+        "content/content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting",
+    "contextMenus"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "commands": {
+    "toggle_agent": {
+      "suggested_key": {
+        "default": "Alt+Shift+A",
+        "mac": "Alt+Shift+A"
+      },
+      "description": "Toggle Floating Agent Widget"
+    },
+    "record_macro": {
+      "suggested_key": {
+        "default": "Alt+Shift+R",
+        "mac": "Alt+Shift+R"
+      },
+      "description": "Start Teach 1 → Batch N Macro Recording"
+    }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "content/style.css",
+        "content/on-device-chat.min.js",
+        "icons/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
+}

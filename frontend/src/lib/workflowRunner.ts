@@ -8,14 +8,19 @@
 import { WebWorkflow, WorkflowStep, ActionExecutionOutput } from "./types";
 import { ActionDispatcher } from "./actionDispatcher";
 import { buildEngramMap, teleportToEngram } from "./engramNavigator";
-import { smartQuerySelector, smoothScrollTo } from "./domUtils";
+import { planSiteTour } from "./siteTour";
+import {
+  smartQuerySelector,
+  smoothScrollTo,
+  humanNavigateTo,
+  clearHumanNavigation,
+  spotlightElement,
+} from "./domUtils";
 import { workflowStore } from "./workflowStore";
 
 export class WorkflowRunner {
-  private activeHighlightEl: HTMLElement | null = null;
-
   /**
-   * Run a full multi-step workflow sequentially
+   * Run a full multi-step workflow sequentially with human pacing and gaze tracking
    */
   async runWorkflow(
     workflow: WebWorkflow,
@@ -32,49 +37,79 @@ export class WorkflowRunner {
       options?.onStepUpdate?.(i, step);
 
       try {
-        const stepOutput = await this.executeStep(step);
+        // Step execution bounded with strict 10s watchdog to prevent hanging
+        const stepOutput = await Promise.race([
+          this.executeStep(step),
+          new Promise<string>((_, reject) =>
+            setTimeout(() => reject(new Error(`Step timed out after 10000ms`)), 10000)
+          ),
+        ]);
         step.status = "success";
         step.output = stepOutput;
         options?.onStepUpdate?.(i, step);
 
-        if (step.delayMs && step.delayMs > 0) {
-          await this.sleep(step.delayMs);
-        }
+        // Natural human breath between consecutive actions (minimum 400ms buffer)
+        await this.sleep(400);
       } catch (err: any) {
         step.status = "error";
         step.output = `Error: ${err?.message || "Execution failed"}`;
         options?.onStepUpdate?.(i, step);
-        this.clearHighlight();
+        clearHumanNavigation();
         return { success: false, results: updatedSteps, error: step.output };
       }
     }
 
-    this.clearHighlight();
-    await workflowStore.recordExecution(workflow.id);
-    options?.onComplete?.(updatedSteps);
+    clearHumanNavigation();
+    try {
+      await workflowStore.recordExecution(workflow.id);
+    } catch (e) {
+      console.warn("[WorkflowRunner] Failed to record execution:", e);
+    }
+    try {
+      options?.onComplete?.(updatedSteps);
+    } catch (e) {
+      console.warn("[WorkflowRunner] onComplete callback failed:", e);
+    }
 
     return { success: true, results: updatedSteps };
   }
 
   /**
-   * Execute an individual workflow step
+   * Execute an individual workflow step with human pacing and visual grounding
    */
   private async executeStep(step: WorkflowStep): Promise<string> {
     const t0 = performance.now();
+    const humanReadingPause = Math.max(step.delayMs || 1800, 1800);
 
     switch (step.action) {
+      case "tour": {
+        const stops = planSiteTour();
+        if (stops.length === 0) {
+          smoothScrollTo(400);
+          await this.sleep(1200);
+          return "Guided tour completed (no explicit landmarks detected)";
+        }
+        for (const stop of stops.slice(0, 5)) {
+          if (stop.element) {
+            await humanNavigateTo(stop.element, stop.title, humanReadingPause);
+          }
+        }
+        const dt = Math.round(performance.now() - t0);
+        return `Completed guided tour across ${Math.min(stops.length, 5)} page landmarks (${dt}ms)`;
+      }
+
       case "scroll": {
         const target = step.target || "body";
         const el = smartQuerySelector(target);
         if (el) {
-          this.highlightElement(el);
-          smoothScrollTo(el);
+          await humanNavigateTo(el, step.title || target, humanReadingPause);
           const dt = Math.round(performance.now() - t0);
-          return `Scrolled to <${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}> (${dt}ms)`;
+          return `Observed <${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}> with human gaze (${dt}ms)`;
         } else {
           // Fallback to progressive smooth scroll
           const currentY = typeof window !== "undefined" ? window.scrollY : 0;
           smoothScrollTo(currentY + 500);
+          await this.sleep(1600);
           return `Scrolled viewport smoothly +500px`;
         }
       }
@@ -83,10 +118,9 @@ export class WorkflowRunner {
         const query = step.target || "";
         const el = smartQuerySelector(query);
         if (el) {
-          this.highlightElement(el);
-          smoothScrollTo(el);
+          await humanNavigateTo(el, step.title || query, humanReadingPause);
           const dt = Math.round(performance.now() - t0);
-          return `Navigated to <${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}> (${dt}ms)`;
+          return `Navigated to <${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}> with human gaze (${dt}ms)`;
         }
         const engramMap = buildEngramMap();
         const node = engramMap.nodes.find(
@@ -98,10 +132,12 @@ export class WorkflowRunner {
 
         if (node) {
           teleportToEngram(node);
+          await this.sleep(1600);
           const dt = Math.round(performance.now() - t0);
           return `Teleported to engram [${node.title}] (${dt}ms)`;
         } else {
           smoothScrollTo(400);
+          await this.sleep(1600);
           return `Smoothly navigated viewport towards "${query}"`;
         }
       }
@@ -112,8 +148,10 @@ export class WorkflowRunner {
         const el = smartQuerySelector(target);
         if (!el) throw new Error(`Element "${target}" not found in active DOM`);
 
-        this.highlightElement(el);
+        spotlightElement(el, step.title || `Click: ${target}`);
+        await this.sleep(450); // Human hesitation before clicking
         await ActionDispatcher.click(el);
+        await this.sleep(1200); // Human observation after click
         const dt = Math.round(performance.now() - t0);
         return `Clicked element <${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}> (${dt}ms)`;
       }
@@ -124,8 +162,10 @@ export class WorkflowRunner {
         const el = smartQuerySelector(target) as HTMLInputElement | HTMLTextAreaElement | null;
         if (!el) throw new Error(`Input "${target}" not found`);
 
-        this.highlightElement(el);
+        spotlightElement(el, step.title || `Type: ${target}`);
+        await this.sleep(350);
         await ActionDispatcher.type(el, step.value || "");
+        await this.sleep(800);
         const dt = Math.round(performance.now() - t0);
         return `Typed "${step.value}" into ${target} (${dt}ms)`;
       }
@@ -134,22 +174,36 @@ export class WorkflowRunner {
         const target = step.target || "body";
         const el = smartQuerySelector(target);
         if (!el) throw new Error(`Zero-Hallucination verification failed: "${target}" absent from DOM`);
-        this.highlightElement(el);
-        smoothScrollTo(el);
+        await humanNavigateTo(el, `Verified: ${step.title || target}`, 1600);
         const rect = el.getBoundingClientRect();
         const isVisible = rect.width > 0 && rect.height > 0;
         const dt = Math.round(performance.now() - t0);
-        return `Verified: <${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}> present in DOM (Visible: ${isVisible ? "Yes" : "Scrolled"}, ${dt}ms)`;
+        return `Verified: <${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}> in DOM (Visible: ${isVisible ? "Yes" : "Scrolled"}, ${dt}ms)`;
       }
 
       case "wait": {
-        const ms = parseInt(step.value || "400", 10);
+        const ms = Math.max(800, parseInt(step.value || "1500", 10));
         await this.sleep(ms);
-        return `Waited ${ms}ms`;
+        return `Observed for ${ms}ms`;
+      }
+
+      case "game_autopilot": {
+        const { CanvasGameController } = await import("./canvasGameController");
+        const canvas = smartQuerySelector(step.target || "canvas") as HTMLCanvasElement | null;
+        if (canvas) {
+          spotlightElement(canvas, "🎮 Autonomous Game Autopilot");
+        }
+        const result = await CanvasGameController.playGame({
+          durationSec: 25,
+          targetScore: 100,
+        });
+        const dt = Math.round(performance.now() - t0);
+        return `🎮 Game Autopilot: ${result.summary} (${dt}ms)`;
       }
 
       default:
-        return `Completed custom step: ${step.title}`;
+        await this.sleep(1000);
+        return `Completed step: ${step.title}`;
     }
   }
 
@@ -166,27 +220,64 @@ export class WorkflowRunner {
     const lowerAction = actionName.toLowerCase();
 
     try {
-      let targetDesc = (args.target as string) || (args.selector as string) || "viewport";
+      const targetDesc = (args.target as string) || (args.selector as string) || "viewport";
       let deltaDesc = "";
       const beforeScroll = typeof window !== "undefined" ? window.scrollY : 0;
 
-      if (lowerAction.includes("scroll") || lowerAction === "goto" || lowerAction === "navigate") {
-        const target = (args.selector as string) || (args.target as string) || "#home";
+      if (lowerAction === "tour" || lowerAction.includes("guided tour") || lowerAction.includes("guided_tour") || lowerAction === "site tour") {
+        const stops = planSiteTour();
+        const count = Math.min(stops.length, 5);
+        for (const stop of stops.slice(0, count)) {
+          if (stop.element) {
+            await humanNavigateTo(stop.element, stop.title, 1400);
+          }
+        }
+        deltaDesc = `Completed guided interactive tour across ${count} key page landmarks`;
+      } else if (lowerAction.includes("game") || lowerAction.includes("autopilot") || lowerAction.includes("play")) {
+        const { CanvasGameController } = await import("./canvasGameController");
+        const result = await CanvasGameController.playGame({ durationSec: 25 });
+        deltaDesc = `Autonomous game autopilot: ${result.summary}`;
+      } else if (lowerAction.includes("scroll") || lowerAction === "goto" || lowerAction === "navigate") {
+        const target = (args.selector as string) || (args.target as string) || "body";
         const el = smartQuerySelector(target);
         if (el) {
-          this.highlightElement(el);
-          smoothScrollTo(el);
-          deltaDesc = `Scrolled viewport from ${Math.round(beforeScroll)}px to <${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}>`;
+          await humanNavigateTo(el, target, 1600);
+          deltaDesc = `Navigated viewport with human gaze to <${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}>`;
         } else {
           const dest = beforeScroll + (lowerAction.includes("up") ? -400 : 400);
           smoothScrollTo(dest);
           deltaDesc = `Smooth scrolled viewport to ${Math.round(dest)}px`;
         }
-      } else if (lowerAction.includes("click") || lowerAction === "toggle theme" || lowerAction === "toggle_theme") {
-        const target = (args.selector as string) || (args.target as string) || "button[aria-label*='theme' i], button";
+      } else if (lowerAction.includes("theme") || lowerAction === "toggle theme" || lowerAction === "toggle_theme") {
+        const isDark =
+          document.documentElement.getAttribute("data-theme") === "dark" ||
+          document.body.classList.contains("dark");
+        const targetTheme = lowerAction.includes("light") ? "light" : (lowerAction.includes("dark") ? "dark" : (isDark ? "light" : "dark"));
+
+        if (typeof (window as any).setTheme === "function") {
+          (window as any).setTheme(targetTheme);
+        } else if (typeof (window as any).toggleTheme === "function") {
+          (window as any).toggleTheme();
+        }
+
+        document.documentElement.setAttribute("data-theme", targetTheme);
+        document.body.setAttribute("data-theme", targetTheme);
+        document.documentElement.classList.toggle("dark", targetTheme === "dark");
+        document.body.classList.toggle("dark", targetTheme === "dark");
+        try { localStorage.setItem("theme", targetTheme); } catch {}
+
+        const themeBtn = smartQuerySelector("button[aria-label*='theme' i], button");
+        if (themeBtn) {
+          spotlightElement(themeBtn, `Theme: ${targetTheme}`);
+          try { themeBtn.click(); } catch {}
+        }
+        deltaDesc = `Synchronized application theme to ${targetTheme} mode across Angular, DOM, and LocalStorage`;
+      } else if (lowerAction.includes("click")) {
+        const target = (args.selector as string) || (args.target as string) || "button";
         const el = smartQuerySelector(target);
         if (el) {
-          this.highlightElement(el);
+          spotlightElement(el, target);
+          await this.sleep(300);
           await ActionDispatcher.click(el);
           deltaDesc = `Dispatched synthetic user click event to <${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}>`;
         } else {
@@ -203,8 +294,18 @@ export class WorkflowRunner {
           deltaDesc = `Engram teleport completed`;
         }
       } else {
-        // Generic fallback action execution
-        deltaDesc = `Dispatched verified host action "${actionName}"`;
+        // Universal dynamic element resolution based on clean action query
+        const cleanQuery = lowerAction.replace(/^[\p{Emoji}\p{Symbol}\s]+/u, "").trim();
+        const candidate = smartQuerySelector(
+          `#${cleanQuery}, [id*='${cleanQuery}' i], [class*='${cleanQuery}' i]`
+        );
+        if (candidate) {
+          await humanNavigateTo(candidate, `Navigated to ${cleanQuery}`, 1400);
+          deltaDesc = `Navigated directly to ${cleanQuery} element`;
+        } else {
+          smoothScrollTo(typeof window !== "undefined" ? window.scrollY + 600 : 0);
+          deltaDesc = `Navigated viewport towards ${cleanQuery}`;
+        }
       }
 
       const durationMs = Math.round(performance.now() - t0);
@@ -234,39 +335,6 @@ export class WorkflowRunner {
         outputSummary: `Action failed: ${err?.message || "Execution error"}`,
         timestamp: Date.now(),
       };
-    }
-  }
-
-  /**
-   * Visually highlight an element with a glowing temporary outline on the host page
-   */
-  private highlightElement(el: HTMLElement): void {
-    this.clearHighlight();
-    try {
-      this.activeHighlightEl = el;
-      el.classList.add("g4-active-action-target");
-      el.style.outline = "2px solid #a855f7";
-      el.style.outlineOffset = "4px";
-      el.style.transition = "outline 0.2s ease-in-out";
-
-      setTimeout(() => {
-        this.clearHighlight();
-      }, 2500);
-    } catch {
-      // ignore
-    }
-  }
-
-  private clearHighlight(): void {
-    if (this.activeHighlightEl) {
-      try {
-        this.activeHighlightEl.classList.remove("g4-active-action-target");
-        this.activeHighlightEl.style.outline = "";
-        this.activeHighlightEl.style.outlineOffset = "";
-      } catch {
-        // ignore
-      }
-      this.activeHighlightEl = null;
     }
   }
 

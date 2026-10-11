@@ -1,5 +1,20 @@
-import React, { useState, useRef, useEffect } from "react";
-import { Sparkles, Info, Plus, Trash2, Clock, Zap, Play } from "lucide-react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import {
+  Sparkles,
+  Info,
+  Plus,
+  Trash2,
+  Clock,
+  Zap,
+  Play,
+  ChevronLeft,
+  ChevronRight,
+  ArrowRight,
+  CircleDot,
+  ArrowLeftRight,
+  Maximize2,
+  X,
+} from "lucide-react";
 import { Gemma4Config } from "../main";
 import { useChat } from "../hooks/useChat";
 import MessageBubble from "./MessageBubble";
@@ -9,14 +24,37 @@ import { EvalsStudio } from "./EvalsStudio";
 import { NavigationHub } from "./NavigationHub";
 import { WorkflowStudio } from "./WorkflowStudio";
 import { workflowStore } from "../lib/workflowStore";
-import { WebWorkflow } from "../lib/types";
+import { WebWorkflow, ModelTier } from "../lib/types";
+import { detectSitePersona, SitePersona } from "../lib/sitePersona";
+import { WorkflowPredictor, PredictedWorkflowCandidate } from "../lib/workflowPredictor";
+
+import { NavPersistenceManager } from "../lib/navPersistence";
+import { CanvasGameController } from "../lib/canvasGameController";
 
 export interface ChatWidgetProps {
   config?: Gemma4Config;
 }
 
 export default function ChatWidget({ config = {} }: ChatWidgetProps) {
-  const [isOpen, setIsOpen] = useState(config.defaultOpen ?? false);
+  const [isOpen, setIsOpen] = useState(() => {
+    try {
+      return (config.defaultOpen ?? false) || Boolean(NavPersistenceManager.getPendingTask());
+    } catch {
+      return config.defaultOpen ?? false;
+    }
+  });
+  const [dockPosition, setDockPosition] = useState<"left" | "right">(() => {
+    try {
+      if (typeof window !== "undefined" && window.localStorage) {
+        const saved = window.localStorage.getItem("g4_dock_position");
+        if (saved === "left" || saved === "right") return saved;
+      }
+    } catch {}
+    return "right";
+  });
+  const [isCompactMode, setIsCompactMode] = useState<boolean>(false);
+  const [isGhostMode, setIsGhostMode] = useState<boolean>(false);
+  const [isMobileExpanded, setIsMobileExpanded] = useState<boolean>(false);
   const [inputValue, setInputValue] = useState("");
   const [showTierMenu, setShowTierMenu] = useState(false);
   const [showNanoHelp, setShowNanoHelp] = useState(false);
@@ -24,6 +62,82 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
   const [expandedTraceId, setExpandedTraceId] = useState<string | null>(null);
   const [showGuide, setShowGuide] = useState(false);
   const [quickWorkflows, setQuickWorkflows] = useState<WebWorkflow[]>([]);
+  const [predictedWorkflows, setPredictedWorkflows] = useState<PredictedWorkflowCandidate[]>([]);
+  const [sitePersona, setSitePersona] = useState<SitePersona>(() => detectSitePersona());
+  const [showPermissionBanner, setShowPermissionBanner] = useState<boolean>(() => {
+    try {
+      if (typeof window !== "undefined" && window.localStorage) {
+        return window.localStorage.getItem("g4_ondevice_model_permission") === null;
+      }
+    } catch {}
+    return false;
+  });
+
+  // Canvas collision detection: If a canvas exists in the right or center on desktop, auto-dock to left
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const saved = localStorage.getItem("g4_dock_position");
+      if (!saved) {
+        const canvas = document.querySelector("canvas");
+        if (canvas && window.innerWidth >= 800) {
+          const rect = canvas.getBoundingClientRect();
+          if (rect.right > window.innerWidth - 460) {
+            setDockPosition("left");
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const toggleDock = useCallback(() => {
+    setDockPosition((prev) => {
+      const next = prev === "right" ? "left" : "right";
+      try {
+        localStorage.setItem("g4_dock_position", next);
+      } catch {}
+      return next;
+    });
+  }, []);
+
+  // Unified, deduplicated workflow suggestions list guaranteed to always be available
+  const displayWorkflows = React.useMemo(() => {
+    const list: Array<{ workflow: WebWorkflow; confidence?: number; isPredicted?: boolean; rationale?: string }> = [];
+    const seenNames = new Set<string>();
+
+    // 1. Add Predicted Workflows (highest priority with Vega scoring)
+    for (const pred of predictedWorkflows) {
+      const clean = pred.workflow.name.toLowerCase().replace(/^[\p{Emoji}\p{Symbol}\s]+/u, "").trim();
+      if (!seenNames.has(clean)) {
+        seenNames.add(clean);
+        list.push({
+          workflow: pred.workflow,
+          confidence: pred.confidence,
+          isPredicted: true,
+          rationale: pred.rationale,
+        });
+      }
+    }
+
+    // 2. Add Stored / Synthesized Quick Workflows
+    for (const wf of quickWorkflows) {
+      const clean = wf.name.toLowerCase().replace(/^[\p{Emoji}\p{Symbol}\s]+/u, "").trim();
+      if (!seenNames.has(clean)) {
+        seenNames.add(clean);
+        list.push({ workflow: wf, isPredicted: false });
+      }
+    }
+
+    return list;
+  }, [predictedWorkflows, quickWorkflows]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setSitePersona(detectSitePersona());
+    }
+  }, [isOpen]);
 
   const {
     messages,
@@ -55,16 +169,37 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
     deleteSession,
     executeDirectAction,
     runSavedWorkflow,
+    executeBatchProposal,
+    cancelBatchProposal,
+    isRecordingMacro,
+    startMacroRecording,
+    stopMacroRecording,
   } = useChat(config);
 
   const loadQuickWorkflows = async () => {
     const list = await workflowStore.getWorkflowsForOrigin();
     setQuickWorkflows(list);
+    try {
+      const preds = await WorkflowPredictor.predictWorkflows(3);
+      setPredictedWorkflows(preds);
+    } catch (err) {
+      console.warn("[ChatWidget] Error predicting workflows:", err);
+    }
   };
 
   useEffect(() => {
     loadQuickWorkflows();
   }, [isOpen]);
+
+  // OpenHarness Pattern: Watchdog auto-clears stuck in-flight action state after 25s
+  useEffect(() => {
+    if (!isLoading) return;
+    const watchdog = setTimeout(() => {
+      console.warn("[ChatWidget] In-flight execution watchdog triggered (25s timeout). Calling stopGeneration.");
+      stopGeneration();
+    }, 25000);
+    return () => clearTimeout(watchdog);
+  }, [isLoading, stopGeneration]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -72,6 +207,135 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
   const [viewportHeight, setViewportHeight] = useState<number | null>(null);
   const [isNearBottom, setIsNearBottom] = useState(true);
   const [showScrollBottomChip, setShowScrollBottomChip] = useState(false);
+  const workflowsBarRef = useRef<HTMLDivElement>(null);
+  const workflowsScrollRef = useRef<HTMLDivElement>(null);
+  const isDraggingWfRef = useRef(false);
+  const startXWfRef = useRef(0);
+  const scrollLeftWfRef = useRef(0);
+  const hasMovedWfRef = useRef(false);
+  const [canScrollWfLeft, setCanScrollWfLeft] = useState(false);
+  const [canScrollWfRight, setCanScrollWfRight] = useState(false);
+  const [hasWfOverflow, setHasWfOverflow] = useState(false);
+
+  const updateWfScrollBounds = useCallback(() => {
+    const el = workflowsScrollRef.current;
+    if (!el) return;
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    const hasOverflow = maxScroll > 4;
+    setHasWfOverflow(hasOverflow);
+    setCanScrollWfLeft(el.scrollLeft > 2);
+    setCanScrollWfRight(el.scrollLeft < maxScroll - 2);
+  }, []);
+
+  useEffect(() => {
+    const el = workflowsScrollRef.current;
+    if (!el) return;
+    updateWfScrollBounds();
+
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined") {
+      ro = new ResizeObserver(() => {
+        updateWfScrollBounds();
+      });
+      ro.observe(el);
+    }
+
+    const onResize = () => updateWfScrollBounds();
+    window.addEventListener("resize", onResize);
+    const timer = setTimeout(updateWfScrollBounds, 60);
+
+    return () => {
+      window.removeEventListener("resize", onResize);
+      clearTimeout(timer);
+      ro?.disconnect();
+    };
+  }, [quickWorkflows.length, isOpen, updateWfScrollBounds]);
+
+  // Dedicated Workflows Bar Wheel Event Listener: hardware 120fps trackpad physics + mouse wheel horizontal translation
+  useEffect(() => {
+    const bar = workflowsBarRef.current;
+    const track = workflowsScrollRef.current;
+    if (!bar || !track || !isOpen) return;
+
+    const handleBarWheel = (e: WheelEvent) => {
+      // Isolate wheel events within the workflow bar so messages container never scrolls
+      e.stopPropagation();
+
+      // Trackpad horizontal swipe:
+      if (Math.abs(e.deltaX) > 0) {
+        // If over the track itself, do not preventDefault: let the browser's native GPU compositor scroll at 120fps with full inertia!
+        if (track.contains(e.target as Node)) {
+          return;
+        }
+        // If hovering over chevrons, label, or padding, scroll track directly:
+        e.preventDefault();
+        track.scrollLeft += e.deltaX;
+        updateWfScrollBounds();
+        return;
+      }
+
+      // Vertical mouse wheel or vertical trackpad flick over the horizontal bar:
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        track.scrollLeft += e.deltaY;
+        updateWfScrollBounds();
+        return;
+      }
+    };
+
+    bar.addEventListener("wheel", handleBarWheel, { passive: false });
+    return () => {
+      bar.removeEventListener("wheel", handleBarWheel);
+    };
+  }, [quickWorkflows.length, isOpen, updateWfScrollBounds]);
+
+  const handlePointerDownWf = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    const el = workflowsScrollRef.current;
+    if (!el) return;
+    isDraggingWfRef.current = true;
+    startXWfRef.current = e.clientX;
+    scrollLeftWfRef.current = el.scrollLeft;
+    hasMovedWfRef.current = false;
+  };
+
+  const handlePointerMoveWf = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingWfRef.current) return;
+    const el = workflowsScrollRef.current;
+    if (!el) return;
+    const dx = e.clientX - startXWfRef.current;
+    if (Math.abs(dx) > 5) {
+      if (!hasMovedWfRef.current) {
+        hasMovedWfRef.current = true;
+        try {
+          el.setPointerCapture(e.pointerId);
+        } catch {}
+      }
+      el.scrollLeft = scrollLeftWfRef.current - dx;
+      updateWfScrollBounds();
+    }
+  };
+
+  const handlePointerUpWf = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (isDraggingWfRef.current) {
+      isDraggingWfRef.current = false;
+      try {
+        if (workflowsScrollRef.current?.hasPointerCapture(e.pointerId)) {
+          workflowsScrollRef.current.releasePointerCapture(e.pointerId);
+        }
+      } catch {}
+      if (hasMovedWfRef.current) {
+        setTimeout(() => {
+          hasMovedWfRef.current = false;
+        }, 80);
+      }
+    }
+  };
+
+  const handlePointerCancelWf = () => {
+    isDraggingWfRef.current = false;
+    hasMovedWfRef.current = false;
+  };
 
   // Dynamic visualViewport tracking for seamless mobile keyboard docking (Standard 2.2)
   useEffect(() => {
@@ -95,74 +359,26 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
     };
   }, [isOpen]);
 
-  // Complete scroll isolation: stops mouse wheel & touch gestures from bleeding through to host page
+  // Scroll isolation: prevent wheel & touch gestures from escaping to host page without breaking native momentum
   useEffect(() => {
     const el = cardRef.current;
     if (!el || !isOpen) return;
 
-    // Lock body scroll on mobile while open so host page behind modal cannot scroll
-    const isMobile = typeof window !== "undefined" && window.innerWidth < 640;
-    let prevBodyOverflow = "";
-    if (isMobile) {
-      prevBodyOverflow = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
-    }
-
-    const findScrollContainer = (target: HTMLElement | null): HTMLElement | null => {
-      let current = target;
-      while (current && current !== el) {
-        if (current.scrollHeight > current.clientHeight) {
-          const cls = current.className || "";
-          if (
-            typeof cls === "string" &&
-            (cls.includes("overflow-y-auto") ||
-              cls.includes("overflow-y-scroll") ||
-              cls.includes("g4-messages-container") ||
-              cls.includes("sessions-list"))
-          ) {
-            return current;
-          }
-        }
-        current = current.parentElement;
-      }
-      return el.querySelector<HTMLElement>(
-        ".g4-messages-container, .overflow-y-auto, [class*='overflow-y-auto']"
-      );
-    };
-
-    const handleWheel = (e: WheelEvent) => {
-      // Prevent wheel event from escaping to host window
-      e.preventDefault();
+    // Stop wheel events from bubbling up to window (where Lenis smooth scroller or window listeners reside)
+    const handleCardWheel = (e: WheelEvent) => {
       e.stopPropagation();
-
-      const scrollable = findScrollContainer(e.target as HTMLElement | null);
-      if (scrollable) {
-        const { scrollTop, scrollHeight, clientHeight } = scrollable;
-        const maxScroll = scrollHeight - clientHeight;
-        if (maxScroll > 0) {
-          scrollable.scrollTop = Math.max(0, Math.min(maxScroll, scrollTop + e.deltaY));
-        }
-      }
     };
 
-    const handleTouchMove = (e: TouchEvent) => {
-      // If user is dragging on non-scrollable chrome (header/footer), block background pull/bounce
-      const scrollable = findScrollContainer(e.target as HTMLElement | null);
-      if (!scrollable) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
+    const handleCardTouchMove = (e: TouchEvent) => {
+      e.stopPropagation();
     };
 
-    el.addEventListener("wheel", handleWheel, { passive: false });
-    el.addEventListener("touchmove", handleTouchMove, { passive: false });
+    el.addEventListener("wheel", handleCardWheel, { passive: true });
+    el.addEventListener("touchmove", handleCardTouchMove, { passive: true });
 
     return () => {
-      if (isMobile) {
-        document.body.style.overflow = prevBodyOverflow;
-      }
-      el.removeEventListener("wheel", handleWheel);
-      el.removeEventListener("touchmove", handleTouchMove);
+      el.removeEventListener("wheel", handleCardWheel);
+      el.removeEventListener("touchmove", handleCardTouchMove);
     };
   }, [isOpen]);
 
@@ -210,18 +426,79 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
   return (
     <div
       data-g4-widget="true"
-      className={`g4-widget-container fixed z-[999999] pointer-events-auto transition-all ${
+      className={`g4-widget-container fixed z-[2147483647] pointer-events-auto transition-all ${
         isOpen
-          ? "g4-is-open inset-0 sm:inset-auto sm:bottom-6 sm:right-6 flex flex-col items-end"
+          ? isCompactMode
+            ? dockPosition === "left"
+              ? "bottom-4 left-4 sm:bottom-6 sm:left-6 flex flex-col items-start"
+              : "bottom-4 right-4 sm:bottom-6 sm:right-6 flex flex-col items-end"
+            : dockPosition === "left"
+            ? "g4-is-open bottom-0 left-0 right-0 sm:inset-auto sm:bottom-6 sm:left-6 flex flex-col items-start"
+            : "g4-is-open bottom-0 left-0 right-0 sm:inset-auto sm:bottom-6 sm:right-6 flex flex-col items-end"
+          : dockPosition === "left"
+          ? "bottom-4 left-4 sm:bottom-6 sm:left-6 flex flex-col items-start"
           : "bottom-4 right-4 sm:bottom-6 sm:right-6 flex flex-col items-end"
       }`}
     >
+      {/* Picture-in-Picture Mini HUD (Compact mode for games & canvas apps) */}
+      {isOpen && isCompactMode && (
+        <div
+          className="w-[calc(100vw-32px)] max-w-[360px] h-[52px] g4-window-card rounded-[12px] shadow-2xl px-3 flex items-center justify-between text-xs text-white overflow-hidden transition-all duration-200 animate-in fade-in slide-in-from-bottom-2 select-none border border-white/10"
+        >
+          <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+            <div className="flex flex-col min-w-0">
+              <span className="font-semibold text-white text-[12px] truncate leading-tight">
+                {isLoading ? "⚡ AI Agent Executing..." : "🏀 AI Copilot Active"}
+              </span>
+              <span className="text-[10px] text-gray-400 truncate leading-tight">
+                {currentTierInfo.name} · Game & Canvas Visible
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={toggleDock}
+              className="text-gray-400 hover:text-white w-7 h-7 rounded-[6px] hover:bg-white/10 flex items-center justify-center transition-colors cursor-pointer"
+              title={dockPosition === "left" ? "Dock Right" : "Dock Left"}
+              aria-label="Switch Dock Position"
+            >
+              <ArrowLeftRight size={13} />
+            </button>
+            <button
+              onClick={() => setIsCompactMode(false)}
+              className="text-gray-400 hover:text-white w-7 h-7 rounded-[6px] hover:bg-white/10 flex items-center justify-center transition-colors cursor-pointer"
+              title="Expand Full Chat"
+              aria-label="Expand Full Chat"
+            >
+              <Maximize2 size={13} />
+            </button>
+            <button
+              onClick={() => setIsOpen(false)}
+              className="text-gray-400 hover:text-white w-7 h-7 rounded-[6px] hover:bg-white/10 flex items-center justify-center transition-colors cursor-pointer"
+              title="Close Assistant"
+              aria-label="Close Assistant"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Expanded Chat & Evals Window */}
-      {isOpen && (
+      {isOpen && !isCompactMode && (
         <div
           ref={cardRef}
-          style={viewportHeight ? { height: `${viewportHeight}px`, maxHeight: `${viewportHeight}px` } : undefined}
-          className="w-full h-[100dvh] max-h-[100dvh] sm:w-[440px] sm:h-[650px] sm:max-h-[88vh] sm:max-w-[calc(100vw-32px)] g4-window-card rounded-none sm:rounded-[8px] shadow-2xl flex flex-col sm:mb-3 overflow-hidden transition-all duration-300 animate-in fade-in slide-in-from-bottom-5 overscroll-contain relative"
+          style={
+            viewportHeight && !isMobileExpanded
+              ? { height: `${Math.min(viewportHeight * 0.52, 650)}px`, maxHeight: `${viewportHeight}px` }
+              : undefined
+          }
+          className={`w-full ${
+            isMobileExpanded ? "h-[92dvh] max-h-[92dvh]" : "h-[50dvh] max-h-[50dvh]"
+          } sm:w-[440px] sm:h-[650px] sm:max-h-[88vh] sm:max-w-[calc(100vw-32px)] g4-window-card rounded-t-[14px] sm:rounded-[8px] shadow-2xl flex flex-col sm:mb-3 overflow-hidden transition-all duration-300 animate-in fade-in slide-in-from-bottom-5 overscroll-contain relative ${
+            isGhostMode ? "opacity-35 hover:opacity-100 transition-opacity duration-300" : ""
+          }`}
         >
           {/* Header */}
           <ChatHeader
@@ -231,7 +508,9 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
             sessionsCount={sessionsList.length}
             canEscalate={canEscalate}
             showTierMenu={showTierMenu}
-            loadingProgress={modelLoadingProgress}
+            dockPosition={dockPosition}
+            isGhostMode={isGhostMode}
+            isMobileExpanded={isMobileExpanded}
             onToggleTierMenu={() => setShowTierMenu(!showTierMenu)}
             onSelectTier={(tier) => {
               setTier(tier);
@@ -240,40 +519,48 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
             onEscalate={triggerEscalation}
             onClose={() => setIsOpen(false)}
             onTabChange={(tab) => setActiveTab(tab)}
+            isRecordingMacro={isRecordingMacro}
+            onStartMacroRecording={startMacroRecording}
+            onStopMacroRecording={stopMacroRecording}
+            onToggleDock={toggleDock}
+            onToggleCompact={() => setIsCompactMode(true)}
+            onToggleGhost={() => setIsGhostMode(!isGhostMode)}
+            onToggleMobileExpand={() => setIsMobileExpanded(!isMobileExpanded)}
           />
+
+          {/* Heavy Model Download Progress Banner (in normal document flow, 0 overlap) */}
+          {modelLoadingProgress?.active && (
+            <div className="bg-[#0b1022] border-b border-indigo-500/40 p-2.5 text-xs text-indigo-200 flex flex-col gap-1.5 animate-in fade-in duration-150 select-none shrink-0 shadow-md">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 font-medium min-w-0">
+                  <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse shrink-0" />
+                  <span className="text-white font-semibold truncate">
+                    Downloading {modelLoadingProgress.modelName}
+                  </span>
+                  <span className="text-[11px] text-indigo-300/80 font-mono shrink-0">
+                    ({modelLoadingProgress.size})
+                  </span>
+                </div>
+                <span className="font-mono text-indigo-300 font-bold shrink-0 ml-2">
+                  {Math.min(100, Math.max(0, Math.round(modelLoadingProgress.percent)))}%
+                </span>
+              </div>
+              <div className="w-full bg-gray-900/90 rounded-full h-1.5 overflow-hidden border border-white/10">
+                <div
+                  className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-full rounded-full transition-all duration-300 shadow-sm"
+                  style={{ width: `${Math.max(4, Math.min(100, modelLoadingProgress.percent))}%` }}
+                />
+              </div>
+              <div className="flex items-center justify-between text-[10px] text-gray-400 font-mono">
+                <span className="truncate">{modelLoadingProgress.text}</span>
+                <span className="shrink-0 text-gray-500 ml-2">Persistent Cache</span>
+              </div>
+            </div>
+          )}
 
           {/* Tab 1: Agent Chat */}
           {activeTab === "chat" && (
             <>
-              {/* Heavy Model Download Progress Banner */}
-              {modelLoadingProgress?.active && (
-                <div className="bg-[#0b1022] border-b border-indigo-500/40 p-3 text-xs text-indigo-200 flex flex-col gap-1.5 animate-in fade-in duration-150 select-none">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 font-medium min-w-0">
-                      <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse shrink-0" />
-                      <span className="text-white font-semibold truncate">
-                        Downloading {modelLoadingProgress.modelName}
-                      </span>
-                      <span className="text-[11px] text-indigo-300/80 font-mono shrink-0">
-                        ({modelLoadingProgress.size})
-                      </span>
-                    </div>
-                    <span className="font-mono text-indigo-300 font-bold shrink-0 ml-2">
-                      {Math.round(modelLoadingProgress.percent)}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-900/90 rounded-full h-1.5 overflow-hidden border border-white/10">
-                    <div
-                      className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-full rounded-full transition-all duration-300 shadow-sm"
-                      style={{ width: `${Math.max(4, Math.min(100, modelLoadingProgress.percent))}%` }}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between text-[10px] text-gray-400 font-mono">
-                    <span className="truncate">{modelLoadingProgress.text}</span>
-                    <span className="shrink-0 text-gray-500 ml-2">Persistent Cache</span>
-                  </div>
-                </div>
-              )}
 
               {/* Nano Help Banner (if Chrome AI unavailable) */}
               {!nanoSupported && showNanoHelp && (
@@ -306,48 +593,226 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
                 className="g4-messages-container text-xs overscroll-contain relative"
               >
                 {messages.length === 0 ? (
-                  <div className="flex flex-col gap-3 py-4 px-1 text-left select-none">
-                    {/* Page context pill */}
-                    <div className="flex items-center gap-2 text-[12px] text-gray-400 font-medium">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                      <span className="text-gray-200 font-semibold">Ready on</span>
-                      <span className="text-purple-300 truncate max-w-[240px] font-mono text-[11px]">
-                        {typeof window !== "undefined"
-                          ? (window.location.hostname + (window.location.pathname !== "/" ? window.location.pathname : "")).replace(/^www\./, "")
-                          : "current page"}
-                      </span>
+                  <div className="flex flex-col gap-3 py-3 px-1 text-left select-none">
+                    {/* Page context pill with site category badge */}
+                    <div className="flex items-center justify-between text-[12px] text-gray-400 font-medium">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                        <span className="text-gray-200 font-semibold">Active on</span>
+                        <span className="text-purple-300 truncate max-w-[150px] font-mono text-[11px]">
+                          {sitePersona.domain}
+                        </span>
+                        <span className="px-1.5 py-0.5 rounded text-[10px] bg-purple-500/15 text-purple-300 border border-purple-500/20 font-medium">
+                          {sitePersona.categoryLabel}
+                        </span>
+                      </div>
                     </div>
 
-                    {/* Standard Section 5 & 7: Capability in one sentence */}
-                    <p className="text-[14px] text-gray-200 leading-relaxed font-normal">
-                      I can navigate this site, summarize pages, explain code, and trigger on-page actions.
-                    </p>
+                    {/* Feature Card: Autonomous Workflow Engine & One-Time Setup */}
+                    {showPermissionBanner && (
+                      <div className="p-3.5 rounded-xl bg-gradient-to-br from-purple-950/70 via-indigo-950/50 to-black/70 border border-purple-500/40 text-gray-200 shadow-xl backdrop-blur-md animate-in fade-in">
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400/20 to-purple-500/30 text-amber-300 border border-amber-500/30 flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
+                            <Zap size={18} className="fill-amber-400 text-amber-300" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <h4 className="text-[13px] font-bold text-white flex items-center gap-1.5">
+                                <span>Autonomous Workflow Engine</span>
+                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/25 text-purple-300 border border-purple-500/40 font-mono">
+                                  Core USP
+                                </span>
+                              </h4>
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono shrink-0">
+                                100% Private WebGPU
+                              </span>
+                            </div>
 
-                    {/* Standard Section 5 & 7: Limit in one sentence */}
-                    <p className="text-[12px] text-gray-400 leading-normal">
-                      I cannot submit forms or perform actions without your explicit confirmation.
-                    </p>
+                            <p className="text-[11.5px] text-gray-300 mt-1.5 leading-relaxed">
+                              Automate multi-step browser tasks across this website with 1 click. Powered by on-device decision intelligence.
+                            </p>
 
-                    {/* Standard Section 2.2: 4 action chips (36-44px tall touch targets, 8px gap) */}
-                    <div className="flex flex-wrap gap-2 pt-2">
-                      {[
-                        "Summarize this page",
-                        "Navigate site sections",
-                        "Explain page architecture",
-                        "Find contact & links",
-                      ].map((chip) => (
-                        <button
-                          key={chip}
-                          type="button"
-                          onClick={() => {
-                            setInputValue(chip);
-                            sendMessage(chip);
-                          }}
-                          className="min-h-[40px] px-3.5 py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-purple-600/20 hover:border-purple-500/50 text-[13px] text-gray-200 hover:text-white transition-all cursor-pointer text-left flex items-center justify-center font-medium shadow-sm active:scale-98"
-                        >
-                          {chip}
-                        </button>
-                      ))}
+                            {/* What Workflows Can Do */}
+                            <div className="mt-2.5 space-y-1 text-[11px] text-gray-300 font-normal">
+                              <div className="flex items-start gap-2 text-gray-200">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0 mt-1.5" />
+                                <span><strong>Predictive Suggestions:</strong> Scans page landmarks to recommend high-value automations.</span>
+                              </div>
+                              <div className="flex items-start gap-2 text-gray-200">
+                                <span className="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0 mt-1.5" />
+                                <span><strong>1-Click Multi-Step Execution:</strong> Smoothly tours sections, fills forms, and triggers actions hands-free.</span>
+                              </div>
+                              <div className="flex items-start gap-2 text-gray-200">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 mt-1.5" />
+                                <span><strong>Build Custom Workflows:</strong> Record and save your own site routines directly in browser memory.</span>
+                              </div>
+                            </div>
+
+                            <div className="mt-2 text-[10px] text-gray-400 font-mono">
+                              ⚡ One-time setup: initializes the local on-device model to predict and execute workflows with zero cloud latency.
+                            </div>
+
+                            <div className="flex items-center gap-2 mt-3">
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    localStorage.setItem("g4_ondevice_model_permission", "granted");
+                                  } catch {}
+                                  setShowPermissionBanner(false);
+                                  setTier(ModelTier.TIER_1_MINILM_ROUTER);
+                                  await loadQuickWorkflows();
+                                }}
+                                className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold text-[11px] shadow-lg shadow-purple-900/40 flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                              >
+                                <Zap size={12} className="fill-current text-amber-300" />
+                                <span>Enable Autonomous Workflows</span>
+                              </button>
+                              <button
+                                onClick={() => {
+                                  try {
+                                    localStorage.setItem("g4_ondevice_model_permission", "declined");
+                                  } catch {}
+                                  setShowPermissionBanner(false);
+                                }}
+                                className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-gray-200 text-[11px] cursor-pointer transition-colors"
+                              >
+                                Basic Mode Only
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* PROMINENT WORKFLOW SUGGESTIONS - UNMISSABLE HERO SHOWCASE */}
+                    <div className="mt-1 flex flex-col gap-2.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 text-[12px] font-semibold text-white">
+                          <Zap size={14} className="text-amber-400 fill-amber-400" />
+                          <span>Suggested Workflows for This Page</span>
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-mono">
+                            {displayWorkflows.length} available
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => startMacroRecording()}
+                            className="text-[11px] text-purple-300 hover:text-white bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 px-2 py-0.5 rounded-[5px] flex items-center gap-1 font-medium cursor-pointer transition-colors shadow-sm"
+                            title="Teach 1 item, batch replay across N items"
+                          >
+                            <CircleDot size={11} className="text-purple-400" />
+                            <span>Teach 1 → Batch N</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setActiveTab("workflows")}
+                            className="text-[11px] text-purple-400 hover:text-purple-300 flex items-center gap-1 font-medium cursor-pointer transition-colors"
+                          >
+                            <Plus size={11} />
+                            <span>Create Custom</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Prominent Large Workflow Cards Deck */}
+                      <div className="grid grid-cols-1 gap-2.5">
+                        {displayWorkflows.length === 0 ? (
+                          <div className="p-4 rounded-xl border border-white/10 bg-white/[0.02] text-center flex flex-col items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-300">
+                              <Sparkles size={16} />
+                            </div>
+                            <div className="text-[12px] font-medium text-gray-200">
+                              No Pre-built Workflows for This View
+                            </div>
+                            <p className="text-[11px] text-gray-400 max-w-[280px]">
+                              Record any custom workflow in seconds, or use Teach 1 → Batch N to automate tasks on this page.
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <button
+                                type="button"
+                                onClick={() => startMacroRecording()}
+                                className="px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium text-[11px] shadow-sm flex items-center gap-1 cursor-pointer transition-colors"
+                              >
+                                <CircleDot size={11} />
+                                <span>Teach 1 → Batch N</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setActiveTab("workflows")}
+                                className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/15 text-white font-medium text-[11px] border border-white/10 flex items-center gap-1 cursor-pointer transition-colors"
+                              >
+                                <Plus size={11} />
+                                <span>Create Custom</span>
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          displayWorkflows.map((item) => (
+                            <div
+                              key={item.workflow.id}
+                              className={`p-3.5 rounded-xl border shadow-md transition-all flex flex-col justify-between gap-2.5 group hover:shadow-purple-950/50 ${
+                                item.isPredicted
+                                  ? "bg-gradient-to-r from-purple-950/50 via-purple-900/25 to-black/40 border-purple-500/40 hover:border-purple-400/70"
+                                  : "bg-white/[0.04] hover:bg-white/[0.07] border-white/10 hover:border-white/20"
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="text-[13px] font-semibold text-white group-hover:text-purple-200 transition-colors">
+                                      {item.workflow.name}
+                                    </span>
+                                    {item.isPredicted && item.confidence && (
+                                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono flex items-center gap-0.5">
+                                        <Sparkles size={8} />
+                                        <span>AI Predicted ({Math.round(item.confidence * 100)}%)</span>
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-[11px] text-gray-300 mt-1 leading-snug line-clamp-2">
+                                    {item.workflow.description}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between pt-1 border-t border-white/5">
+                                <span className="text-[10px] text-gray-400 font-mono">
+                                  {item.workflow.steps.length} {item.workflow.steps.length === 1 ? "step" : "steps"} • instant
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => runSavedWorkflow(item.workflow)}
+                                  className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-[11px] shadow-md shadow-emerald-950/40 flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                                >
+                                  <Play size={10} className="fill-current text-white" />
+                                  <span>Run Workflow</span>
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Conversational Action Chips */}
+                    <div className="pt-2">
+                      <div className="text-[11px] text-gray-400 font-medium mb-1.5">Or ask a question:</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {sitePersona.primaryActionPills.map((chip) => (
+                          <button
+                            key={chip}
+                            type="button"
+                            onClick={() => {
+                              setInputValue(chip);
+                              sendMessage(chip);
+                            }}
+                            className="px-2.5 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-purple-600/20 hover:border-purple-500/50 text-[11px] text-gray-300 hover:text-white transition-all cursor-pointer text-left flex items-center gap-1 shadow-sm active:scale-98"
+                          >
+                            <span>{chip}</span>
+                            <ArrowRight size={10} className="text-gray-500" />
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 ) : (
@@ -358,7 +823,17 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
                       onFeedback={handleFeedback}
                       onEscalate={triggerEscalation}
                       onSelectOption={(optionLabel) => sendMessage(optionLabel)}
-                      onExecuteAction={executeDirectAction}
+                      onExecuteAction={(actionName, payload) => {
+                        if (actionName === "stop_game") {
+                          CanvasGameController.stop();
+                        } else if (actionName === "run_workflow" && payload?.workflowId) {
+                          runSavedWorkflow(payload.workflowId as string);
+                        } else {
+                          executeDirectAction(actionName, payload);
+                        }
+                      }}
+                      onApproveBatch={executeBatchProposal}
+                      onCancelBatch={cancelBatchProposal}
                       onSaveToWorkflow={async (title, action, target) => {
                         const newWf: WebWorkflow = {
                           id: `wf_${Date.now()}`,
@@ -379,14 +854,25 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
 
                 {/* In-Flight Streaming & Steps Indicator */}
                 {isLoading && (
-                  <div className="flex items-center gap-1.5 text-gray-400 font-mono text-[11px] py-1 select-none">
-                    <span className="inline-block w-1.5 h-3.5 bg-purple-400 animate-pulse" />
-                    <span>Thinking...</span>
-                    {activeSteps.length > 0 && (
-                      <span className="text-gray-500 truncate max-w-[220px]">
-                        (step {activeSteps.length}: {activeSteps[activeSteps.length - 1].tool})
-                      </span>
-                    )}
+                  <div className="flex items-center justify-between gap-1.5 text-gray-400 font-mono text-[11px] py-1 select-none w-full">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="inline-block w-1.5 h-3.5 bg-purple-400 animate-pulse shrink-0" />
+                      <span className="shrink-0">Thinking...</span>
+                      {activeSteps.length > 0 && (
+                        <span className="text-gray-500 truncate max-w-[170px]">
+                          (step {activeSteps.length}: {activeSteps[activeSteps.length - 1].tool})
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => stopGeneration()}
+                      className="px-2 py-0.5 rounded text-[10px] font-sans font-medium bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-500/30 cursor-pointer transition-all active:scale-95 shrink-0"
+                      title="Stop in-flight execution"
+                      aria-label="Stop in-flight execution"
+                    >
+                      Stop
+                    </button>
                   </div>
                 )}
 
@@ -406,29 +892,88 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
                 </button>
               )}
 
-              {/* Quick Workflows Thumb Bar */}
+              {/* Quick Workflows Thumb Bar with In-Flow Chevrons & Hardware Trackpad Scrolling */}
               {quickWorkflows.length > 0 && (
-                <div className="px-3 py-1.5 bg-black/40 border-t border-white/6 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0 select-none">
+                <div
+                  ref={workflowsBarRef}
+                  className="px-3 py-1.5 bg-black/40 border-t border-white/6 flex items-center gap-1.5 shrink-0 select-none"
+                >
+                  {/* Pinned Label */}
                   <div className="flex items-center gap-1 text-[10px] font-mono text-purple-400 font-semibold shrink-0 mr-0.5">
                     <Zap size={11} className="text-amber-400" />
                     <span>Workflows:</span>
                   </div>
 
-                  {quickWorkflows.map((wf) => (
+                  {/* Left Chevron in Dedicated In-Flow Slot */}
+                  {hasWfOverflow && (
                     <button
-                      key={wf.id}
-                      onClick={() => runSavedWorkflow(wf.id)}
-                      className="px-2 py-0.5 rounded-[5px] bg-white/5 hover:bg-purple-950/40 text-gray-300 hover:text-white border border-white/8 hover:border-purple-500/30 text-[10px] flex items-center gap-1 cursor-pointer transition-all shrink-0 whitespace-nowrap active:scale-95"
-                      title={wf.description}
+                      type="button"
+                      disabled={!canScrollWfLeft}
+                      onClick={() => {
+                        workflowsScrollRef.current?.scrollBy({ left: -180, behavior: "smooth" });
+                      }}
+                      className={`shrink-0 w-5 h-5 rounded-[4px] bg-white/5 hover:bg-purple-900/50 border border-white/10 hover:border-purple-500/40 text-purple-200 flex items-center justify-center transition-all active:scale-90 ${
+                        !canScrollWfLeft ? "opacity-20 pointer-events-none cursor-default" : "opacity-90 hover:opacity-100 cursor-pointer"
+                      }`}
+                      aria-label="Scroll workflows left"
+                      title="Scroll left"
                     >
-                      <Play size={9} className="fill-current text-emerald-400" />
-                      <span className="truncate max-w-[110px]">{wf.name}</span>
+                      <ChevronLeft size={12} />
                     </button>
-                  ))}
+                  )}
 
+                  {/* Scrollable Track - Instant 120fps hardware scrolling without scroll-smooth lag */}
+                  <div
+                    ref={workflowsScrollRef}
+                    onScroll={updateWfScrollBounds}
+                    onPointerDown={handlePointerDownWf}
+                    onPointerMove={handlePointerMoveWf}
+                    onPointerUp={handlePointerUpWf}
+                    onPointerCancel={handlePointerCancelWf}
+                    className="flex-1 flex items-center gap-1.5 overflow-x-auto no-scrollbar g4-workflows-scroll cursor-grab active:cursor-grabbing select-none py-0.5"
+                    style={{ WebkitOverflowScrolling: "touch" }}
+                  >
+                    {quickWorkflows.map((wf) => (
+                      <button
+                        key={wf.id}
+                        onClick={() => {
+                          if (hasMovedWfRef.current) return;
+                          runSavedWorkflow(wf);
+                        }}
+                        className="px-2 py-0.5 rounded-[5px] bg-white/5 hover:bg-purple-950/40 text-gray-300 hover:text-white border border-white/8 hover:border-purple-500/30 text-[10px] flex items-center gap-1 cursor-pointer transition-all shrink-0 whitespace-nowrap active:scale-95"
+                        title={wf.description}
+                      >
+                        <Play size={9} className="fill-current text-emerald-400" />
+                        <span className="truncate max-w-[110px]">{wf.name}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Right Chevron in Dedicated In-Flow Slot */}
+                  {hasWfOverflow && (
+                    <button
+                      type="button"
+                      disabled={!canScrollWfRight}
+                      onClick={() => {
+                        workflowsScrollRef.current?.scrollBy({ left: 180, behavior: "smooth" });
+                      }}
+                      className={`shrink-0 w-5 h-5 rounded-[4px] bg-white/5 hover:bg-purple-900/50 border border-white/10 hover:border-purple-500/40 text-purple-200 flex items-center justify-center transition-all active:scale-90 ${
+                        !canScrollWfRight ? "opacity-20 pointer-events-none cursor-default" : "opacity-90 hover:opacity-100 cursor-pointer"
+                      }`}
+                      aria-label="Scroll workflows right"
+                      title="Scroll right"
+                    >
+                      <ChevronRight size={12} />
+                    </button>
+                  )}
+
+                  {/* Pinned Add Button */}
                   <button
-                    onClick={() => setActiveTab("workflows")}
-                    className="px-2 py-0.5 rounded-[5px] bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 text-[10px] font-medium flex items-center gap-1 cursor-pointer transition-colors shrink-0"
+                    onClick={() => {
+                      if (hasMovedWfRef.current) return;
+                      setActiveTab("workflows");
+                    }}
+                    className="shrink-0 px-2 py-0.5 rounded-[5px] bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 text-[10px] font-medium flex items-center gap-1 cursor-pointer transition-colors"
                     title="Open Workflows & Automations Studio"
                   >
                     <Plus size={10} />
@@ -565,7 +1110,11 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
       {/* Floating Toggle Button (when closed) */}
       {!isOpen && (
         <button
-          onClick={() => setIsOpen(true)}
+          id="g4-floating-launcher"
+          onClick={() => {
+            setIsOpen(true);
+            setIsCompactMode(false);
+          }}
           className="g4-launcher-button relative group text-white rounded-[8px] flex items-center gap-2 cursor-pointer"
           title="Open On-Device AI Assistant"
         >

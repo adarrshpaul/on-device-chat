@@ -99,15 +99,88 @@ export class ActionDispatcher {
     smoothScrollTo(element);
     await this.pause(50);
 
+    // SeeClick / ScreenSpot Pattern: Calculate exact visual centroid
+    const rect = element.getBoundingClientRect();
+    let cx = Math.round(rect.left + rect.width / 2);
+    let cy = Math.round(rect.top + rect.height / 2);
+
+    if (typeof target === "number" || typeof target === "string") {
+      const node = A11yTreeEngine.getNodeById(target);
+      if (node && node.tag === "canvas-element" && node.bounds) {
+        cx = Math.round(node.bounds.left + node.bounds.width / 2);
+        cy = Math.round(node.bounds.top + node.bounds.height / 2);
+      }
+    }
+
+    const eventInit: PointerEventInit & MouseEventInit = {
+      bubbles: true,
+      cancelable: true,
+      clientX: cx,
+      clientY: cy,
+      screenX: cx,
+      screenY: cy,
+    };
+
     // Mouse sequence: pointerdown -> mousedown -> pointerup -> mouseup -> click
-    element.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true }));
-    element.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+    element.dispatchEvent(new PointerEvent("pointerdown", eventInit));
+    element.dispatchEvent(new MouseEvent("mousedown", eventInit));
     element.focus();
-    element.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, cancelable: true }));
-    element.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, cancelable: true }));
+    element.dispatchEvent(new PointerEvent("pointerup", eventInit));
+    element.dispatchEvent(new MouseEvent("mouseup", eventInit));
     element.click();
 
     await this.pause(50);
+    return true;
+  }
+
+  /**
+   * SeeClick / ScreenSpot Pattern & Direct Canvas Coordinate Clicking
+   * Supports either normalized [0, 1000] coordinates OR direct client pixels when canvas/element is provided.
+   */
+  public static async clickCoordinates(
+    x: number,
+    y: number,
+    targetElement?: HTMLElement | null
+  ): Promise<boolean> {
+    if (typeof window === "undefined" || typeof document === "undefined") return false;
+
+    let clientX = x;
+    let clientY = y;
+
+    // If normalized [0, 1000] without explicit targetElement and within 1000
+    if (!targetElement && x <= 1000 && y <= 1000 && (x > 0 || y > 0)) {
+      const vpWidth = window.innerWidth || document.documentElement.clientWidth || 1280;
+      const vpHeight = window.innerHeight || document.documentElement.clientHeight || 800;
+      clientX = Math.round((x / 1000) * vpWidth);
+      clientY = Math.round((y / 1000) * vpHeight);
+    }
+
+    const hitElement = targetElement || (document.elementFromPoint(clientX, clientY) as HTMLElement | null);
+    if (!hitElement) return false;
+
+    // Dispatch full pointer and mouse event cascade with explicit coordinates
+    const eventInit: PointerEventInit = {
+      bubbles: true,
+      cancelable: true,
+      clientX,
+      clientY,
+      screenX: clientX,
+      screenY: clientY,
+      pointerId: 1,
+      pointerType: "mouse",
+      isPrimary: true,
+      button: 0,
+      buttons: 1,
+    };
+
+    hitElement.dispatchEvent(new PointerEvent("pointerdown", eventInit));
+    hitElement.dispatchEvent(new MouseEvent("mousedown", eventInit));
+    await this.pause(20);
+    hitElement.dispatchEvent(new PointerEvent("pointerup", { ...eventInit, buttons: 0 }));
+    hitElement.dispatchEvent(new MouseEvent("mouseup", { ...eventInit, buttons: 0 }));
+    hitElement.dispatchEvent(new MouseEvent("click", { ...eventInit, buttons: 0 }));
+    await this.pause(30);
+
     return true;
   }
 

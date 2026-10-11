@@ -172,23 +172,36 @@ export const WorkflowStudio: React.FC<WorkflowStudioProps> = ({
       let generatedName = "⚡ " + aiPrompt.slice(0, 30);
       let steps: WorkflowStep[] = [];
 
-      if (promptLower.includes("music") || promptLower.includes("audio") || promptLower.includes("dsp")) {
-        generatedName = "🎵 Inspect Audio DSP Engine";
+      // Scan live DOM for elements matching user prompt keywords
+      const words = promptLower.split(/\s+/).filter((w) => w.length > 2);
+      let matchedTarget: HTMLElement | null = null;
+      let matchedLabel = "";
+
+      if (typeof document !== "undefined") {
+        for (const word of words) {
+          const el = document.querySelector(
+            `#${word}, [id*='${word}' i]:not([data-g4-widget] *), section[id*='${word}' i], [class*='${word}' i]:not([data-g4-widget] *), a[href*='${word}'], button[aria-label*='${word}' i]`
+          ) as HTMLElement | null;
+          if (el && !el.closest("[data-g4-widget]")) {
+            matchedTarget = el;
+            matchedLabel = el.textContent?.trim().slice(0, 30) || el.id || word;
+            break;
+          }
+        }
+      }
+
+      if (matchedTarget) {
+        const cleanSel = matchedTarget.id ? `#${matchedTarget.id}` : (matchedTarget.tagName.toLowerCase() + (matchedTarget.className ? `.${matchedTarget.className.split(" ")[0]}` : ""));
+        generatedName = `⚡ ${matchedLabel}`;
         steps = [
-          { id: "s1", title: "Scroll to Audio Section", action: "teleport", target: "music.paulcreates.online", delayMs: 400, status: "idle" },
-          { id: "s2", title: "Verify Web Audio Canvas", action: "verify", target: "canvas, #projects", delayMs: 300, status: "idle" },
-        ];
-      } else if (promptLower.includes("contact") || promptLower.includes("reach") || promptLower.includes("message")) {
-        generatedName = "✉️ Jump to Contact Form";
-        steps = [
-          { id: "s1", title: "Scroll to Contact", action: "scroll", target: "#contact", delayMs: 400, status: "idle" },
-          { id: "s2", title: "Highlight Contact Links", action: "verify", target: "#contact a, #contact form", delayMs: 300, status: "idle" },
+          { id: "s1", title: `Navigate to ${matchedLabel}`, action: "scroll", target: cleanSel, delayMs: 400, status: "idle" },
+          { id: "s2", title: `Inspect ${matchedLabel}`, action: "verify", target: cleanSel, delayMs: 300, status: "idle" },
         ];
       } else {
         generatedName = `⚡ ${aiPrompt.charAt(0).toUpperCase() + aiPrompt.slice(1)}`;
         steps = [
-          { id: "s1", title: `Navigate: ${aiPrompt}`, action: "teleport", target: "projects", delayMs: 400, status: "idle" },
-          { id: "s2", title: "Verify Page Target", action: "verify", target: "#about, #projects", delayMs: 300, status: "idle" },
+          { id: "s1", title: `Explore: ${aiPrompt}`, action: "scroll", target: "main, section, header", delayMs: 400, status: "idle" },
+          { id: "s2", title: "Observe Target Region", action: "verify", target: "body", delayMs: 300, status: "idle" },
         ];
       }
 

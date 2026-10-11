@@ -10,6 +10,7 @@
  */
 
 import { isWidgetElement, getCleanElementSelector } from "./domUtils";
+import { CanvasInspector } from "./canvasInspector";
 
 export interface IA11yNode {
   id: number;
@@ -33,6 +34,7 @@ export interface IA11yNode {
     value?: string;
     href?: string;
   };
+  inModal?: boolean;
 }
 
 export interface A11yScanOptions {
@@ -190,8 +192,20 @@ export class A11yTreeEngine {
       }
     }
 
-    // Sort in visual reading order: top-to-bottom, then left-to-right
+    // OSWorld / WorkArena Pattern: Modal Dialog Trapping
+    // If an interactive modal or drawer is open, prioritize and isolate candidate discovery
+    const activeModal = document.querySelector<HTMLElement>(
+      "dialog[open], [role='dialog'], [aria-modal='true'], .modal-open, .is-active"
+    );
+
+    // Sort in visual reading order: top-to-bottom, then left-to-right (with active modal precedence)
     visibleElements.sort((a, b) => {
+      if (activeModal && typeof activeModal.contains === "function") {
+        const aIn = activeModal.contains(a);
+        const bIn = activeModal.contains(b);
+        if (aIn && !bIn) return -1;
+        if (!aIn && bIn) return 1;
+      }
       const rectA = a.getBoundingClientRect();
       const rectB = b.getBoundingClientRect();
       // Allow 8px variance in Y to treat horizontally aligned elements on the same row
@@ -211,6 +225,7 @@ export class A11yTreeEngine {
       const role = this.inferRole(el);
       const name = this.computeAccessibleName(el);
       const cleanSel = getCleanElementSelector(el);
+      const inModal = Boolean(activeModal && typeof activeModal.contains === "function" && activeModal.contains(el));
 
       const inputEl = el as HTMLInputElement;
       const states: IA11yNode["states"] = {};
@@ -249,11 +264,26 @@ export class A11yTreeEngine {
           height: Math.round(rect.height),
         },
         states,
+        inModal,
       };
 
       nodes.push(node);
       registry.set(id, node);
     });
+
+    // Augment with Canvas & WebGL Game Entities if canvas is present
+    const canvasEl = document.querySelector<HTMLCanvasElement>("canvas");
+    if (canvasEl && this.isVisible(canvasEl, viewportOnly)) {
+      try {
+        const canvasNodes = CanvasInspector.getVirtualA11yNodes(canvasEl, nodes.length + 1);
+        for (const cNode of canvasNodes) {
+          nodes.push(cNode);
+          registry.set(cNode.id, cNode);
+        }
+      } catch {
+        // Non-fatal if canvas inspection throws
+      }
+    }
 
     this.activeRegistry = registry;
     return nodes;
@@ -295,7 +325,8 @@ export class A11yTreeEngine {
         const stateStr = stateFlags.length > 0 ? ` (${stateFlags.join(", ")})` : "";
         const labelStr = n.name ? ` "${n.name}"` : "";
 
-        return `[${n.id}] ${n.role}${labelStr}${stateStr}`;
+        const modalPrefix = n.inModal ? "[MODAL] " : "";
+        return `${modalPrefix}[${n.id}] ${n.role}${labelStr}${stateStr}`;
       })
       .join("\n");
   }

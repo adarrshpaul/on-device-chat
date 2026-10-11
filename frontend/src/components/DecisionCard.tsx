@@ -316,6 +316,25 @@ export const DecisionCard: React.FC<DecisionCardProps> = ({
                   </div>
                 )}
 
+                {decision.vegaMetrics && (
+                  <div className="flex flex-wrap gap-1.5 pt-1 border-t border-white/6 text-[9px] font-mono">
+                    <span className="px-1.5 py-0.5 rounded bg-cyan-950/40 text-cyan-300 border border-cyan-500/30">
+                      Settle: {decision.vegaMetrics.settleSteps} steps
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded bg-cyan-950/40 text-cyan-300 border border-cyan-500/30">
+                      Kinetic: {decision.vegaMetrics.kineticEnergy}
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded bg-cyan-950/40 text-cyan-300 border border-cyan-500/30">
+                      τ: {decision.vegaMetrics.tau}
+                    </span>
+                    {decision.vegaMetrics.conformalSet.length > 0 && (
+                      <span className="px-1.5 py-0.5 rounded bg-purple-950/40 text-purple-300 border border-purple-500/30">
+                        Conformal Set: [{decision.vegaMetrics.conformalSet.join(", ")}]
+                      </span>
+                    )}
+                  </div>
+                )}
+
                 {/* Probability Distribution Breakdown */}
                 {decision.distribution && decision.distribution.length > 0 && (
                   <div className="space-y-1 pt-1 border-t border-white/6">

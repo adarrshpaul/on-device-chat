@@ -53,27 +53,35 @@ class RecipeStoreImpl {
     if (typeof window === "undefined" || !window.indexedDB) return;
 
     if (!this.isReadyPromise) {
-      this.isReadyPromise = new Promise((resolve, reject) => {
-        const req = indexedDB.open(this.dbName, this.dbVersion);
+      this.isReadyPromise = new Promise((resolve) => {
+        try {
+          const req = indexedDB.open(this.dbName, this.dbVersion);
 
-        req.onupgradeneeded = (e: any) => {
-          const db = e.target.result as IDBDatabase;
-          if (!db.objectStoreNames.contains("exemplars")) {
-            const store = db.createObjectStore("exemplars", { keyPath: "id" });
-            store.createIndex("by_origin", "siteOrigin", { unique: false });
-          }
-          if (!db.objectStoreNames.contains("recipes")) {
-            const store = db.createObjectStore("recipes", { keyPath: "id" });
-            store.createIndex("by_origin", "siteOrigin", { unique: false });
-          }
-        };
+          req.onupgradeneeded = (e: any) => {
+            const db = e.target.result as IDBDatabase;
+            if (!db.objectStoreNames.contains("exemplars")) {
+              const store = db.createObjectStore("exemplars", { keyPath: "id" });
+              store.createIndex("by_origin", "siteOrigin", { unique: false });
+            }
+            if (!db.objectStoreNames.contains("recipes")) {
+              const store = db.createObjectStore("recipes", { keyPath: "id" });
+              store.createIndex("by_origin", "siteOrigin", { unique: false });
+            }
+          };
 
-        req.onsuccess = () => {
-          this.db = req.result;
+          req.onsuccess = () => {
+            this.db = req.result;
+            resolve();
+          };
+
+          req.onerror = () => {
+            console.warn("[RecipeStore] IndexedDB error, operating in memory");
+            resolve();
+          };
+        } catch {
+          console.warn("[RecipeStore] IndexedDB access denied, operating in memory");
           resolve();
-        };
-
-        req.onerror = () => reject(req.error);
+        }
       });
     }
 
@@ -162,6 +170,22 @@ class RecipeStoreImpl {
       const tx = this.db!.transaction("recipes", "readwrite");
       const store = tx.objectStore("recipes");
       store.put(recipe);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  /**
+   * Delete a stale or broken macro recipe
+   */
+  async deleteMacro(id: string): Promise<void> {
+    await this.init();
+    if (!this.db) return;
+
+    return new Promise((resolve, reject) => {
+      const tx = this.db!.transaction("recipes", "readwrite");
+      const store = tx.objectStore("recipes");
+      store.delete(id);
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
     });

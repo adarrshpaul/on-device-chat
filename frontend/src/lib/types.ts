@@ -37,6 +37,10 @@ export interface TierInfo {
   size: string;
   description: string;
   badgeColor: string;
+  specialty?: string;
+  speedProfile?: string;
+  bestFor?: string;
+  isRecommended?: boolean;
 }
 
 export const DEFAULT_BROWSER_TOOLS: ToolDefinition[] = [
@@ -183,7 +187,7 @@ export const DEFAULT_BROWSER_TOOLS: ToolDefinition[] = [
         properties: {
           action: {
             type: "string",
-            enum: ["click", "type", "scroll", "inspect", "snapshot", "overview", "see", "navigate", "hover", "tour"],
+            enum: ["click", "type", "scroll", "inspect", "snapshot", "overview", "see", "navigate", "hover", "tour", "play_game"],
             description: "Action to execute.",
           },
           selector: { type: "string" },
@@ -193,6 +197,26 @@ export const DEFAULT_BROWSER_TOOLS: ToolDefinition[] = [
           prompt: { type: "string" },
         },
         required: ["action"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "playGame",
+      description: "Autonomous real-time gameplay controller for Canvas/WebGL/Phaser games. Runs continuous high-frequency physics and action loop to play the game and maximize score.",
+      parameters: {
+        type: "object",
+        properties: {
+          durationSec: {
+            type: "number",
+            description: "Number of seconds to play (default 30, max 65).",
+          },
+          targetScore: {
+            type: "number",
+            description: "Target score threshold to reach.",
+          },
+        },
       },
     },
   },
@@ -333,7 +357,7 @@ export interface ActionExecutionOutput {
 export interface WorkflowStep {
   id: string;
   title: string;
-  action: "click" | "scroll" | "type" | "teleport" | "wait" | "verify";
+  action: "tour" | "click" | "scroll" | "type" | "teleport" | "wait" | "verify" | "game_autopilot";
   target?: string;
   value?: string;
   delayMs?: number;
@@ -365,7 +389,7 @@ export interface DecisionTrace {
   distribution?: DecisionAlternative[];
   needsClarification?: boolean;
   margin?: number; // Margin between top-1 and top-2 candidate probability
-  primitive?: "choice" | "noul" | "score";
+  primitive?: "choice" | "noul" | "score" | "boolean";
   hallucinationShield?: {
     verified: boolean;
     check: string;
@@ -377,6 +401,55 @@ export interface DecisionTrace {
     tool: string;
     args: Record<string, unknown>;
   };
+  vegaMetrics?: {
+    kineticEnergy: number;
+    settleSteps: number;
+    conformalSet: string[];
+    abstain: boolean;
+    unbound: boolean;
+    tau: number;
+  };
   explanation?: string;
+}
+
+export interface BatchEntityItem {
+  id: string;
+  name: string;
+  status?: string;
+  selector?: string;
+  selected: boolean;
+  variables: Record<string, string>;
+  executionState: "pending" | "running" | "success" | "failed" | "skipped";
+  resultSummary?: string;
+  durationMs?: number;
+  error?: string;
+}
+
+export interface BatchProposal {
+  id: string;
+  title: string;
+  macroId?: string;
+  siteOrigin: string;
+  templateSteps: WorkflowStep[];
+  entities: BatchEntityItem[];
+  summary: string;
+  createdAt: number;
+  totalItems: number;
+  estimatedDurationMs?: number;
+  executionStatus?: "proposed" | "running" | "completed" | "cancelled";
+  succeededCount?: number;
+  failedCount?: number;
+}
+
+export interface BatchExecutionResult {
+  proposalId: string;
+  totalEntities: number;
+  executedCount: number;
+  succeededCount: number;
+  failedCount: number;
+  skippedCount: number;
+  durationMs: number;
+  entities: BatchEntityItem[];
+  summary: string;
 }
 

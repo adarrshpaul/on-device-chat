@@ -7,7 +7,12 @@
  * giving users an interactive guided tour without requiring hardcoded logic.
  */
 
-import { smartQuerySelector, getCleanElementSelector, spotlightElement, isWidgetElement } from "./domUtils";
+import {
+  smartQuerySelector,
+  getCleanElementSelector,
+  isWidgetElement,
+  humanNavigateTo,
+} from "./domUtils";
 
 export interface TourStop {
   id: string;
@@ -37,8 +42,8 @@ export function planSiteTour(): TourStop[] {
   // 1. Dynamic Hero / Header Landmark
   const heroEl = smartQuerySelector("header, [role='banner'], .hero, [class*='hero' i], h1, main h1");
   if (heroEl) {
-    const h1Text = heroEl.querySelector("h1")?.textContent?.trim() || heroEl.textContent?.trim().slice(0, 40) || siteTitle;
-    const heroDesc = heroEl.querySelector("p, [class*='subtitle' i]")?.textContent?.trim().slice(0, 140) ||
+    const h1Text = (typeof heroEl.querySelector === "function" ? heroEl.querySelector("h1")?.textContent?.trim() : null) || heroEl.textContent?.trim().slice(0, 40) || siteTitle;
+    const heroDesc = (typeof heroEl.querySelector === "function" ? heroEl.querySelector("p, [class*='subtitle' i]")?.textContent?.trim().slice(0, 140) : null) ||
       `Welcome to ${siteTitle}! Overview of layout, structure, and capabilities.`;
 
     addStop({
@@ -54,25 +59,28 @@ export function planSiteTour(): TourStop[] {
 
   // 2. Discover Structural Sections & Regions Dynamically
   const candidateSections = Array.from(
-    document.querySelectorAll("main > section, main > article, section[id], article[id], [role='region'][aria-label], [role='main'] > div[id]")
+    document.querySelectorAll(
+      "section[id], section, article[id], article, main > section, main > div[id], [role='region'], div[id*='section' i], div[id*='playground' i], div[id*='calculator' i], div[id*='pricing' i], div[id*='benchmarks' i]"
+    )
   ).filter((el) => !isWidgetElement(el)) as HTMLElement[];
 
   for (const sec of candidateSections.slice(0, 8)) {
+    if (!sec || typeof sec.getBoundingClientRect !== "function") continue;
     const rect = sec.getBoundingClientRect();
     // Skip hidden or tiny decorative elements
     if (rect.height < 50) continue;
 
-    const headingEl = sec.querySelector("h1, h2, h3, [role='heading']");
-    const headingText = (
+    const headingEl = typeof sec.querySelector === "function" ? sec.querySelector("h1, h2, h3, h4, [role='heading']") : null;
+    const rawHeading = (
       headingEl?.textContent ||
-      sec.getAttribute("aria-label") ||
-      sec.id.replace(/[-_]/g, " ") ||
-      ""
+      sec.getAttribute?.("aria-label") ||
+      (sec.id ? sec.id.replace(/[-_]/g, " ") : "")
     ).trim();
 
-    if (!headingText || headingText.length > 50) continue;
+    if (!rawHeading) continue;
+    const headingText = rawHeading.slice(0, 40);
 
-    const pText = sec.querySelector("p")?.textContent?.trim().slice(0, 140) ||
+    const pText = (typeof sec.querySelector === "function" ? sec.querySelector("p")?.textContent?.trim().slice(0, 140) : null) ||
       `Explore ${headingText} and associated features on this page.`;
 
     const cleanSel = getCleanElementSelector(sec);
@@ -92,9 +100,10 @@ export function planSiteTour(): TourStop[] {
   // 3. Discover Interactive Canvases & Visual Engines (WebGL / 2D Canvas)
   const canvasEl = document.querySelector("canvas:not([data-g4-widget] canvas)") as HTMLElement | null;
   if (canvasEl && !isWidgetElement(canvasEl)) {
-    const rect = canvasEl.getBoundingClientRect();
+    const rect = typeof canvasEl.getBoundingClientRect === "function" ? canvasEl.getBoundingClientRect() : { width: 0, height: 0, top: 0 };
     if (rect.width > 100 && rect.height > 100) {
-      const parentHeading = canvasEl.closest("section, div, main")?.querySelector("h1, h2, h3")?.textContent?.trim();
+      const parent = canvasEl.closest ? canvasEl.closest("section, div, main") : null;
+      const parentHeading = parent && typeof parent.querySelector === "function" ? parent.querySelector("h1, h2, h3")?.textContent?.trim() : undefined;
       addStop({
         id: "canvas_viewport",
         title: parentHeading ? `${parentHeading.slice(0, 25)} (Interactive)` : "Interactive Visual Canvas",
@@ -110,8 +119,8 @@ export function planSiteTour(): TourStop[] {
   // 4. Discover Footer, Contact, or Forms
   const footerEl = smartQuerySelector("footer, [role='contentinfo'], #contact, form[action], .footer") as HTMLElement | null;
   if (footerEl && !isWidgetElement(footerEl)) {
-    const rect = footerEl.getBoundingClientRect();
-    const heading = footerEl.querySelector("h2, h3, h4")?.textContent?.trim() || "Footer & Links";
+    const rect = typeof footerEl.getBoundingClientRect === "function" ? footerEl.getBoundingClientRect() : { top: 0 };
+    const heading = (typeof footerEl.querySelector === "function" ? footerEl.querySelector("h2, h3, h4")?.textContent?.trim() : null) || "Footer & Links";
     addStop({
       id: "footer",
       title: heading.slice(0, 30),
@@ -171,8 +180,7 @@ export async function executeSiteTour(): Promise<{
   const targetStop = stops[1] || stops[0];
 
   if (targetStop.element) {
-    targetStop.element.scrollIntoView({ behavior: "smooth", block: "center" });
-    spotlightElement(targetStop.element, `Tour: ${targetStop.title}`);
+    await humanNavigateTo(targetStop.element, `Tour: ${targetStop.title}`, 2000);
   }
 
   // Format rich tour response

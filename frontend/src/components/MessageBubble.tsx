@@ -3,7 +3,10 @@ import { marked } from "marked";
 import ToolCallCard from "./ToolCallCard";
 import { DecisionCard } from "./DecisionCard";
 import { ActionOutputCard } from "./ActionOutputCard";
+import { BatchConfirmationCard } from "./BatchConfirmationCard";
+import { GameAutopilotCard } from "./GameAutopilotCard";
 import type { DisplayMessage } from "../hooks/useChat";
+import type { BatchProposal } from "../lib/types";
 import {
   ThumbsUp,
   ThumbsDown,
@@ -21,6 +24,8 @@ interface MessageBubbleProps {
   onSelectOption?: (optionLabel: string) => void;
   onExecuteAction?: (actionName: string, payload?: Record<string, unknown>) => void;
   onSaveToWorkflow?: (title: string, actionName: string, target?: string) => void;
+  onApproveBatch?: (proposal: BatchProposal) => void;
+  onCancelBatch?: (proposalId: string) => void;
 }
 
 function formatToolSummary(trace: AgentStepTrace[]): string {
@@ -53,8 +58,43 @@ export default function MessageBubble({
   onSelectOption,
   onExecuteAction,
   onSaveToWorkflow,
+  onApproveBatch,
+  onCancelBatch,
 }: MessageBubbleProps) {
   const [showSteps, setShowSteps] = useState(false);
+
+  const handleProseClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = (e.target as HTMLElement).closest("a");
+    if (!target) return;
+    const href = target.getAttribute("href") || "";
+    if (href.startsWith("action:")) {
+      e.preventDefault();
+      e.stopPropagation();
+      const raw = href.slice(7).trim();
+      const [act, search] = raw.split("?");
+      const payload: Record<string, unknown> = {};
+      if (search) {
+        try {
+          const params = new URLSearchParams(search);
+          params.forEach((v, k) => {
+            payload[k] = v;
+          });
+        } catch {}
+      }
+      if (onExecuteAction) {
+        onExecuteAction(act, payload);
+      } else if (onSelectOption) {
+        onSelectOption(act);
+      }
+    } else if (href.startsWith("workflow:")) {
+      e.preventDefault();
+      e.stopPropagation();
+      const wfId = href.slice(9).trim();
+      if (onExecuteAction) {
+        onExecuteAction("run_workflow", { workflowId: wfId });
+      }
+    }
+  };
 
   // System or escalation alert notice
   if (message.isEscalationNotice || message.role === "system") {
@@ -67,6 +107,7 @@ export default function MessageBubble({
           </div>
           <div
             className="g4-prose text-[12px]"
+            onClick={handleProseClick}
             dangerouslySetInnerHTML={{ __html: marked(message.content || "") as string }}
           />
         </div>
@@ -170,10 +211,32 @@ export default function MessageBubble({
           </div>
         )}
 
+        {/* Batch Confirmation Gate Card */}
+        {message.batchProposal && (
+          <div className="mb-2 w-full">
+            <BatchConfirmationCard
+              proposal={message.batchProposal}
+              onApprove={onApproveBatch || ((p) => onExecuteAction?.("approve_batch", { proposal: p }))}
+              onCancel={onCancelBatch || ((id) => onExecuteAction?.("cancel_batch", { proposalId: id }))}
+            />
+          </div>
+        )}
+
+        {/* Game Autopilot Progress Card */}
+        {message.gameProgress && (
+          <div className="mb-2 w-full">
+            <GameAutopilotCard
+              progress={message.gameProgress}
+              onStop={() => onExecuteAction?.("stop_game")}
+            />
+          </div>
+        )}
+
         {/* Flat Text Content (No card bubble, blends into thread, 16px body floor) */}
         {message.content && (
           <div
             className="g4-prose text-[16px] leading-[1.5] text-gray-100 w-full select-text"
+            onClick={handleProseClick}
             dangerouslySetInnerHTML={{ __html: marked(message.content) as string }}
           />
         )}

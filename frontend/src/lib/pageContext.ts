@@ -500,84 +500,82 @@ export function buildContextBlock(query: string, opts: { passages?: number; char
 export function generateSiteOverview(d: PageDigest = getPageDigest()): string {
   const parts: string[] = [];
 
-  // 1. Identity & Purpose
+  // 1. Identity & Purpose Header
   const title = d.title || (typeof document !== "undefined" ? document.title : "") || "Active Page";
   parts.push(`### 🌐 **${title}**`);
-  if (d.url && d.url !== "about:blank") {
-    parts.push(`**URL:** \`${d.url}\``);
-  }
+
+  // 2. Crisp, Executive Synopsis (1-2 sentences)
   if (d.description) {
-    parts.push(`> **Overview:** ${d.description}`);
+    parts.push(`> ${d.description.trim()}`);
+  } else {
+    parts.push(`> Welcome! I am your on-device web copilot. I can guide you through this site, run automated workflows, highlight key projects, and interact with page controls live.`);
   }
 
-  // 2. Rich Media & Interactive Viewport (3D / WebGL / Canvas / Game)
+  // 3. Rich Media / WebGL indicator if present
   if (d.canvases && d.canvases.length > 0) {
     const webglCount = d.canvases.filter((c) => c.isWebGL).length;
     const mediaType = webglCount > 0 ? "3D WebGL / GPU-Accelerated Viewport" : "Interactive 2D Canvas Engine";
-    parts.push(
-      `\n🎮 **Interactive Visual Engine Detected:**\n` +
-      `- **Type:** ${mediaType}\n` +
-      `- **Canvases:** ${d.canvases.map((c) => `\`${c.selector}\` (${c.width}×${c.height}px)`).join(", ")}`
+    parts.push(`🎮 **Interactive Visual Engine Detected:** ${mediaType} active with realtime rendering.`);
+  }
+
+  // 4. Ready-to-Click Instant Action Buttons
+  parts.push(`⚡ **Instant Actions — click any action below to execute live:**`);
+
+
+
+  const url = typeof window !== "undefined" ? window.location.href.toLowerCase() : "";
+  const isPortfolio =
+    /adarrsh|portfolio|resume|cv/i.test(title) ||
+    /adarrsh|portfolio/i.test(url) ||
+    d.outline.some((h) => /quant|basketball|career|project/i.test(h.text));
+
+  if (isPortfolio) {
+    parts.push(`- [▶ 🗺️ Take Guided Tour](action:tour)`);
+    parts.push(`- [▶ 🚀 Explore Key Projects](action:projects)`);
+    parts.push(`- [▶ 📄 Download Resume](action:resume)`);
+    parts.push(`- [▶ ✉️ Quick Contact & Connect](action:contact)`);
+    parts.push(`- [▶ 🎨 Toggle Theme](action:theme)`);
+  } else {
+    // Universal dynamic actions for any website
+    parts.push(`- [▶ 🗺️ Take Guided Tour](action:tour)`);
+
+    const hasDownload = d.controls.some(
+      (c) => c.kind === "link" && /resume|cv|download|\.pdf/i.test(c.label)
     );
-  }
-
-  // 3. Section Architecture & Navigation Map
-  if (d.outline.length > 0) {
-    parts.push(`\n📑 **Key Sections & Structure:**`);
-    const uniqueHeadings = Array.from(new Set(d.outline.map((h) => h.text.trim()))).slice(0, 10);
-    for (const h of uniqueHeadings) {
-      parts.push(`- **${h}**`);
+    if (hasDownload) {
+      parts.push(`- [▶ 📄 Download Resume / File](action:resume)`);
     }
-  }
 
-  // 4. Interactive Tools, Actions & Forms
-  const buttons = d.controls.filter((c) => c.kind === "button");
-  const inputs = d.controls.filter((c) => c.kind === "input" || c.kind === "textarea" || c.kind === "select");
-  const navLinks = d.controls.filter((c) => c.kind === "link" && c.label.length > 1);
+    const hasContact =
+      d.controls.some((c) => /contact|hire|touch|inquire|message/i.test(c.label)) ||
+      d.outline.some((h) => /contact|touch/i.test(h.text));
+    if (hasContact) {
+      parts.push(`- [▶ ✉️ Quick Contact](action:contact)`);
+    }
 
-  if (buttons.length > 0 || inputs.length > 0 || navLinks.length > 0) {
-    parts.push(`\n⚡ **Interactive Capabilities & Controls:**`);
-    if (navLinks.length > 0) {
-      const distinctLinks = Array.from(new Set(navLinks.map((l) => l.label))).slice(0, 8);
-      parts.push(`- **Navigation Tabs / Destinations:** ${distinctLinks.map((l) => `\`${l}\``).join(" · ")}`);
+    const hasTheme = d.controls.some((c) => /theme|dark|light/i.test(c.label));
+    if (hasTheme) {
+      parts.push(`- [▶ 🎨 Toggle Theme](action:theme)`);
     }
-    if (buttons.length > 0) {
-      const distinctButtons = Array.from(new Set(buttons.map((b) => b.label).filter(Boolean))).slice(0, 8);
-      if (distinctButtons.length > 0) {
-        parts.push(`- **Action Triggers & Tools:** ${distinctButtons.map((b) => `\`${b}\``).join(" · ")}`);
-      }
-    }
-    if (inputs.length > 0) {
-      parts.push(`- **Form Fields & Inputs:** ${inputs.length} interactive input field(s) available.`);
-    }
-  }
 
-  // 5. Representative Content Synopsis
-  if (d.chunks.length > 0) {
-    parts.push(`\n💡 **Core Content Highlights:**`);
-    const informativeChunks = d.chunks
-      .filter((c) => c.text.length > 40 && !c.text.toLowerCase().includes("copyright") && !c.text.toLowerCase().includes("cookie"))
+    // Dynamic landmarks from outline
+    const keySections = d.outline
+      .filter(
+        (h) =>
+          h.text.trim().length > 2 &&
+          h.text.trim().length < 35 &&
+          !/contact|overview|about|home/i.test(h.text)
+      )
       .slice(0, 3);
-    for (const c of informativeChunks) {
-      parts.push(`- ${c.heading ? `**${c.heading}:** ` : ""}${c.text.slice(0, 220).trim()}${c.text.length > 220 ? "…" : ""}`);
+    for (const sec of keySections) {
+      const text = sec.text.trim();
+      const target = sec.selector || text;
+      parts.push(`- [▶ 📌 Jump to "${text}"](action:navigate?target=${encodeURIComponent(target)})`);
     }
   }
 
-  // 6. Actionable Next Steps for User
-  parts.push(`\n✨ **Quick Actions You Can Ask Me:**`);
-  if (d.outline.length > 0) {
-    const firstSection = d.outline[0].text;
-    parts.push(`- *"Navigate to ${firstSection}"*`);
-  }
-  if (d.canvases && d.canvases.length > 0) {
-    parts.push(`- *"Inspect 3D canvas viewport"* or *"Describe visual scene"*`);
-  }
-  if (buttons.length > 0) {
-    const firstBtn = buttons.find((b) => b.label && b.label.length < 25)?.label || buttons[0]?.label;
-    if (firstBtn) parts.push(`- *"Click '${firstBtn}'"*`);
-  }
-  parts.push(`- *"Search for [keyword]"* across the entire page`);
+  parts.push(`\n💬 *Or type any custom question or command in chat to inspect this page.*`);
 
-  return parts.join("\n");
+  return parts.join("\n\n");
 }
 

@@ -220,13 +220,13 @@ Respond with STRICT JSON format ONLY:
    * Memory Primitive: Saves loop states outside conversation context
    */
   private saveLoopState(state: LoopExecutionState) {
-    if (typeof localStorage !== "undefined") {
-      try {
+    try {
+      if (typeof window !== "undefined" && window.localStorage) {
         const key = `g4_loop_${state.id}`;
         localStorage.setItem(key, JSON.stringify(state));
-      } catch {
-        /* storage quota */
       }
+    } catch {
+      /* storage quota or access denied */
     }
   }
 
