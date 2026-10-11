@@ -18,7 +18,13 @@ export interface RecordedDomAction {
   tagName: string;
   textSnippet: string;
   timestamp: number;
+  /** Consecutive identical clicks coalesced into this action */
+  count?: number;
+  lastTimestamp?: number;
 }
+
+const CLICK_COALESCE_WINDOW_MS = 2500;
+const CLICKABLE = "button, a, [role='button'], input, select, label, summary";
 
 export interface MacroRecordingSession {
   isActive: boolean;
@@ -37,14 +43,15 @@ export class MacroRecorder {
   private static handleClick = (e: MouseEvent) => {
     if (!MacroRecorder.session || !MacroRecorder.session.isActive) return;
 
-    const target = e.target as HTMLElement;
-    if (!target) return;
+    const raw = e.target as HTMLElement;
+    if (!raw) return;
 
     // Ignore clicks inside chat widget or floating banners
-    if (isWidgetElement(target) || target.closest("#g4-macro-recorder-banner, #eo-macro-recorder-banner")) {
+    if (isWidgetElement(raw) || raw.closest("#g4-macro-recorder-banner, #eo-macro-recorder-banner")) {
       return;
     }
 
+    const target = (raw.closest(CLICKABLE) as HTMLElement | null) ?? raw;
     MacroRecorder.recordAction(target, "click");
   };
 
@@ -128,16 +135,25 @@ export class MacroRecorder {
       timestamp: Date.now(),
     };
 
-    // Debounce fast repeated inputs on the same element
-    const lastAction = this.session.actions[this.session.actions.length - 1];
-    if (
-      lastAction &&
-      lastAction.targetSelector === action.targetSelector &&
-      (type === "input" || type === "change") &&
-      lastAction.type === type
+    const last = this.session.actions[this.session.actions.length - 1];
+    const sameTarget =
+      last &&
+      last.type === type &&
+      last.targetSelector === action.targetSelector &&
+      last.relativeSelector === action.relativeSelector;
+
+    if (sameTarget && (type === "input" || type === "change")) {
+      // Debounce fast repeated inputs on the same element
+      last.value = value;
+      last.timestamp = Date.now();
+    } else if (
+      sameTarget &&
+      type === "click" &&
+      action.timestamp - (last.lastTimestamp ?? last.timestamp) <= CLICK_COALESCE_WINDOW_MS
     ) {
-      lastAction.value = value;
-      lastAction.timestamp = Date.now();
+      // "Add to cart" x3 → one step with repeatCount 3
+      last.count = (last.count ?? 1) + 1;
+      last.lastTimestamp = action.timestamp;
     } else {
       this.session.actions.push(action);
     }
@@ -353,12 +369,25 @@ export class MacroRecorder {
         action = "click";
       }
 
+      const count = act.type === "click" ? act.count ?? 1 : 1;
+      const repeat =
+        count > 1
+          ? {
+              repeatCount: count,
+              repeatIntervalMs: Math.min(
+                1500,
+                Math.max(250, Math.round(((act.lastTimestamp ?? act.timestamp) - act.timestamp) / (count - 1)))
+              ),
+            }
+          : {};
+
       return {
         id: `rec_step_${idx + 1}`,
-        title: `${title} [{{entity_name}}]`,
+        title: count > 1 ? `${title} (×${count}) [{{entity_name}}]` : `${title} [{{entity_name}}]`,
         action,
         target,
         value: act.value,
+        ...repeat,
         status: "idle",
       };
     });

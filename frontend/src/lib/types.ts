@@ -363,8 +363,21 @@ export interface WorkflowStep {
   /** For type action: press Enter key after typing */
   pressEnter?: boolean;
   delayMs?: number;
+  /** For click action: how many times to click (default 1) */
+  repeatCount?: number;
+  /** For click action: pause between repeated clicks in ms (default 400) */
+  repeatIntervalMs?: number;
   status?: "idle" | "running" | "success" | "error";
   output?: string;
+}
+
+export const MAX_CLICK_REPEAT = 50;
+export const DEFAULT_REPEAT_INTERVAL_MS = 400;
+
+/** Effective click count for a step (always 1 for non-click actions) */
+export function clickRepeatCount(step: Pick<WorkflowStep, "action" | "repeatCount">): number {
+  if (step.action !== "click") return 1;
+  return Math.min(MAX_CLICK_REPEAT, Math.max(1, Math.floor(step.repeatCount ?? 1)));
 }
 
 export interface WebWorkflow {

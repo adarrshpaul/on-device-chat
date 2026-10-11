@@ -14,6 +14,7 @@ import { AgentHarness } from "./lib/agentHarness";
 import { MacroRecorder } from "./lib/macroRecorder";
 import { BatchRunner, EntityExtractor, BatchProposalManager } from "./lib/batchEngine";
 import { WorkflowPredictor } from "./lib/workflowPredictor";
+import { WorkflowRunner, workflowRunner } from "./lib/workflowRunner";
 
 export interface EdgeOperatorConfig {
   /** DOM element ID to mount into (auto-created if missing) */
@@ -103,6 +104,8 @@ Object.assign(instance, {
   EntityExtractor,
   BatchProposalManager,
   WorkflowPredictor,
+  WorkflowRunner,
+  workflowRunner,
 });
 
 if (typeof window !== "undefined") {
@@ -119,6 +122,8 @@ if (typeof window !== "undefined") {
   (window as any).EntityExtractor = EntityExtractor;
   (window as any).BatchProposalManager = BatchProposalManager;
   (window as any).WorkflowPredictor = WorkflowPredictor;
+  (window as any).WorkflowRunner = WorkflowRunner;
+  (window as any).workflowRunner = workflowRunner;
 
   /**
    * Standard Web Component Custom Element: <edge-operator> and <on-device-chat>

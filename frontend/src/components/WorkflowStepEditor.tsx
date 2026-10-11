@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle, ArrowDownToLine, ChevronDown, CornerDownLeft, Crosshair, Heading, KeyRound, Link2,
-  ListChecks, MousePointerClick, Navigation, ShieldCheck, TextCursorInput, Timer, ToggleLeft, Trash2, Type,
+  ListChecks, Minus, MousePointerClick, Navigation, Plus, Repeat, ShieldCheck, TextCursorInput, Timer, ToggleLeft, Trash2, Type,
 } from "lucide-react";
 import type { WorkflowStep } from "../lib/types";
+import { MAX_CLICK_REPEAT, DEFAULT_REPEAT_INTERVAL_MS, clickRepeatCount } from "../lib/types";
 import {
   ACTION_TARGET_KINDS, PageElement, PageElementKind, PageScan, TARGET_REQUIRED,
   defaultStepTitle, matchTarget, suggestionsForAction,
@@ -113,6 +114,10 @@ export const StepEditor: React.FC<StepEditorProps> = ({ step, index, scan, picki
         <p className="flex items-center gap-1 text-[9px] text-amber-300/80">
           <AlertTriangle size={10} /> “{matched.label}” is a {matched.kind}; {step.action} expects {TARGET_NOUN[step.action] ?? "another element"}.
         </p>
+      )}
+
+      {step.action === "click" && (
+        <RepeatField step={step} onChange={onChange} />
       )}
 
       {(step.action === "type" || step.action === "select" || step.action === "wait") && (
@@ -390,3 +395,80 @@ const ValueField: React.FC<{ step: WorkflowStep; field?: PageElement; onChange: 
     </div>
   );
 };
+
+interface RepeatFieldProps {
+  step: WorkflowStep;
+  onChange: (updates: Partial<WorkflowStep>) => void;
+}
+
+const RepeatField: React.FC<RepeatFieldProps> = ({ step, onChange }) => {
+  const count = clickRepeatCount(step);
+  const interval = step.repeatIntervalMs ?? DEFAULT_REPEAT_INTERVAL_MS;
+
+  const setCount = (val: number) => {
+    const clamped = Math.max(1, Math.min(MAX_CLICK_REPEAT, Math.round(val)));
+    onChange({
+      repeatCount: clamped > 1 ? clamped : undefined,
+      repeatIntervalMs: clamped > 1 ? (step.repeatIntervalMs ?? DEFAULT_REPEAT_INTERVAL_MS) : undefined,
+    });
+  };
+
+  const setInterval = (val: number) => {
+    const clamped = Math.max(50, Math.min(5000, Math.round(val)));
+    onChange({ repeatIntervalMs: clamped });
+  };
+
+  return (
+    <div className="flex items-center justify-between gap-1.5 p-1 rounded bg-[#111626] border border-white/8 text-[10px]">
+      <div className="flex items-center gap-1 text-gray-400">
+        <Repeat size={11} className={count > 1 ? "text-purple-400" : "text-gray-500"} />
+        <span>Repeat</span>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <div className="flex items-center rounded border border-white/10 bg-black/40 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setCount(count - 1)}
+            disabled={count <= 1}
+            title="Decrease repeat count"
+            className="px-1.5 py-0.5 text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer"
+          >
+            <Minus size={10} />
+          </button>
+          <span className="px-1.5 font-mono text-[11px] font-semibold text-white min-w-[20px] text-center">
+            {count}
+          </span>
+          <button
+            type="button"
+            onClick={() => setCount(count + 1)}
+            disabled={count >= MAX_CLICK_REPEAT}
+            title="Increase repeat count (e.g. click 3 times)"
+            className="px-1.5 py-0.5 text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer"
+          >
+            <Plus size={10} />
+          </button>
+        </div>
+        <span className="text-gray-400 text-[10px]">{count === 1 ? "time" : "times"}</span>
+
+        {count > 1 && (
+          <div className="flex items-center gap-1 pl-1.5 border-l border-white/10 text-gray-400">
+            <span>every</span>
+            <input
+              type="number"
+              min={50}
+              max={5000}
+              step={50}
+              value={interval}
+              onChange={(e) => setInterval(Number(e.target.value) || DEFAULT_REPEAT_INTERVAL_MS)}
+              title="Interval between repeated clicks in milliseconds"
+              className="w-12 bg-black/60 border border-white/10 rounded px-1 py-0.5 text-[10px] font-mono text-purple-200 text-center focus:outline-none focus:border-purple-400"
+            />
+            <span>ms</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+

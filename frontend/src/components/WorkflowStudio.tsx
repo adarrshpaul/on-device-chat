@@ -15,7 +15,7 @@ import {
   Crosshair,
   Wand2,
 } from "lucide-react";
-import { WebWorkflow, WorkflowStep } from "../lib/types";
+import { WebWorkflow, WorkflowStep, clickRepeatCount } from "../lib/types";
 import { workflowStore } from "../lib/workflowStore";
 import { workflowRunner } from "../lib/workflowRunner";
 import { StepEditor } from "./WorkflowStepEditor";
@@ -169,6 +169,24 @@ export const WorkflowStudio: React.FC<WorkflowStudioProps> = ({
           const cur = next[idx];
           if (!cur) return prev;
           const action = ACTION_TARGET_KINDS[cur.action]?.includes(picked.kind) ? cur.action : inferActionFor(picked);
+
+          // If this is an unconfigured step and the previous step is already a click on this target, coalesce repeatCount
+          if (idx > 0 && !cur.target && action === "click") {
+            const prevStep = next[idx - 1];
+            if (prevStep.action === "click" && prevStep.target === picked.selector) {
+              const prevRepeat = clickRepeatCount(prevStep);
+              const nextRepeat = prevRepeat + 1;
+              const cleanTitle = (prevStep.title || defaultStepTitle("click", picked)).replace(/\s*\(×\d+\)$/, "");
+              next[idx - 1] = {
+                ...prevStep,
+                repeatCount: nextRepeat,
+                title: `${cleanTitle} (×${nextRepeat})`,
+              };
+              next.splice(idx, 1);
+              return next;
+            }
+          }
+
           next[idx] = {
             ...cur,
             action,
@@ -567,7 +585,14 @@ export const WorkflowStudio: React.FC<WorkflowStudioProps> = ({
                     ) : (
                       <span className="w-2.5 h-2.5 rounded-full bg-gray-600 shrink-0" />
                     )}
-                    <span className="text-gray-200 truncate">{s.title || s.action}</span>
+                    <span className="text-gray-200 truncate flex items-center gap-1">
+                      <span>{s.title || s.action}</span>
+                      {clickRepeatCount(s) > 1 && (
+                        <span className="px-1 py-0.2 rounded bg-purple-500/20 text-purple-300 font-semibold font-mono text-[9px] shrink-0">
+                          ×{clickRepeatCount(s)}
+                        </span>
+                      )}
+                    </span>
                   </div>
                   {s.output && (
                     <span className="text-[9px] font-mono text-gray-400 ml-2 truncate max-w-[120px]">
@@ -627,15 +652,23 @@ export const WorkflowStudio: React.FC<WorkflowStudioProps> = ({
                 {/* Steps Preview Shelf */}
                 <div className="flex flex-wrap items-center gap-1 pt-1 border-t border-white/5">
                   <span className="text-[9px] font-mono text-gray-500 mr-1">Steps:</span>
-                  {wf.steps.map((st, sIdx) => (
-                    <div
-                      key={sIdx}
-                      className="px-1.5 py-0.5 rounded bg-black/40 border border-white/6 text-[10px] font-mono text-gray-300 flex items-center gap-1"
-                    >
-                      <span className="text-purple-400">{st.action}</span>
-                      {st.target && <span className="text-gray-400 truncate max-w-[80px]">({st.target})</span>}
-                    </div>
-                  ))}
+                  {wf.steps.map((st, sIdx) => {
+                    const repeats = clickRepeatCount(st);
+                    return (
+                      <div
+                        key={sIdx}
+                        className="px-1.5 py-0.5 rounded bg-black/40 border border-white/6 text-[10px] font-mono text-gray-300 flex items-center gap-1"
+                      >
+                        <span className="text-purple-400">{st.action}</span>
+                        {repeats > 1 && (
+                          <span className="px-1 py-0.2 rounded bg-purple-500/25 text-purple-300 font-bold text-[9px]">
+                            ×{repeats}
+                          </span>
+                        )}
+                        {st.target && <span className="text-gray-400 truncate max-w-[80px]">({st.target})</span>}
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {/* Card Footer */}

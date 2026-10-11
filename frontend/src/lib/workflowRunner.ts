@@ -5,7 +5,13 @@
  * Every action click triggers real DOM manipulation and produces structured, verified output telemetry.
  */
 
-import { WebWorkflow, WorkflowStep, ActionExecutionOutput } from "./types";
+import {
+  WebWorkflow,
+  WorkflowStep,
+  ActionExecutionOutput,
+  clickRepeatCount,
+  DEFAULT_REPEAT_INTERVAL_MS,
+} from "./types";
 import { ActionDispatcher } from "./actionDispatcher";
 import { buildEngramMap, teleportToEngram } from "./engramNavigator";
 import { planSiteTour } from "./siteTour";
@@ -17,6 +23,24 @@ import {
   spotlightElement,
 } from "./domUtils";
 import { workflowStore } from "./workflowStore";
+
+const REACQUIRE_TIMEOUT_MS = 3000;
+
+function isDisabled(el: HTMLElement): boolean {
+  return (
+    (el as HTMLButtonElement).disabled === true ||
+    el.getAttribute("aria-disabled") === "true" ||
+    el.getAttribute("aria-busy") === "true" ||
+    el.closest("fieldset[disabled]") !== null
+  );
+}
+
+/** Watchdog budget scales with repeat count so a 10x click step isn't killed prematurely */
+function stepTimeoutMs(step: WorkflowStep): number {
+  const extra = clickRepeatCount(step) - 1;
+  const interval = step.repeatIntervalMs ?? DEFAULT_REPEAT_INTERVAL_MS;
+  return 10000 + extra * (interval + REACQUIRE_TIMEOUT_MS + 200);
+}
 
 export class WorkflowRunner {
   /**
@@ -36,14 +60,24 @@ export class WorkflowRunner {
       step.status = "running";
       options?.onStepUpdate?.(i, step);
 
+      const timeoutMs = stepTimeoutMs(step);
+      const abort = new AbortController();
+      let timer: ReturnType<typeof setTimeout> | undefined;
+
       try {
-        // Step execution bounded with strict 10s watchdog to prevent hanging
         const stepOutput = await Promise.race([
-          this.executeStep(step),
-          new Promise<string>((_, reject) =>
-            setTimeout(() => reject(new Error(`Step timed out after 10000ms`)), 10000)
-          ),
+          this.executeStep(step, abort.signal, (progress) => {
+            step.output = progress;
+            options?.onStepUpdate?.(i, step);
+          }),
+          new Promise<string>((_, reject) => {
+            timer = setTimeout(() => {
+              abort.abort();
+              reject(new Error(`Step timed out after ${timeoutMs}ms`));
+            }, timeoutMs);
+          }),
         ]);
+        clearTimeout(timer);
         step.status = "success";
         step.output = stepOutput;
         options?.onStepUpdate?.(i, step);
@@ -51,6 +85,7 @@ export class WorkflowRunner {
         // Natural human breath between consecutive actions (minimum 400ms buffer)
         await this.sleep(400);
       } catch (err: any) {
+        clearTimeout(timer);
         step.status = "error";
         step.output = `Error: ${err?.message || "Execution failed"}`;
         options?.onStepUpdate?.(i, step);
@@ -77,7 +112,11 @@ export class WorkflowRunner {
   /**
    * Execute an individual workflow step with human pacing and visual grounding
    */
-  private async executeStep(step: WorkflowStep): Promise<string> {
+  private async executeStep(
+    step: WorkflowStep,
+    signal?: AbortSignal,
+    onProgress?: (msg: string) => void
+  ): Promise<string> {
     const t0 = performance.now();
     const humanReadingPause = Math.max(step.delayMs || 1800, 1800);
 
@@ -145,15 +184,41 @@ export class WorkflowRunner {
       case "click": {
         const target = step.target;
         if (!target) throw new Error("Missing click target");
-        const el = smartQuerySelector(target);
+        const times = clickRepeatCount(step);
+        const interval = Math.max(100, step.repeatIntervalMs ?? DEFAULT_REPEAT_INTERVAL_MS);
+
+        let el = smartQuerySelector(target);
         if (!el) throw new Error(`Element "${target}" not found in active DOM`);
+
+        if (isDisabled(el)) {
+          const enabled = await this.reacquireClickable(el, target, REACQUIRE_TIMEOUT_MS);
+          if (!enabled) throw new Error(`"${target}" is disabled`);
+          el = enabled;
+        }
 
         spotlightElement(el, step.title || `Click: ${target}`);
         await this.sleep(450); // Human hesitation before clicking
-        await ActionDispatcher.click(el);
-        await this.sleep(1200); // Human observation after click
+
+        for (let n = 1; n <= times; n++) {
+          if (signal?.aborted) throw new Error(`Aborted after ${n - 1}/${times} clicks`);
+          if (n > 1) {
+            // SPAs re-render or disable the button after each click — re-acquire before every repeat
+            const next = await this.reacquireClickable(el, target, REACQUIRE_TIMEOUT_MS);
+            if (!next) {
+              throw new Error(`"${target}" disappeared or stayed disabled after click ${n - 1}/${times}`);
+            }
+            if (next !== el) spotlightElement(next, step.title || `Click: ${target}`);
+            el = next;
+          }
+          await ActionDispatcher.click(el);
+          if (times > 1) onProgress?.(`Clicked ${n}/${times}`);
+          if (n < times) await this.sleep(interval);
+        }
+
+        await this.sleep(1200); // Human observation after final click
         const dt = Math.round(performance.now() - t0);
-        return `Clicked element <${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}> (${dt}ms)`;
+        const tag = `<${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}>`;
+        return times > 1 ? `Clicked ${tag} ${times}× (${dt}ms)` : `Clicked element ${tag} (${dt}ms)`;
       }
 
       case "type": {
@@ -351,6 +416,20 @@ export class WorkflowRunner {
         outputSummary: `Action failed: ${err?.message || "Execution error"}`,
         timestamp: Date.now(),
       };
+    }
+  }
+
+  /** Reacquire clickable element, checking live DOM and mounted node until enabled */
+  private async reacquireClickable(prev: HTMLElement, selector: string, timeoutMs: number): Promise<HTMLElement | null> {
+    const deadline = performance.now() + timeoutMs;
+    for (;;) {
+      const fresh = smartQuerySelector(selector);
+      const candidate = (fresh && !isDisabled(fresh))
+        ? fresh
+        : (prev.isConnected && !isDisabled(prev) ? prev : fresh ?? (prev.isConnected ? prev : null));
+      if (candidate && !isDisabled(candidate)) return candidate;
+      if (performance.now() >= deadline) return null;
+      await this.sleep(100);
     }
   }
 
