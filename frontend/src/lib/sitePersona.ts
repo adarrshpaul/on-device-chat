@@ -126,7 +126,20 @@ export function detectSitePersona(): SitePersona {
   const actionPills: string[] = [];
   const seenPills = new Set<string>();
 
-  // 2. Discover Action Chips from Host Page Navigation Links (Top Priority)
+  // 1.5. Dynamic Form & Action Discovery from Host DOM (Top Priority)
+  const hasPageForm = document.querySelector("form:not([data-g4-widget] form), [role='form']") !== null;
+  if (hasPageForm && !seenPills.has("formulate form")) {
+    seenPills.add("formulate form");
+    actionPills.push("📝 Formulate Form");
+  }
+
+  const hasShopButtons = document.querySelector("button[id*='cart' i], button[id*='add' i], [data-testid*='cart' i], [data-testid*='add' i]") !== null;
+  if (hasShopButtons && !seenPills.has("add to cart")) {
+    seenPills.add("add to cart");
+    actionPills.push("🛒 Add to Cart (×3)");
+  }
+
+  // 2. Discover Action Chips from Host Page Navigation Links
   const navLinks = Array.from(
     document.querySelectorAll("nav a, header a, [role='navigation'] a, .nav-links a, .navbar a, #nav a, nav button, header button")
   ).filter((el) => {

@@ -18,6 +18,7 @@
 import { layaDecisionEngine, LayaDecisionEngine } from "./layaEngine";
 import type { DecisionAlternative, DecisionTrace } from "./types";
 import { smartQuerySelector } from "./domUtils";
+import { decisionScorerRegistry } from "./decisionScorer";
 
 export interface VegaChoiceQuestion {
   type: "choice";
@@ -699,11 +700,40 @@ export class VegaDecisionEngine {
         explanation: `Vega settled particle in ${targetAnswer.settle_steps} steps (tau: ${targetAnswer.tau}, conformal set: [${targetAnswer.prediction_set.join(", ")}]). Verified against live DOM.`,
       };
 
+      // Candidate 2 Integration: Escalate to d3-nano when Vega confidence margin is tight (< 0.15)
+      if (targetAnswer.margin < 0.15 && shortlisted.length > 1) {
+        try {
+          const d3Result = await decisionScorerRegistry.scoreCandidates(
+            userGoal,
+            shortlisted.map((c, i) => ({
+              id: `elem_${i}`,
+              text: c.text,
+              role: c.role,
+              selector: c.selector,
+            }))
+          );
+          if (d3Result.engineUsed.includes("d3-nano") && d3Result.bestIndex >= 0) {
+            const d3Best = shortlisted[d3Result.bestIndex];
+            if (d3Best) {
+              targetSelector = d3Best.selector;
+              decisionTrace.selectedOption = `${opChoice} ${targetSelector}`;
+              decisionTrace.engineUsed = `${d3Result.engineUsed} (Tie-Break from Vega)`;
+              decisionTrace.latencyMs = Math.round(((decisionTrace.latencyMs || 0) + d3Result.latencyMs) * 100) / 100;
+              decisionTrace.margin = d3Result.margin;
+              decisionTrace.needsClarification = d3Result.margin < 0.10;
+              decisionTrace.explanation = `${d3Result.explanation} (Single forward pass choice logit scoring).`;
+            }
+          }
+        } catch {
+          // Keep Vega trace on any error
+        }
+      }
+
       return {
         operation: opChoice,
         targetSelector,
         confidence: combinedConf,
-        needsClarification: combinedConf < 0.68 || targetAnswer.margin < 0.15,
+        needsClarification: decisionTrace.needsClarification ?? (combinedConf < 0.68 || targetAnswer.margin < 0.15),
         decisionTrace,
       };
     }

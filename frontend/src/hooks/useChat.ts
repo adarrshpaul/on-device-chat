@@ -14,7 +14,7 @@ import { expertJudge, EvalMetrics, EvalTrace, AgentStepTrace } from "../lib/expe
 import { recipeStore, SiteMacroRecipe } from "../lib/recipeStore";
 import { pageActionInferer, PageAnalysisResult } from "../lib/pageActionInferer";
 import { sessionStore, ChatSession } from "../lib/sessionStore";
-import type { DecisionTrace, ActionExecutionOutput, WebWorkflow, BatchProposal } from "../lib/types";
+import type { DecisionTrace, ActionExecutionOutput, WebWorkflow, BatchProposal, UISpec } from "../lib/types";
 import { workflowRunner } from "../lib/workflowRunner";
 import { workflowStore } from "../lib/workflowStore";
 import { ensembleDecisionEngine } from "../lib/ensembleDecision";
@@ -23,6 +23,7 @@ import { batchRunner, BatchProposalManager } from "../lib/batchEngine";
 import { MacroRecorder } from "../lib/macroRecorder";
 import { CanvasGameController, GameProgressEvent } from "../lib/canvasGameController";
 import { CanvasInspector } from "../lib/canvasInspector";
+import { UISpecEngine } from "../lib/uiSpecEngine";
 import type { Gemma4Config } from "../main";
 
 export interface DisplayMessage {
@@ -46,6 +47,7 @@ export interface DisplayMessage {
   actionOutput?: ActionExecutionOutput;
   batchProposal?: BatchProposal;
   gameProgress?: GameProgressEvent & { isFinished?: boolean; summary?: string };
+  ui?: UISpec[];
 }
 
 export type EngineStatus = "idle" | "loading" | "ready" | "generating" | "error";
@@ -720,6 +722,34 @@ export function useChat(config: Gemma4Config) {
           conversationHistory
         );
 
+        const decisionTrace = harnessResult.decision || escalationManagerRef.current.lastDecisionTrace || undefined;
+        const managerSpecs = escalationManagerRef.current.lastUiSpecs;
+        let generatedUiSpecs: UISpec[] | undefined = managerSpecs && managerSpecs.length > 0 ? UISpecEngine.bindOrDrop(managerSpecs) : undefined;
+
+        if (decisionTrace) {
+          const rawSpecs: UISpec[] = [];
+          if (decisionTrace.needsClarification && decisionTrace.distribution && decisionTrace.distribution.length > 0) {
+            rawSpecs.push({
+              kind: "choices",
+              id: `choices_${Date.now()}`,
+              prompt: "Select the intended element or action:",
+              options: decisionTrace.distribution.map((d, i) => ({
+                id: `opt_${i}`,
+                label: d.label,
+                score: d.score,
+                ref: d.actionPayload?.args?.selector ? { selector: d.actionPayload.args.selector as string } : undefined,
+                actionPayload: d.actionPayload,
+              })),
+            });
+          }
+          if (rawSpecs.length > 0) {
+            const bound = UISpecEngine.bindOrDrop(rawSpecs);
+            if (bound.length > 0) {
+              generatedUiSpecs = [...(generatedUiSpecs || []), ...bound];
+            }
+          }
+        }
+
         const assistantMsg: DisplayMessage = {
           id: `asst_${Date.now()}`,
           role: "assistant",
@@ -728,7 +758,8 @@ export function useChat(config: Gemma4Config) {
           stepTrace: harnessResult.trajectory,
           isMacro: harnessResult.isMacro,
           durationMs: harnessResult.totalDurationMs,
-          decision: harnessResult.decision || escalationManagerRef.current.lastDecisionTrace || undefined,
+          decision: decisionTrace,
+          ui: generatedUiSpecs,
         };
 
         const updatedMessages = [...messages, userMsg, assistantMsg];

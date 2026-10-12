@@ -362,11 +362,17 @@ export class AgentHarness {
           }
         }
 
-        await ActionDispatcher.click(resolved.element);
+        const repeatCount = typeof rawArgs.repeatCount === "number" && rawArgs.repeatCount > 0 ? rawArgs.repeatCount : 1;
+        for (let r = 0; r < repeatCount; r++) {
+          await ActionDispatcher.click(resolved.element);
+          if (r < repeatCount - 1) {
+            await new Promise((res) => setTimeout(res, 250));
+          }
+        }
         const after = StateDeltaVerifier.captureSnapshot();
         const delta = StateDeltaVerifier.computeDelta(before, after);
 
-        return `Successfully clicked ${resolved.identifierDescription}. State transition: ${delta.summary}.`;
+        return `Successfully clicked ${resolved.identifierDescription}${repeatCount > 1 ? ` (${repeatCount} times)` : ""}. State transition: ${delta.summary}.`;
       }
 
       case "type": {

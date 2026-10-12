@@ -15,6 +15,8 @@ import { MacroRecorder } from "./lib/macroRecorder";
 import { BatchRunner, EntityExtractor, BatchProposalManager } from "./lib/batchEngine";
 import { WorkflowPredictor } from "./lib/workflowPredictor";
 import { WorkflowRunner, workflowRunner } from "./lib/workflowRunner";
+import { UISpecEngine } from "./lib/uiSpecEngine";
+import { decisionScorerRegistry, VegaOnDeviceScorer, D3NanoDecisionScorer } from "./lib/decisionScorer";
 
 export interface EdgeOperatorConfig {
   /** DOM element ID to mount into (auto-created if missing) */
@@ -37,9 +39,9 @@ export interface EdgeOperatorConfig {
 
 export type Gemma4Config = EdgeOperatorConfig;
 
-export const EDGE_OPERATOR_VERSION = "0.2.0";
+const EDGE_OPERATOR_VERSION = "0.2.0";
 
-export function getStyleHref(): string {
+function getStyleHref(): string {
   if (typeof document !== "undefined") {
     const existing = document.getElementById("edge-operator-styles") || document.getElementById("on-device-chat-styles");
     if (existing && (existing as HTMLLinkElement).href) return (existing as HTMLLinkElement).href;
@@ -141,6 +143,10 @@ Object.assign(instance, {
   WorkflowPredictor,
   WorkflowRunner,
   workflowRunner,
+  UISpecEngine,
+  decisionScorerRegistry,
+  VegaOnDeviceScorer,
+  D3NanoDecisionScorer,
 });
 
 if (typeof window !== "undefined") {
@@ -159,6 +165,10 @@ if (typeof window !== "undefined") {
   (window as any).WorkflowPredictor = WorkflowPredictor;
   (window as any).WorkflowRunner = WorkflowRunner;
   (window as any).workflowRunner = workflowRunner;
+  (window as any).UISpecEngine = UISpecEngine;
+  (window as any).decisionScorerRegistry = decisionScorerRegistry;
+  (window as any).VegaOnDeviceScorer = VegaOnDeviceScorer;
+  (window as any).D3NanoDecisionScorer = D3NanoDecisionScorer;
 
   /**
    * Standard Web Component Custom Element: <edge-operator> and <on-device-chat>

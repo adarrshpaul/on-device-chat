@@ -20,6 +20,7 @@ export default defineConfig({
         '@mlc-ai/web-llm'
       ],
       output: {
+        exports: 'default',
         globals: {
           '@huggingface/transformers': '(typeof window !== "undefined" && window.transformers ? window.transformers : { LogitsProcessorList: class {}, LogitsProcessor: class {}, env: {}, ModelRegistry: { is_pipeline_cached: () => Promise.resolve(false) }, TextStreamer: class {}, pipeline: () => Promise.resolve() })',
           '@mlc-ai/web-llm': '(typeof window !== "undefined" && window.webllm ? window.webllm : { prebuiltAppConfig: { model_list: [] }, hasModelInCache: () => Promise.resolve(false), CreateMLCEngine: () => Promise.reject(new Error("WebLLM not loaded")) })'

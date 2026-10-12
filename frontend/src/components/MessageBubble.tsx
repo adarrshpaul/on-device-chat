@@ -5,6 +5,7 @@ import { DecisionCard } from "./DecisionCard";
 import { ActionOutputCard } from "./ActionOutputCard";
 import { BatchConfirmationCard } from "./BatchConfirmationCard";
 import { GameAutopilotCard } from "./GameAutopilotCard";
+import UISpecRenderer from "./UISpecRenderer";
 import type { DisplayMessage } from "../hooks/useChat";
 import type { BatchProposal } from "../lib/types";
 import {
@@ -255,6 +256,17 @@ export default function MessageBubble({
             <GameAutopilotCard
               progress={message.gameProgress}
               onStop={() => onExecuteAction?.("stop_game")}
+            />
+          </div>
+        )}
+
+        {/* Typed UI Spec Cards (OpenUI / DIL Component Stream) */}
+        {message.ui && message.ui.length > 0 && (
+          <div className="mb-2 w-full">
+            <UISpecRenderer
+              specs={message.ui}
+              onSelectChoice={onSelectOption}
+              onExecuteAction={onExecuteAction}
             />
           </div>
         )}

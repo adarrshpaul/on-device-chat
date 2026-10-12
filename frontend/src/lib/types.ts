@@ -11,6 +11,74 @@ export interface ToolDefinition {
   };
 }
 
+export interface ElementRef {
+  a11yId?: string;
+  selector: string;
+  fingerprint?: string;
+  role?: string;
+  label?: string;
+}
+
+export type UISpec =
+  | {
+      kind: "confirm";
+      id: string;
+      title: string;
+      description?: string;
+      action: {
+        tool: "click" | "type" | "select" | "scroll" | "navigate";
+        ref: ElementRef;
+        value?: string;
+        repeatCount?: number;
+      };
+    }
+  | {
+      kind: "batchPreview";
+      id: string;
+      title: string;
+      summary?: string;
+      columns: string[];
+      rows: Array<{
+        id: string;
+        ref: ElementRef;
+        cells: string[];
+        selected: boolean;
+        status?: "pending" | "running" | "success" | "error";
+      }>;
+    }
+  | {
+      kind: "paramForm";
+      id: string;
+      title: string;
+      description?: string;
+      targetRef?: ElementRef;
+      submitLabel?: string;
+      fields: Array<{
+        name: string;
+        label: string;
+        type: "text" | "number" | "enum" | "boolean";
+        ref?: ElementRef;
+        defaultValue?: string | number | boolean;
+        options?: string[];
+        min?: number;
+        max?: number;
+        required?: boolean;
+      }>;
+    }
+  | {
+      kind: "choices";
+      id: string;
+      prompt: string;
+      options: Array<{
+        id: string;
+        label: string;
+        description?: string;
+        score?: number; // 0.0 to 1.0 calibrated probability
+        ref?: ElementRef;
+        actionPayload?: { tool: string; args?: Record<string, unknown> };
+      }>;
+    };
+
 export interface EngineChatResponse {
   content?: string;
   tool_calls?: Array<{
@@ -21,6 +89,7 @@ export interface EngineChatResponse {
       arguments: string;
     };
   }>;
+  ui?: UISpec[];
 }
 
 export enum ModelTier {

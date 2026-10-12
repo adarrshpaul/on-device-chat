@@ -1,5 +1,20 @@
 # OKF Transition Log
 
+## 2026-10-12T04:40:00Z - Shipped OpenUI Typed Component Stream & D3-Nano Decision Scorer
+- **Implementation Shipped:**
+  - Candidate 1 (OpenUI / DIL): Implemented `UISpec` typed schema (`confirm`, `batchPreview`, `paramForm`, `choices`), live DOM verification gate (`UISpecEngine.bindOrDrop()`), and native 380px renderer (`UISpecRenderer.tsx`) inside `MessageBubble.tsx`.
+  - Candidate 2 (`d3-nano`): Implemented `DecisionScorer` interface, `VegaOnDeviceScorer` (on-device 64D Hamiltonian dynamics), `D3NanoDecisionScorer` (System 1 single forward pass logit scoring with privacy payload redaction), and `DecisionScorerRegistry` cascading tie-breaker when `margin < 0.15`.
+  - Air-Gap Security: Honors `window.EO_AIRGAP` by blocking unauthorized remote transmissions.
+  - Verification: 11/11 automated test suites passing 100% green (`npm test` including new `test:uispec`).
+
+## 2026-10-12T04:25:00Z - Strategic Model & Generative UI Evaluation (D3-Nano, OpenUI, AesCode, GPT-X3)
+- **Consultation & Autopsy:** Evaluated 4 external models/frameworks via `claude -p`, commercial validation (TrustMRR), and startup autopsy (Startups.rip - Delve W24).
+- **P0 Priority (Immediate Adoption):** OpenUI / DIL typed component stream (`thesysdev/open-intelligent-ui`). Replaces raw markdown output with typed, interactive `UISpec` widgets (`batchPreview` table, `paramForm` with live validators, `confirm` cards, `choices` pills) bound to physical `ElementRef` scanned from `a11yTreeEngine`. Zero client weight download.
+- **P1 Priority (Conditional Fast-Follow):** `vllm-sr/d3-nano` (2B single forward pass decision model) as a remote/edge `DecisionScorer` when candidate confidence margin is tight (`margin < 0.15`).
+- **P2 Priority (Deferred):** `AxiomicLabs/GPT-X3-150M` (base model, non-standard GDN2/GQA architecture, replaces existing 135M slot where generative SLMs struggle with page context).
+- **P3 Priority (Skip):** `microsoft/AesCode-8B` (8B visual design model generating raw HTML/Tailwind; EdgeOperator operates existing interfaces, not generating new landing pages; raw model HTML is an XSS liability).
+- **Rule 7 & 9 Verification:** All UI actions must strictly bind to live physical element references (`bindOrDrop()`) to eliminate simulated automation churn.
+
 ## 2026-10-11T22:15:00Z - EdgeOperator Shipped: Industrial OT WBM Recognition, "Teach 1 → Batch N", & Dual Compatibility
 - **Implementation Delivered:**
   - Full codebase rebranding to **EdgeOperator • Autonomous On-Device Web Operator**.

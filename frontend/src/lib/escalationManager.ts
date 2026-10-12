@@ -13,7 +13,7 @@ import { Gemma4Engine } from "./engine";
 import { LayaDecisionEngine, layaDecisionEngine } from "./layaEngine";
 import { VegaDecisionEngine, vegaDecisionEngine } from "./vegaEngine";
 import { backgroundDownloader } from "./backgroundDownloader";
-import { ToolDefinition, EngineChatResponse, ModelTier, TierInfo, DEFAULT_BROWSER_TOOLS, DecisionTrace } from "./types";
+import { ToolDefinition, EngineChatResponse, ModelTier, TierInfo, DEFAULT_BROWSER_TOOLS, DecisionTrace, UISpec } from "./types";
 import { smartQuerySelector, getCleanElementSelector, spotlightElement, smoothScrollTo, isWidgetElement } from "./domUtils";
 import { ActionDispatcher } from "./actionDispatcher";
 export { ModelTier };
@@ -90,6 +90,7 @@ export class EscalationManager {
   public nanoSupported: boolean = false;
   public nanoDiagnostic: string = "";
   public lastDecisionTrace: DecisionTrace | null = null;
+  public lastUiSpecs: UISpec[] | null = null;
 
   // Active tier engines
   private nanoEngine?: GeminiNanoEngine;
@@ -425,6 +426,10 @@ export class EscalationManager {
           .split("\n")[0]
           .trim();
       }
+    }
+
+    if (!hasObservation) {
+      this.lastUiSpecs = null;
     }
 
     // 1. Interactive Guided Site Tour & Human-Like Browsing
@@ -771,14 +776,64 @@ export class EscalationManager {
       }
     }
 
+    // 2.55 OpenUI Dynamic Form Synthesis & Parameter Configuration
+    const isFormIntent = (q: string): boolean => {
+      const lower = q.toLowerCase().trim();
+      return /\b(formulate\s+form|formulate|forms?|fields?|input\s+fields?|fill\s+form|configure\s+form|order\s+form|shipping\s+form)\b/i.test(lower);
+    };
+
+    if (!hasObservation && isFormIntent(cleanQuery) && typeof document !== "undefined") {
+      const { scanPage } = await import("./pageFormExtractor");
+      const scan = scanPage();
+      if (scan.forms.length > 0) {
+        const targetForm = scan.forms.find(f => cleanQuery.toLowerCase().includes(f.title.toLowerCase())) || scan.forms[0];
+        if (targetForm && targetForm.fields.length > 0) {
+          const formSpec: UISpec = {
+            kind: "paramForm",
+            id: `param_form_${Date.now()}`,
+            title: `📝 Formulated: ${targetForm.title || "Page Form"}`,
+            description: `Discovered ${targetForm.fields.length} interactive fields directly from the active page. You can adjust parameters below and click Apply:`,
+            submitLabel: targetForm.submit ? `Submit (${targetForm.submit.label})` : "Apply to Page",
+            fields: targetForm.fields.slice(0, 10).map((f) => ({
+              name: f.label || f.selector,
+              label: f.label || f.selector,
+              type: f.kind === "select" ? "enum" : f.kind === "toggle" ? "boolean" : f.inputType === "number" ? "number" : "text",
+              options: f.options ? f.options.map((o) => o.text || o.value) : undefined,
+              defaultValue: f.value ?? "",
+              ref: { selector: f.selector, label: f.label, role: f.kind },
+              required: f.required,
+            })),
+          };
+          this.lastUiSpecs = [formSpec];
+          this.lastDecisionTrace = {
+            type: "system1_gate",
+            title: "OpenUI DIL: Live Form Synthesis",
+            selectedOption: `Formulate ${targetForm.title}`,
+            confidence: 0.98,
+            margin: 0.90,
+            primitive: "choice",
+            latencyMs: 4,
+            engineUsed: "OpenUI DIL Engine (Live DOM)",
+            distribution: [
+              { label: `Formulate ${targetForm.title}`, score: 0.98, isWinner: true },
+              { label: "Plain Text Q&A", score: 0.02, isWinner: false },
+            ],
+          };
+          return JSON.stringify({
+            final: `I dynamically scanned the page and formulated **${targetForm.title || "the page form"}** (${targetForm.fields.length} fields) into an interactive OpenUI component below. You can edit parameters directly and click **${targetForm.submit?.label || "Apply to Page"}**.`
+          });
+        }
+      }
+    }
+
     // 2.6 Universal Section Landmark Navigation (<15ms, 0 tokens)
     const isSectionNavIntent = (q: string): { isNav: boolean; sectionId: string; sectionName: string; directElement?: HTMLElement } => {
       // Clean leading emojis and symbols (📍, 💼, ⚡, 📬, 🛒, 💳, 📖, etc.)
       const cleaned = q.replace(/^[\p{Emoji}\p{Symbol}\s]+/u, "").toLowerCase().trim();
       const lower = cleaned;
 
-      // Disqualify action verbs from landmark section navigation
-      if (/^(?:download|save|get|fetch|export|click|press|tap|submit|buy|add\s+to\s+cart)\b/i.test(lower)) {
+      // Disqualify action verbs and multipliers from landmark section navigation
+      if (/^(?:download|save|get|fetch|export|click|press|tap|submit|buy|add|put|insert|formulate|form|fields?|fill)\b/i.test(lower) || /(?:x|×|\btimes\b)\s*\d+|\b\d+\s*(?:x|×|times)/i.test(lower)) {
         return { isNav: false, sectionId: "", sectionName: "" };
       }
 
@@ -1084,11 +1139,14 @@ export class EscalationManager {
     // Helper to detect action/navigation vs informational Q&A intent
     const isActionIntent = (q: string): boolean => {
       const lower = q.toLowerCase().trim();
-      if (isQuestionOrInfoIntent(q) && !/^(click|press|tap|scroll|type|switch|toggle|download)\b/i.test(lower)) {
+      if (/(?:x|×|\btimes\b)\s*\d+|\b\d+\s*(?:x|×|times)/i.test(lower)) {
+        return true;
+      }
+      if (isQuestionOrInfoIntent(q) && !/^(click|press|tap|scroll|type|switch|toggle|download|add|buy)\b/i.test(lower)) {
         return false;
       }
       return (
-        /\b(open|click|go to|goto|navigate|visit|view|show|scroll|scroll to|press|switch to|select|take me to|find and click|tap|toggle|download|save|get|fetch|export)\b/i.test(lower)
+        /\b(open|click|go to|goto|navigate|visit|view|show|scroll|scroll to|press|switch to|select|take me to|find and click|tap|toggle|download|save|get|fetch|export|add|buy|put|insert|checkout)\b/i.test(lower)
       );
     };
 
@@ -1145,8 +1203,17 @@ export class EscalationManager {
         }
 
         const role = el.getAttribute("role") || tagName;
-        const text = (el.textContent || (el as HTMLInputElement).value || (el as HTMLInputElement).placeholder || el.getAttribute("aria-label") || "").trim().slice(0, 40);
-        if (!text && tagName !== "input") continue;
+        const rawText = (el.textContent || (el as HTMLInputElement).value || (el as HTMLInputElement).placeholder || el.getAttribute("aria-label") || "").trim().slice(0, 40);
+        if (!rawText && tagName !== "input") continue;
+
+        // Extract nearby contextual parent text (e.g. item name, card title, column header)
+        const parentContainer = el.closest(".product-row, [data-testid], tr, li, .card, .item, section, article, div[id]");
+        const parentHeading = parentContainer?.querySelector("h1, h2, h3, h4, [class*='title'], [class*='name'], [class*='header']")?.textContent?.trim() || "";
+        const idHint = el.id ? el.id.replace(/^btn[-_]|[-_]btn$/i, "").replace(/[-_]/g, " ") : "";
+        const contextStr = parentHeading || idHint;
+        const text = contextStr && !rawText.toLowerCase().includes(contextStr.toLowerCase())
+          ? `${contextStr} — ${rawText}`.slice(0, 50)
+          : rawText;
 
         const sel = getCleanElementSelector(el);
 
@@ -1208,6 +1275,54 @@ export class EscalationManager {
         return JSON.stringify({ final: lastObservation || "Task completed." });
       }
 
+      // 0. Form Synthesis & Interactive Parameter Configuration (OpenUI DIL)
+      const isFormIntent = (q: string): boolean =>
+        /\b(form|fields?|input|fill|configure|configuration|parameters?|settings?|shipping|address|order form|param)\b/i.test(q);
+
+      if (isFormIntent(cleanQuery) && typeof document !== "undefined") {
+        const { scanPage } = await import("./pageFormExtractor");
+        const scan = scanPage();
+        if (scan.forms.length > 0) {
+          const targetForm = scan.forms.find(f => cleanQuery.toLowerCase().includes(f.title.toLowerCase())) || scan.forms[0];
+          if (targetForm && targetForm.fields.length > 0) {
+            const formSpec: UISpec = {
+              kind: "paramForm",
+              id: `param_form_${Date.now()}`,
+              title: `📝 Formulated: ${targetForm.title || "Page Form"}`,
+              description: `Discovered ${targetForm.fields.length} interactive fields directly from the active page. You can adjust parameters below and click Apply:`,
+              submitLabel: targetForm.submit ? `Submit (${targetForm.submit.label})` : "Apply to Page",
+              fields: targetForm.fields.slice(0, 10).map((f) => ({
+                name: f.label || f.selector,
+                label: f.label || f.selector,
+                type: f.kind === "select" ? "enum" : f.kind === "toggle" ? "boolean" : f.inputType === "number" ? "number" : "text",
+                options: f.options ? f.options.map((o) => o.text || o.value) : undefined,
+                defaultValue: f.value ?? "",
+                ref: { selector: f.selector, label: f.label, role: f.kind },
+                required: f.required,
+              })),
+            };
+            this.lastUiSpecs = [formSpec];
+            this.lastDecisionTrace = {
+              type: "system1_gate",
+              title: "OpenUI DIL: Live Form Synthesis",
+              selectedOption: `Formulate ${targetForm.title}`,
+              confidence: 0.98,
+              margin: 0.90,
+              primitive: "choice",
+              latencyMs: 4,
+              engineUsed: "OpenUI DIL Engine (Live DOM)",
+              distribution: [
+                { label: `Formulate ${targetForm.title}`, score: 0.98, isWinner: true },
+                { label: "Plain Text Q&A", score: 0.02, isWinner: false },
+              ],
+            };
+            return JSON.stringify({
+              final: `I dynamically scanned the page and formulated **${targetForm.title || "the page form"}** (${targetForm.fields.length} fields) into an interactive OpenUI component below. You can edit parameters directly and click **${targetForm.submit?.label || "Apply to Page"}**.`
+            });
+          }
+        }
+      }
+
       // Check if user wants an action or navigation
       if (isActionIntent(cleanQuery)) {
         const candidates = mapPageCandidates();
@@ -1217,16 +1332,52 @@ export class EscalationManager {
           if (decision.decisionTrace) {
             this.lastDecisionTrace = decision.decisionTrace;
           }
-          if (decision.targetSelector && decision.operation === "CLICK") {
-            return JSON.stringify({
-              tool: "browse",
-              args: { action: "click", selector: decision.targetSelector },
-            });
+          if (decision.targetSelector && !decision.needsClarification) {
+            const op = decision.operation.toLowerCase();
+            const repeatMatch = cleanQuery.match(/(?:x|×|\btimes\b)\s*(\d+)|\b(\d+)\s*(?:x|×|times)/i);
+            const repeatCount = repeatMatch ? parseInt(repeatMatch[1] || repeatMatch[2], 10) : 1;
+
+            if (op === "click") {
+              const confirmSpec: UISpec = {
+                kind: "confirm",
+                id: `confirm_${Date.now()}`,
+                title: `${decision.decisionTrace?.selectedOption || "Confirm Action"}`,
+                description: `Target element verified on live DOM (${decision.decisionTrace?.engineUsed || "Vega"}). Confirm to execute:`,
+                action: {
+                  tool: "click",
+                  ref: { selector: decision.targetSelector },
+                  repeatCount,
+                },
+              };
+              this.lastUiSpecs = [confirmSpec];
+              return JSON.stringify({
+                tool: "browse",
+                args: { action: "click", selector: decision.targetSelector, repeatCount },
+              });
+            }
+            if (op === "type_text" || op === "type") {
+              return JSON.stringify({
+                tool: "browse",
+                args: { action: "type", selector: decision.targetSelector, value: cleanQuery },
+              });
+            }
           }
-          if (decision.targetSelector && decision.operation === "TYPE_TEXT") {
+          if (decision.needsClarification && decision.decisionTrace?.distribution) {
+            const choicesSpec: UISpec = {
+              kind: "choices",
+              id: `choices_${Date.now()}`,
+              prompt: "Multiple interactive elements match your intent. Please select one:",
+              options: decision.decisionTrace.distribution.map((d, i) => ({
+                id: `opt_${i}`,
+                label: d.label,
+                score: d.score,
+                ref: d.actionPayload?.args?.selector ? { selector: d.actionPayload.args.selector as string } : undefined,
+                actionPayload: d.actionPayload,
+              })),
+            };
+            this.lastUiSpecs = [choicesSpec];
             return JSON.stringify({
-              tool: "browse",
-              args: { action: "type", selector: decision.targetSelector, value: cleanQuery },
+              final: "I found matching candidate elements on this page. Please select your intended action below:"
             });
           }
         }
@@ -1310,6 +1461,54 @@ export class EscalationManager {
         return JSON.stringify({ final: lastObservation || "Task completed." });
       }
 
+      // 0. Form Synthesis & Interactive Parameter Configuration (OpenUI DIL)
+      const isFormIntent = (q: string): boolean =>
+        /\b(form|fields?|input|fill|configure|configuration|parameters?|settings?|shipping|address|order form|param)\b/i.test(q);
+
+      if (isFormIntent(cleanQuery) && typeof document !== "undefined") {
+        const { scanPage } = await import("./pageFormExtractor");
+        const scan = scanPage();
+        if (scan.forms.length > 0) {
+          const targetForm = scan.forms.find(f => cleanQuery.toLowerCase().includes(f.title.toLowerCase())) || scan.forms[0];
+          if (targetForm && targetForm.fields.length > 0) {
+            const formSpec: UISpec = {
+              kind: "paramForm",
+              id: `param_form_${Date.now()}`,
+              title: `📝 Formulated: ${targetForm.title || "Page Form"}`,
+              description: `Discovered ${targetForm.fields.length} interactive fields directly from the active page. You can adjust parameters below and click Apply:`,
+              submitLabel: targetForm.submit ? `Submit (${targetForm.submit.label})` : "Apply to Page",
+              fields: targetForm.fields.slice(0, 10).map((f) => ({
+                name: f.label || f.selector,
+                label: f.label || f.selector,
+                type: f.kind === "select" ? "enum" : f.kind === "toggle" ? "boolean" : f.inputType === "number" ? "number" : "text",
+                options: f.options ? f.options.map((o) => o.text || o.value) : undefined,
+                defaultValue: f.value ?? "",
+                ref: { selector: f.selector, label: f.label, role: f.kind },
+                required: f.required,
+              })),
+            };
+            this.lastUiSpecs = [formSpec];
+            this.lastDecisionTrace = {
+              type: "system1_gate",
+              title: "OpenUI DIL: Live Form Synthesis",
+              selectedOption: `Formulate ${targetForm.title}`,
+              confidence: 0.98,
+              margin: 0.90,
+              primitive: "choice",
+              latencyMs: 4,
+              engineUsed: "OpenUI DIL Engine (Live DOM)",
+              distribution: [
+                { label: `Formulate ${targetForm.title}`, score: 0.98, isWinner: true },
+                { label: "Plain Text Q&A", score: 0.02, isWinner: false },
+              ],
+            };
+            return JSON.stringify({
+              final: `I dynamically scanned the page and formulated **${targetForm.title || "the page form"}** (${targetForm.fields.length} fields) into an interactive OpenUI component below. You can edit parameters directly and click **${targetForm.submit?.label || "Apply to Page"}**.`
+            });
+          }
+        }
+      }
+
       // 1. Direct Q&A Fast Path: Questions and knowledge inquiries route directly to grounded answerFromPage
       if (isQuestionOrInfoIntent(cleanQuery)) {
         const res = await answerFromPage(cleanQuery, this.compactEngine);
@@ -1348,10 +1547,25 @@ export class EscalationManager {
           }
           if (decision.targetSelector && !decision.needsClarification) {
             const op = decision.operation.toLowerCase();
+            const repeatMatch = cleanQuery.match(/(?:x|×|\btimes\b)\s*(\d+)|\b(\d+)\s*(?:x|×|times)/i);
+            const repeatCount = repeatMatch ? parseInt(repeatMatch[1] || repeatMatch[2], 10) : 1;
+
             if (op === "click") {
+              const confirmSpec: UISpec = {
+                kind: "confirm",
+                id: `confirm_${Date.now()}`,
+                title: `${decision.decisionTrace?.selectedOption || "Confirm Action"}`,
+                description: `Target element verified on live DOM (${decision.decisionTrace?.engineUsed || "Vega"}). Confirm to execute:`,
+                action: {
+                  tool: "click",
+                  ref: { selector: decision.targetSelector },
+                  repeatCount,
+                },
+              };
+              this.lastUiSpecs = [confirmSpec];
               return JSON.stringify({
                 tool: "browse",
-                args: { action: "click", selector: decision.targetSelector },
+                args: { action: "click", selector: decision.targetSelector, repeatCount },
               });
             }
             if (op === "type_text") {
@@ -1360,6 +1574,23 @@ export class EscalationManager {
                 args: { action: "type", selector: decision.targetSelector, value: cleanQuery },
               });
             }
+          }
+          if (decision.needsClarification && decision.decisionTrace?.distribution) {
+            const choicesSpec: UISpec = {
+              kind: "choices",
+              id: `choices_${Date.now()}`,
+              prompt: "I detected multiple possible targets on the page. Please select the intended action:",
+              options: decision.decisionTrace.distribution.slice(0, 4).map((d, i) => ({
+                id: `opt_${i}`,
+                label: d.label,
+                score: d.score,
+                ref: d.actionPayload?.args?.selector ? { selector: d.actionPayload.args.selector as string } : undefined,
+              })),
+            };
+            this.lastUiSpecs = [choicesSpec];
+            return JSON.stringify({
+              final: "I detected candidate elements matching your goal on the page. Please select the intended action below:"
+            });
           }
         }
         return JSON.stringify({

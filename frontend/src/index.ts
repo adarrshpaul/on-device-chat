@@ -33,7 +33,10 @@ export { CanvasInspector } from './lib/canvasInspector';
 export type { ICanvasEntity, ICanvasGameState } from './lib/canvasInspector';
 export { CanvasGameController } from './lib/canvasGameController';
 export type { GameProgressEvent, GameAutopilotOptions, GameAutopilotResult } from './lib/canvasGameController';
-export { GameAutopilotCard } from './components/GameAutopilotCard';
+export { UISpecEngine } from './lib/uiSpecEngine';
+export { UISpecRenderer } from './components/UISpecRenderer';
+export { DecisionScorerRegistry, decisionScorerRegistry, VegaOnDeviceScorer, D3NanoDecisionScorer } from './lib/decisionScorer';
+export type { DecisionScorer, CandidateElement, ScoringResult, ScoringDistributionItem } from './lib/decisionScorer';
 export * from './lib/types';
 
 
