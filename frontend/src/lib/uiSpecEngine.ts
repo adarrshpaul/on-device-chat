@@ -123,6 +123,16 @@ export class UISpecEngine {
               break;
             }
           }
+          // Validate individual field refs if provided
+          if (spec.fields && spec.fields.length > 0) {
+            const validFields = spec.fields.filter((f) => !f.ref || Boolean(this.resolveElementRef(f.ref)));
+            if (validFields.length === 0) {
+              console.warn(`[UISpecEngine] Dropped paramForm with all detached fields:`, spec.id);
+              break;
+            }
+            validated.push({ ...spec, fields: validFields });
+            break;
+          }
           validated.push(spec);
           break;
         }
@@ -191,7 +201,18 @@ export class UISpecEngine {
           break;
         }
         case "navigate": {
-          if (action.value) window.location.href = action.value;
+          if (action.value) {
+            try {
+              const url = new URL(action.value, window.location.href);
+              if (url.protocol === "http:" || url.protocol === "https:") {
+                window.location.href = url.href;
+              } else {
+                console.warn(`[UISpecEngine] Blocked unsafe navigation protocol:`, url.protocol);
+              }
+            } catch {
+              console.warn(`[UISpecEngine] Invalid navigation target:`, action.value);
+            }
+          }
           break;
         }
       }

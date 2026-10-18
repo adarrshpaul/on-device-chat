@@ -22,6 +22,17 @@
   // 2. Initialize Agent Widget
   function initAgent(options = {}) {
     if (isInitialized) return;
+
+    // Check if host page ALREADY embeds a native EdgeOperator / OnDeviceChat widget
+    const existingLauncher = document.querySelector(
+      "#eo-floating-launcher, #g4-floating-launcher, [data-eo-launcher], .eo-launcher-button, .g4-launcher-button, button[aria-label='Toggle AI Assistant'], button[aria-label='Open On-Device AI Chat'], button[aria-label='Open EdgeOperator']"
+    );
+    if (existingLauncher) {
+      console.log("[EdgeOperator] Native launcher already present; yielding to host page embed.");
+      isInitialized = true;
+      return;
+    }
+
     injectLocalStyles();
 
     const agent = window.EdgeOperator || window.OnDeviceChat;

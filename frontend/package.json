@@ -1,7 +1,7 @@
 {
   "name": "on-device-chat",
-  "version": "0.2.0",
-  "description": "On-device AI agent & chat widget for any website: Chrome Gemini Nano, WebGPU, WebLLM. Record-and-replay browser automation, zero API cost, prompts never leave the browser.",
+  "version": "0.3.0",
+  "description": "On-device AI agent & workflow operator for any website. Private SLMs, automated macros, 0 cloud API cost, 100% in-browser.",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -66,8 +66,8 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build && tsc -p tsconfig.build.json && vite build --config vite.standalone.config.ts && cp dist/on-device-chat.min.js dist/gemma4-agent.min.js && cp dist/on-device-chat.min.js dist/edge-operator.min.js && node scripts/sync-extension.mjs",
-    "sync:extension": "node scripts/sync-extension.mjs",
+    "build": "vite build && tsc -p tsconfig.build.json && vite build --config vite.standalone.config.ts && node scripts/scope-css.mjs && cp dist/on-device-chat.min.js dist/gemma4-agent.min.js && cp dist/on-device-chat.min.js dist/edge-operator.min.js && node scripts/sync-extension.mjs",
+    "sync:extension": "node scripts/scope-css.mjs && node scripts/sync-extension.mjs",
     "build:extension": "npm run build && node scripts/sync-extension.mjs",
     "build:docs": "vite build --config vite.demo.config.ts",
     "test": "npm run test:giskard && npm run test:grounding && npm run test:vega && npm run test:universal && npm run test:sota && npm run test:workflows && npm run test:specialty && npm run test:extension && npm run test:consistency && npm run test:industrial && npm run test:uispec",
@@ -83,6 +83,11 @@
     "test:consistency": "node tests/test_cross_application_ui_consistency.mjs",
     "test:industrial": "node tests/test_industrial_ot_wbm_recognition.mjs",
     "test:uispec": "node tests/test_ui_spec_and_d3_nano.mjs",
+    "e2e:extension": "npm run build:extension && playwright test --project=gate1-extension",
+    "e2e:smoke": "playwright test --project=gate2-smoke",
+    "release:gate1": "npm test && npm run lint && npm run e2e:extension",
+    "release:next": "node scripts/release/version.mjs next",
+    "release:stable": "node scripts/release/version.mjs stable",
     "lint": "eslint .",
     "preview": "vite preview",
     "prepublishOnly": "npm run test:giskard && npm run lint && npm run build"
@@ -101,6 +106,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.11.1",
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/vite": "^4.0.0-beta.1",
     "@types/marked": "^6.0.0",
     "@types/react": "^18.3.10",

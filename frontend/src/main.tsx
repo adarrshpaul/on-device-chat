@@ -177,7 +177,12 @@ if (typeof window !== "undefined") {
    * - <slot name="launcher"> : Custom floating trigger button slot
    * - Encapsulates styles and DOM tree from host framework collisions
    */
-  if (typeof customElements !== "undefined" && typeof HTMLElement !== "undefined") {
+  if (
+    typeof customElements !== "undefined" &&
+    customElements !== null &&
+    typeof customElements.get === "function" &&
+    typeof HTMLElement !== "undefined"
+  ) {
     class EdgeOperatorElement extends HTMLElement {
     private shadow: ShadowRoot;
     private mountPoint: HTMLDivElement;

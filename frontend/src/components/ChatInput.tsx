@@ -38,17 +38,17 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       <form onSubmit={onSubmit} className="flex items-center gap-2">
         <div className="flex-1 flex items-center gap-1.5 bg-black/40 border border-white/10 focus-within:border-purple-500/70 rounded-[8px] px-2.5 py-1.5 transition-colors min-w-0">
           {/* Dismissible Left Page-Context Tag */}
-          {!isContextDismissed && contextLabel && (
-            <span className="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-[5px] bg-white/6 text-gray-300 border border-white/8 text-[11px] font-mono leading-none">
-              <span className="truncate max-w-[80px] sm:max-w-[120px]">{contextLabel}</span>
+          {!isContextDismissed && contextLabel && !hasInput && (
+            <span className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[4px] bg-purple-500/15 text-purple-300 border border-purple-500/25 text-[10px] font-mono leading-none">
+              <span className="truncate max-w-[70px] sm:max-w-[120px]">{contextLabel}</span>
               <button
                 type="button"
                 onClick={() => setIsContextDismissed(true)}
-                className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-white cursor-pointer ml-0.5"
+                className="w-4 h-4 flex items-center justify-center text-gray-400 hover:text-white cursor-pointer ml-0.5"
                 title="Dismiss context tag"
                 aria-label="Dismiss context tag"
               >
-                <X size={11} />
+                <X size={10} />
               </button>
             </span>
           )}

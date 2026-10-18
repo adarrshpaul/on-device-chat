@@ -69,7 +69,7 @@ const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
 const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
 
 assert(manifest.manifest_version === 3, "Manifest version is exactly 3 (MV3)");
-assert(manifest.version === pkg.version, `Version strictly matches package.json (v${pkg.version})`);
+assert((manifest.version_name || manifest.version) === pkg.version, `Version strictly matches package.json (v${pkg.version})`);
 assert(manifest.description === pkg.description, "Description matches package.json");
 assert(manifest.background?.service_worker === "background.js", "Background service worker configured");
 assert(manifest.action?.default_popup === "popup.html", "Action popup is popup.html");

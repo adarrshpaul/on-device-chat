@@ -41,27 +41,41 @@ export interface DecisionScorer {
   score(goal: string, candidates: CandidateElement[]): Promise<ScoringResult>;
 }
 
-/** Deterministic pseudo-random projection vector for fast on-device scoring */
+/** Deterministic token-level random projection vector for fast semantic on-device scoring */
 function textToLatentVector(text: string, dim = 64): number[] {
-  const vec = new Array(dim).fill(0);
-  let h = 0x811c9dc5;
-  for (let i = 0; i < text.length; i++) {
-    h ^= text.charCodeAt(i);
-    h = Math.imul(h, 0x01000193);
+  const words = text.toLowerCase().split(/[\s_\-.,:;/\\()[\]{}"]+/).filter((w) => w.length > 0);
+  if (words.length === 0) return new Array(dim).fill(0);
+
+  const docVec = new Array(dim).fill(0);
+
+  for (const word of words) {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < word.length; i++) {
+      h ^= word.charCodeAt(i);
+      h = Math.imul(h, 0x01000193);
+    }
+    let state = h >>> 0;
+    for (let d = 0; d < dim; d++) {
+      state ^= state << 13;
+      state ^= state >>> 17;
+      state ^= state << 5;
+      const u1 = Math.max(1e-7, (state >>> 0) / 4294967296);
+      state ^= state << 13;
+      state ^= state >>> 17;
+      state ^= state << 5;
+      const u2 = (state >>> 0) / 4294967296;
+      docVec[d] += Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+    }
   }
-  let state = h >>> 0;
-  for (let d = 0; d < dim; d++) {
-    state ^= state << 13;
-    state ^= state >>> 17;
-    state ^= state << 5;
-    const u1 = Math.max(1e-7, (state >>> 0) / 4294967296);
-    state ^= state << 13;
-    state ^= state >>> 17;
-    state ^= state << 5;
-    const u2 = (state >>> 0) / 4294967296;
-    vec[d] = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+
+  // L2 normalize
+  let norm = 0;
+  for (let d = 0; d < dim; d++) norm += docVec[d] * docVec[d];
+  norm = Math.sqrt(norm);
+  if (norm > 0) {
+    for (let d = 0; d < dim; d++) docVec[d] /= norm;
   }
-  return vec;
+  return docVec;
 }
 
 function cosineSimilarity(a: number[], b: number[]): number {
@@ -81,7 +95,7 @@ function cosineSimilarity(a: number[], b: number[]): number {
  * 1. Vega On-Device Scorer (Hamiltonian dynamics & 64D projection)
  */
 export class VegaOnDeviceScorer implements DecisionScorer {
-  readonly placement: "on-device" = "on-device";
+  readonly placement = "on-device" as const;
   readonly label = "Vega Hamiltonian (On-Device)";
 
   async score(goal: string, candidates: CandidateElement[]): Promise<ScoringResult> {
@@ -173,7 +187,12 @@ export class D3NanoDecisionScorer implements DecisionScorer {
     return candidates.map((c) => ({
       id: c.id,
       role: c.role,
-      label: c.text.slice(0, 80).replace(/\b(pass|token|secret|key)[^\s]*/gi, "[REDACTED]"),
+      label: c.text
+        .slice(0, 100)
+        .replace(/\b(pass|token|secret|key|bearer|auth|pwd)[^\s]*/gi, "[REDACTED_SECRET]")
+        .replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, "[REDACTED_EMAIL]")
+        .replace(/\b(?:\d[ -]*?){13,19}\b/g, "[REDACTED_NUMBER]")
+        .replace(/\b(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/g, "[REDACTED_PHONE]"),
       selector: c.selector,
     }));
   }
@@ -284,12 +303,12 @@ export class D3NanoDecisionScorer implements DecisionScorer {
     return {
       scores: probs,
       latencyMs,
-      engineUsed: this.label,
-      placement: this.placement,
+      engineUsed: "Lexical & Structural Fallback (d3-nano endpoint pending)",
+      placement: "on-device",
       distribution,
       bestIndex,
       margin,
-      explanation: `d3-nano single-forward pass discriminated target (margin: ${(margin * 100).toFixed(1)}%).`,
+      explanation: `d3-nano remote endpoint not configured; evaluated via calibrated on-device lexical & structural tie-breaker (margin: ${(margin * 100).toFixed(1)}%).`,
     };
   }
 }

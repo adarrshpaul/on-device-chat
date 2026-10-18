@@ -80,15 +80,15 @@
 }
 
 /* Universal box-sizing reset for all descendants */
-.g4-widget-container,
-.g4-widget-container *,
-.g4-widget-container *::before,
-.g4-widget-container *::after {
+:is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root),
+:is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root) *,
+:is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root) *::before,
+:is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root) *::after {
   box-sizing: border-box !important;
 }
 
 /* Hardened Button Reset: Prevents host CMS / framework border or background overrides */
-.g4-widget-container button {
+:is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root) button {
   font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
   font-size: inherit;
   line-height: inherit;
@@ -108,15 +108,15 @@
   appearance: none !important;
 }
 
-.g4-widget-container button:focus {
+:is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root) button:focus {
   outline: none !important;
 }
 
 /* Hardened Input & Textarea Reset: Fixes Amazon, Wikipedia, Bootstrap white background overrides */
-.g4-widget-container input,
-.g4-widget-container input[type="text"],
-.g4-widget-container input[type="search"],
-.g4-widget-container textarea {
+:is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root) input,
+:is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root) input[type="text"],
+:is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root) input[type="search"],
+:is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root) textarea {
   font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
   font-size: 14px !important;
   line-height: 1.5 !important;
@@ -140,22 +140,22 @@
   min-height: 0 !important;
 }
 
-.g4-widget-container input::placeholder,
-.g4-widget-container textarea::placeholder {
+:is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root) input::placeholder,
+:is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root) textarea::placeholder {
   color: #64748b !important;
   opacity: 1 !important;
   -webkit-text-fill-color: #64748b !important;
 }
 
-.g4-widget-container input:focus,
-.g4-widget-container textarea:focus {
+:is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root) input:focus,
+:is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root) textarea:focus {
   outline: none !important;
   border: 0 solid transparent !important;
   box-shadow: none !important;
 }
 
 /* SVG Reset: Protects against host CMS / framework expanding SVGs to 100% or huge dimensions */
-.g4-widget-container svg {
+:is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root) svg {
   display: inline-block !important;
   vertical-align: middle !important;
   flex-shrink: 0 !important;
@@ -167,29 +167,29 @@
 }
 
 /* Typography elements reset (p, headings, lists) */
-.g4-widget-container h1,
-.g4-widget-container h2,
-.g4-widget-container h3,
-.g4-widget-container h4,
-.g4-widget-container h5,
-.g4-widget-container h6,
-.g4-widget-container p,
-.g4-widget-container ul,
-.g4-widget-container ol,
-.g4-widget-container li,
-.g4-widget-container span,
-.g4-widget-container div {
+:is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root) h1,
+:is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root) h2,
+:is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root) h3,
+:is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root) h4,
+:is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root) h5,
+:is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root) h6,
+:is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root) p,
+:is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root) ul,
+:is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root) ol,
+:is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root) li,
+:is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root) span,
+:is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root) div {
   text-transform: none;
   letter-spacing: normal;
 }
 
-.g4-widget-container a {
+:is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root) a {
   text-decoration: none !important;
   color: inherit;
   cursor: pointer;
 }
 
-.g4-widget-container a:hover {
+:is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root) a:hover {
   text-decoration: none !important;
 }
 

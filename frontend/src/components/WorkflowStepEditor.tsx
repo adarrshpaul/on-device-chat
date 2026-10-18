@@ -157,7 +157,6 @@ const TargetCombobox: React.FC<TargetComboboxProps> = ({ action, value, matched,
   const showCustomRow = !!custom && !options.some((o) => o.selector === custom);
   const rowCount = options.length + (showCustomRow ? 1 : 0);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const resolves = useMemo(() => !value || !!smartQuerySelector(value), [value, scan?.scannedAt]);
 
   useEffect(() => setActive(0), [query]);

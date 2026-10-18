@@ -522,11 +522,11 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
           ref={cardRef}
           style={
             viewportHeight && !isMobileExpanded
-              ? { height: `${Math.min(viewportHeight * 0.52, 650)}px`, maxHeight: `${viewportHeight}px` }
+              ? { height: `${Math.min(viewportHeight * 0.75, 650)}px`, maxHeight: `${viewportHeight}px` }
               : undefined
           }
           className={`w-full ${
-            isMobileExpanded ? "h-[92dvh] max-h-[92dvh]" : "h-[50dvh] max-h-[50dvh]"
+            isMobileExpanded ? "h-[92dvh] max-h-[92dvh]" : "h-[75dvh] max-h-[85dvh]"
           } sm:w-[440px] sm:h-[650px] sm:max-h-[88vh] sm:max-w-[calc(100vw-32px)] g4-window-card rounded-t-[14px] sm:rounded-[8px] shadow-2xl flex flex-col sm:mb-3 overflow-hidden transition-all duration-300 animate-in fade-in slide-in-from-bottom-5 overscroll-contain relative ${
             isGhostMode ? "opacity-35 hover:opacity-100 transition-opacity duration-300" : ""
           }`}
@@ -679,8 +679,9 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
                               </div>
                             </div>
 
-                            <div className="mt-2 text-[10px] text-gray-400 font-mono">
-                              ⚡ One-time setup: initializes the local on-device model to predict and execute workflows with zero cloud latency.
+                            <div className="mt-2 text-[10px] text-gray-400 font-mono flex items-start gap-1.5">
+                              <Zap size={11} className="text-amber-300 fill-amber-300 shrink-0 mt-0.5" />
+                              <span>One-time setup: initializes the local on-device model to predict and execute workflows with zero cloud latency.</span>
                             </div>
 
                             <div className="flex items-center gap-2 mt-3">
@@ -976,8 +977,8 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
                         className="px-2 py-0.5 rounded-[5px] bg-white/5 hover:bg-purple-950/40 text-gray-300 hover:text-white border border-white/8 hover:border-purple-500/30 text-[10px] flex items-center gap-1 cursor-pointer transition-all shrink-0 whitespace-nowrap active:scale-95"
                         title={wf.description}
                       >
-                        <Play size={9} className="fill-current text-emerald-400" />
-                        <span className="truncate max-w-[110px]">{wf.name}</span>
+                        <Play size={9} className="fill-current text-emerald-400 shrink-0" />
+                        <span className="truncate max-w-[200px]">{wf.name}</span>
                       </button>
                     ))}
                   </div>

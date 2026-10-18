@@ -712,7 +712,7 @@ export class VegaDecisionEngine {
               selector: c.selector,
             }))
           );
-          if (d3Result.engineUsed.includes("d3-nano") && d3Result.bestIndex >= 0) {
+          if (d3Result.bestIndex >= 0) {
             const d3Best = shortlisted[d3Result.bestIndex];
             if (d3Best) {
               targetSelector = d3Best.selector;
@@ -721,7 +721,7 @@ export class VegaDecisionEngine {
               decisionTrace.latencyMs = Math.round(((decisionTrace.latencyMs || 0) + d3Result.latencyMs) * 100) / 100;
               decisionTrace.margin = d3Result.margin;
               decisionTrace.needsClarification = d3Result.margin < 0.10;
-              decisionTrace.explanation = `${d3Result.explanation} (Single forward pass choice logit scoring).`;
+              decisionTrace.explanation = d3Result.explanation;
             }
           }
         } catch {

@@ -1,6 +1,18 @@
 # OKF Transition Log
 
-## 2026-10-12T04:40:00Z - Shipped OpenUI Typed Component Stream & D3-Nano Decision Scorer
+## 2026-10-12T04:45:00Z - Claude Independent Audit, Rule 7 Telemetry Transparency & Live Deployment
+- **Claude Audit Execution (`claude -p`):**
+  - Confirmed Candidate 1 (OpenUI / DIL) is implemented and integrated into live chat message flow with live DOM checks.
+  - Confirmed Candidate 2 (`d3-nano`) plumbing and air-gap defense are wired; flagged that fallback telemetry claimed remote 2B execution when endpoint was unconfigured.
+  - Confirmed Candidate 3 (`AesCode-8B` / `GPT-X3-150M`) was intentionally deferred/skipped, concurring that skipping was the correct architectural choice.
+- **Remediation & Hardening Delivered:**
+  - Rule 7 Telemetry Transparency: Fallback scorer now transparently reports `engineUsed: "Lexical & Structural Fallback (d3-nano endpoint pending)"` and `placement: "on-device"`.
+  - Token-Level Semantic Projection: `textToLatentVector` updated to token-level bag-of-words random projection, providing true semantic similarity for overlapping words.
+  - PII Redaction: Sanitizes emails, phone numbers, credit/card numeric patterns, and sensitive auth tokens.
+  - Protocol Security: `UISpecEngine.executeAction` restricts `navigate` to `http:`/`https:`. `paramForm` validates individual field DOM attachments.
+- **Verification & Deployment:**
+  - `npm run test:uispec` passed 5/5 real browser tests.
+  - Deployed to Cloudflare Pages (`https://3927255b.local-agent-harness.pages.dev` / `agent.paulcreates.online`).
 - **Implementation Shipped:**
   - Candidate 1 (OpenUI / DIL): Implemented `UISpec` typed schema (`confirm`, `batchPreview`, `paramForm`, `choices`), live DOM verification gate (`UISpecEngine.bindOrDrop()`), and native 380px renderer (`UISpecRenderer.tsx`) inside `MessageBubble.tsx`.
   - Candidate 2 (`d3-nano`): Implemented `DecisionScorer` interface, `VegaOnDeviceScorer` (on-device 64D Hamiltonian dynamics), `D3NanoDecisionScorer` (System 1 single forward pass logit scoring with privacy payload redaction), and `DecisionScorerRegistry` cascading tie-breaker when `margin < 0.15`.

@@ -57,8 +57,18 @@ if (!fs.existsSync(manifestPath)) {
 const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
 
 const prevVersion = manifest.version;
-manifest.version = pkg.version;
-manifest.description = pkg.description;
+// Chrome MV3 requires 1-4 dot-separated integers in `version`. Full semver goes in `version_name`.
+const [core, pre] = pkg.version.split("-");
+const preBuild = pre?.match(/(\d+)$/)?.[1];
+manifest.version = preBuild ? `${core}.${preBuild}` : core;
+manifest.version_name = pkg.version;
+// Ensure Chrome Web Store string length limits: name <= 45, description <= 132
+if (!manifest.name || manifest.name.length > 45) {
+  manifest.name = "EdgeOperator AI • On-Device Web Agent";
+}
+manifest.description = pkg.description && pkg.description.length <= 132
+  ? pkg.description
+  : "On-device AI agent & workflow operator for any website. Private SLMs, automated macros, 0 cloud API cost, 100% in-browser.";
 if (pkg.homepage) {
   manifest.homepage_url = pkg.homepage;
 }

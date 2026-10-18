@@ -150,8 +150,19 @@ export class EscalationManager {
     }
 
     // Chrome Gemini Nano flag is not enabled or hardware check failed
-    console.info(`ℹ️ Gemini Nano: ${this.nanoDiagnostic}. Starting at Tier 1 MiniLM Router.`);
-    await this.setTier(ModelTier.TIER_1_MINILM_ROUTER);
+    const hasPermission = typeof window !== "undefined" && (
+      localStorage.getItem("eo_ondevice_model_permission") === "granted" ||
+      localStorage.getItem("g4_ondevice_model_permission") === "granted"
+    );
+
+    if (hasPermission) {
+      console.info(`ℹ️ Gemini Nano: ${this.nanoDiagnostic}. Starting at Tier 1 MiniLM Router.`);
+      await this.setTier(ModelTier.TIER_1_MINILM_ROUTER);
+    } else {
+      console.info(`ℹ️ Gemini Nano: ${this.nanoDiagnostic}. Starting at 0MB Reflex & In-DOM Navigation Tier.`);
+      this.currentTier = ModelTier.TIER_1_5_LAYA_DECISION;
+      this.onTierChange?.(this.currentTierInfo);
+    }
   }
 
   public async setTier(tier: ModelTier): Promise<void> {

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy • EdgeOperator AI</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: #090d16;
+      color: #f1f5f9;
+      line-height: 1.6;
+      padding: 40px 20px;
+    }
+    .container {
+      max-width: 840px;
+      margin: 0 auto;
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 16px;
+      padding: 40px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+    header {
+      border-bottom: 1px solid #1e293b;
+      padding-bottom: 24px;
+      margin-bottom: 32px;
+    }
+    .badge {
+      display: inline-block;
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      color: #38bdf8;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    h1 {
+      font-size: 32px;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 8px;
+    }
+    .date {
+      color: #64748b;
+      font-size: 14px;
+    }
+    h2 {
+      font-size: 20px;
+      color: #38bdf8;
+      margin-top: 28px;
+      margin-bottom: 12px;
+    }
+    p, li {
+      color: #94a3b8;
+      font-size: 15px;
+      margin-bottom: 12px;
+    }
+    ul {
+      padding-left: 24px;
+      margin-bottom: 16px;
+    }
+    li {
+      margin-bottom: 6px;
+    }
+    .highlight-box {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin: 20px 0;
+    }
+    .highlight-box strong {
+      color: #34d399;
+      display: block;
+      margin-bottom: 4px;
+    }
+    a {
+      color: #38bdf8;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="badge">EdgeOperator AI Privacy Policy</div>
+      <h1>Privacy Practices & Data Protection</h1>
+      <div class="date">Last updated: October 18, 2026 • Version 0.2.0</div>
+    </header>
+
+    <div class="highlight-box">
+      <strong>Zero Cloud Data Transmission (100% On-Device Operation)</strong>
+      EdgeOperator AI is architected from the ground up as an on-device local operator. Prompts, page content, accessibility tree structures, and automated browsing macros are processed entirely inside your local Google Chrome browser and GPU. Zero personal data, browsing history, or keystrokes are transmitted to external servers.
+    </div>
+
+    <h2>1. Information We Do Not Collect</h2>
+    <p>EdgeOperator AI does <strong>NOT</strong> collect, store, sell, or transmit:</p>
+    <ul>
+      <li>Personally Identifiable Information (Name, email address, phone numbers, physical address).</li>
+      <li>Browsing history, session activity, or page visit history outside active user-invoked interactions.</li>
+      <li>Financial, credit card, or payment information.</li>
+      <li>Authentication credentials, passwords, or session cookies.</li>
+      <li>Biometric or health data.</li>
+    </ul>
+
+    <h2>2. How Local Permissions Are Used</h2>
+    <p>Our Chrome WebExtension declares minimal permissions required strictly for on-device functionality:</p>
+    <ul>
+      <li><code>activeTab</code>: Used exclusively when the user interacts with the extension to inspect the active webpage's DOM structure, highlight interactive elements, and execute user-directed workflow clicks.</li>
+      <li><code>storage</code>: Used exclusively to persist user-created workflow macros, UI dock layout choices, and on-device model settings within Chrome's local sandboxed storage.</li>
+      <li><code>scripting</code>: Used to mount the isolated floating assistant UI container into webpages upon user interaction.</li>
+      <li><code>contextMenus</code>: Used to provide an optional right-click shortcut ("Ask EdgeOperator") for selected text.</li>
+    </ul>
+
+    <h2>3. Local Machine Learning & Inference</h2>
+    <p>All neural inference and heuristic reasoning models (including Chrome built-in Gemini Nano via the Prompt API, Transformers.js, and WebGPU/WebLLM runtimes) execute on the user's local hardware. Model weights and temporary activation tensors remain within the browser's memory sandbox.</p>
+
+    <h2>4. Data Sharing & Third-Party Disclosure</h2>
+    <p>We do not share, sell, lease, or monetize user data with any third parties, advertisers, or data brokers. There are no remote tracking pixels, third-party analytics scripts, or cloud telemetry pipelines embedded in EdgeOperator AI.</p>
+
+    <h2>5. Compliance with Chrome Web Store Policies</h2>
+    <p>EdgeOperator AI complies fully with the <a href="https://developer.chrome.com/docs/webstore/program-policies/" target="_blank" rel="noopener">Chrome Web Store Developer Program Policies</a>, including the Single Purpose Policy and User Data Privacy requirements.</p>
+
+    <h2>6. Contact & Source Code</h2>
+    <p>EdgeOperator AI is open source under the Apache-2.0 License. If you have questions regarding this Privacy Policy or wish to inspect the implementation, contact us or audit the source code:</p>
+    <ul>
+      <li>Developer: Adarrsh Paul (<a href="mailto:adarrsh@paulcreates.online">adarrsh@paulcreates.online</a>)</li>
+      <li>Documentation: <a href="https://agent.paulcreates.online">https://agent.paulcreates.online</a></li>
+      <li>Repository: <a href="https://github.com/adarrshpaul/on-device-chat">https://github.com/adarrshpaul/on-device-chat</a></li>
+    </ul>
+  </div>
+</body>
+</html>
