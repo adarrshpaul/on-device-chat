@@ -352,7 +352,7 @@ export const WorkflowStudio: React.FC<WorkflowStudioProps> = ({
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+      <div className="flex-1 overflow-y-auto p-3 space-y-3 neo-dot-grid">
         {/* Editor Modal / Drawer */}
         {showEditor ? (
           <div className="p-3 rounded-[8px] bg-[#0c1222] border border-purple-500/30 space-y-3 animate-in fade-in duration-200 text-xs">
@@ -652,7 +652,7 @@ export const WorkflowStudio: React.FC<WorkflowStudioProps> = ({
                   <button
                     onClick={() => handleRunWorkflow(wf)}
                     disabled={isCurrentlyRunning}
-                    className="px-3.5 py-1.5 rounded-xl bg-[#D4FF00] hover:bg-[#c2eb00] text-black text-xs font-black flex items-center gap-1.5 cursor-pointer transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none disabled:opacity-50 shrink-0"
+                    className="px-3.5 py-1.5 rounded-xl neo-btn-lime-hero text-xs font-black flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
                     title="Run this entire workflow now"
                   >
                     <Play size={10} className="fill-current stroke-none" />

@@ -448,7 +448,14 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
 
   // Standard 2.3: Stream to newest message ONLY when already at bottom.
   // If user scrolled up, do not yank down; show "New message ↓" chip instead.
+  // When messages are empty, preserve top position so hero workflows are fully visible.
   useEffect(() => {
+    if (messages.length === 0) {
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTop = 0;
+      }
+      return;
+    }
     if (isNearBottom) {
       scrollToBottom(true);
     } else {
@@ -653,79 +660,40 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
 
                     {/* Feature Card: Autonomous Workflow Engine & One-Time Setup */}
                     {showPermissionBanner && (
-                      <div className="p-3.5 rounded-xl bg-gradient-to-br from-purple-950/70 via-indigo-950/50 to-black/70 border border-purple-500/40 text-gray-200 shadow-xl backdrop-blur-md animate-in fade-in">
-                        <div className="flex items-start gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400/20 to-purple-500/30 text-amber-300 border border-amber-500/30 flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
-                            <Zap size={18} className="fill-amber-400 text-amber-300" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between gap-2">
-                              <h4 className="text-[13px] font-bold text-white flex items-center gap-1.5">
-                                <span>Autonomous Workflow Engine</span>
-                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/25 text-purple-300 border border-purple-500/40 font-mono">
-                                  Core USP
-                                </span>
-                              </h4>
-                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono shrink-0">
-                                100% Private WebGPU
-                              </span>
-                            </div>
-
-                            <p className="text-[11.5px] text-gray-300 mt-1.5 leading-relaxed">
-                              Automate multi-step browser tasks across this website with 1 click. Powered by on-device decision intelligence.
-                            </p>
-
-                            {/* What Workflows Can Do */}
-                            <div className="mt-2.5 space-y-1 text-[11px] text-gray-300 font-normal">
-                              <div className="flex items-start gap-2 text-gray-200">
-                                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0 mt-1.5" />
-                                <span><strong>Predictive Suggestions:</strong> Scans page landmarks to recommend high-value automations.</span>
-                              </div>
-                              <div className="flex items-start gap-2 text-gray-200">
-                                <span className="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0 mt-1.5" />
-                                <span><strong>1-Click Multi-Step Execution:</strong> Smoothly tours sections, fills forms, and triggers actions hands-free.</span>
-                              </div>
-                              <div className="flex items-start gap-2 text-gray-200">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 mt-1.5" />
-                                <span><strong>Build Custom Workflows:</strong> Record and save your own site routines directly in browser memory.</span>
-                              </div>
-                            </div>
-
-                            <div className="mt-2 text-[10px] text-gray-400 font-mono flex items-start gap-1.5">
-                              <Zap size={11} className="text-amber-300 fill-amber-300 shrink-0 mt-0.5" />
-                              <span>One-time setup: initializes the local on-device model to predict and execute workflows with zero cloud latency.</span>
-                            </div>
-
-                            <div className="flex items-center gap-2 mt-3">
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    localStorage.setItem("eo_ondevice_model_permission", "granted");
-                                    localStorage.setItem("g4_ondevice_model_permission", "granted");
-                                  } catch {}
-                                  setShowPermissionBanner(false);
-                                  setTier(ModelTier.TIER_1_MINILM_ROUTER);
-                                  await loadQuickWorkflows();
-                                }}
-                                className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold text-[11px] shadow-lg shadow-purple-900/40 flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
-                              >
-                                <Zap size={12} className="fill-current text-amber-300" />
-                                <span>Enable Autonomous Workflows</span>
-                              </button>
-                              <button
-                                onClick={() => {
-                                  try {
-                                    localStorage.setItem("eo_ondevice_model_permission", "declined");
-                                    localStorage.setItem("g4_ondevice_model_permission", "declined");
-                                  } catch {}
-                                  setShowPermissionBanner(false);
-                                }}
-                                className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-gray-200 text-[11px] cursor-pointer transition-colors"
-                              >
-                                Basic Mode Only
-                              </button>
-                            </div>
-                          </div>
+                      <div className="p-2.5 rounded-xl bg-purple-950/40 border border-purple-500/30 text-gray-200 flex items-center justify-between gap-2.5 animate-in fade-in">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="w-2 h-2 rounded-full bg-[#D4FF00] shrink-0" />
+                          <span className="text-[11px] text-gray-200 truncate">
+                            Enable 1-click on-device workflow engine (0 cloud tokens)
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            onClick={async () => {
+                              try {
+                                localStorage.setItem("eo_ondevice_model_permission", "granted");
+                                localStorage.setItem("g4_ondevice_model_permission", "granted");
+                              } catch {}
+                              setShowPermissionBanner(false);
+                              setTier(ModelTier.TIER_1_MINILM_ROUTER);
+                              await loadQuickWorkflows();
+                            }}
+                            className="px-2.5 py-1 rounded-md bg-[#D4FF00] text-black font-extrabold text-[10px] cursor-pointer shadow-sm active:scale-95"
+                          >
+                            Enable
+                          </button>
+                          <button
+                            onClick={() => {
+                              try {
+                                localStorage.setItem("eo_ondevice_model_permission", "declined");
+                                localStorage.setItem("g4_ondevice_model_permission", "declined");
+                              } catch {}
+                              setShowPermissionBanner(false);
+                            }}
+                            className="text-[10px] text-gray-400 hover:text-white px-1.5 py-1 cursor-pointer"
+                          >
+                            Dismiss
+                          </button>
                         </div>
                       </div>
                     )}
@@ -734,31 +702,22 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
                     <div className="mt-1 flex flex-col gap-3">
                       <div className="flex items-baseline justify-between pt-1">
                         <div>
-                          <h2 className="text-[19px] font-black text-white tracking-tight leading-tight">
-                            What do you want to automate <span className="text-[#D4FF00] font-serif italic underline decoration-wavy decoration-purple-500/80">today?</span>
+                          <h2 className="text-[20px] font-black text-white tracking-tight leading-tight">
+                            What do you want to automate <span className="text-[#C084FC] font-serif italic underline decoration-wavy decoration-[#D4FF00]">today?</span>
                           </h2>
                           <p className="text-[11.5px] text-gray-300 mt-0.5 font-normal">
                             1-click on-device browser routines physically discovered on this page.
                           </p>
                         </div>
-                        <div className="flex flex-col items-end gap-1.5 shrink-0 ml-2">
+                        <div className="flex items-center gap-1.5 shrink-0 ml-2">
                           <span className="text-[10px] font-black font-mono px-2 py-0.5 rounded-full bg-[#D4FF00] text-black shadow-sm uppercase tracking-wider">
                             {displayWorkflows.length} ready
                           </span>
-                          <button
-                            type="button"
-                            onClick={() => startMacroRecording()}
-                            className="text-[10px] text-purple-200 hover:text-white bg-purple-900/40 hover:bg-purple-900/60 border border-purple-500/35 px-2 py-0.5 rounded-lg flex items-center gap-1 font-bold cursor-pointer transition-all active:scale-95"
-                            title="Teach 1 item, batch replay across N items"
-                          >
-                            <CircleDot size={10} className="text-[#D4FF00]" />
-                            <span>Teach 1 → Batch N</span>
-                          </button>
                         </div>
                       </div>
 
-                      {/* Prominent Large Workflow Cards Deck with Neo-Brutalist Tactile Surfaces */}
-                      <div className="grid grid-cols-1 gap-3">
+                      {/* Prominent Tactile Workflow Cards Deck */}
+                      <div className="grid grid-cols-1 gap-2.5">
                         {displayWorkflows.length === 0 ? (
                           <div className="p-4 rounded-2xl border-2 border-white/10 bg-white/[0.03] text-center flex flex-col items-center gap-2">
                             <div className="w-9 h-9 rounded-full bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-300">
@@ -774,7 +733,7 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
                               <button
                                 type="button"
                                 onClick={() => startMacroRecording()}
-                                className="px-3 py-1.5 rounded-xl bg-[#D4FF00] text-black font-black text-[11px] shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center gap-1 cursor-pointer transition-all active:scale-95"
+                                className="px-3 py-1.5 rounded-xl neo-btn-lime-hero flex items-center gap-1 cursor-pointer transition-all active:scale-95 text-[11px]"
                               >
                                 <CircleDot size={11} className="stroke-[3]" />
                                 <span>Teach 1 → Batch N</span>
@@ -793,86 +752,81 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
                           displayWorkflows.map((item, idx) => {
                             // Cycle through high-energy tactile theme cards
                             const themeIndex = idx % 4;
-                            const isLime = themeIndex === 0;
-                            const isWhite = themeIndex === 1;
-                            const isPurple = themeIndex === 2;
-                            const isPink = themeIndex === 3;
-
-                            const cardBg = isLime
-                              ? "bg-[#D4FF00] text-black border-2 border-black/80 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-                              : isWhite
-                              ? "bg-white text-black border-2 border-black/80 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-                              : isPurple
-                              ? "bg-gradient-to-br from-[#9333EA] to-[#7E22CE] text-white border-2 border-black/80 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-                              : "bg-gradient-to-br from-[#FF2E93] to-[#E11D48] text-white border-2 border-black/80 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]";
-
-                            const isDarkCard = isPurple || isPink;
+                            const cardClass = [
+                              "neo-card-lime",
+                              "neo-card-white",
+                              "neo-card-purple",
+                              "neo-card-pink"
+                            ][themeIndex];
+                            const isDark = themeIndex === 2 || themeIndex === 3;
 
                             return (
                               <div
                                 key={item.workflow.id}
-                                className={`p-4 rounded-2xl transition-all flex flex-col justify-between gap-3 group active:translate-x-[2px] active:translate-y-[2px] active:shadow-none ${cardBg}`}
+                                onClick={() => runSavedWorkflow(item.workflow)}
+                                className={`p-3.5 rounded-2xl flex items-center justify-between gap-3 cursor-pointer group active:translate-x-[1px] active:translate-y-[1px] select-none ${cardClass}`}
                               >
-                                <div className="flex items-start justify-between gap-2.5">
-                                  <div className="flex items-start gap-2.5 min-w-0">
-                                    <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold shrink-0 shadow-sm ${
-                                      isDarkCard ? "bg-black text-[#D4FF00]" : "bg-black text-white"
-                                    }`}>
-                                      <Zap size={16} className="fill-current" />
-                                    </div>
-                                    <div className="min-w-0">
-                                      <div className="flex items-center gap-2 flex-wrap">
-                                        <span className={`text-[14px] font-black tracking-tight leading-snug ${
-                                          isDarkCard ? "text-white" : "text-black"
-                                        }`}>
-                                          {item.workflow.name}
-                                        </span>
-                                        {item.isPredicted && item.confidence && (
-                                          <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-black text-[#D4FF00] uppercase tracking-wider font-mono">
-                                            Verified
-                                          </span>
-                                        )}
-                                      </div>
-                                      <p className={`text-[11.5px] mt-1 leading-snug line-clamp-2 ${
-                                        isDarkCard ? "text-white/85" : "text-black/80 font-medium"
-                                      }`}>
-                                        {item.workflow.description}
-                                      </p>
-                                    </div>
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <div className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center shrink-0 shadow-sm">
+                                    <Zap size={16} className={themeIndex === 0 ? "fill-[#D4FF00] text-[#D4FF00]" : "fill-white text-white"} />
                                   </div>
-
-                                  <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded-full shrink-0 ${
-                                    isDarkCard ? "bg-white/20 text-white" : "bg-black/10 text-black"
-                                  }`}>
-                                    {item.workflow.steps.length} {item.workflow.steps.length === 1 ? "step" : "steps"}
-                                  </span>
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className={`text-[13.5px] font-black tracking-tight leading-snug truncate ${isDark ? "text-white" : "text-black"}`}>
+                                        {item.workflow.name}
+                                      </span>
+                                      {item.isPredicted && (
+                                        <span className="text-[9px] font-black font-mono px-1.5 py-0.2 rounded-full bg-black text-[#D4FF00] uppercase tracking-wider shrink-0">
+                                          Verified
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className={`text-[11px] truncate max-w-[210px] sm:max-w-[250px] font-medium mt-0.5 ${isDark ? "text-white/80" : "text-black/75"}`}>
+                                      {item.workflow.description}
+                                    </p>
+                                  </div>
                                 </div>
 
-                                <div className={`flex items-center justify-between pt-2 border-t ${
-                                  isDarkCard ? "border-white/15" : "border-black/15"
-                                }`}>
-                                  <span className={`text-[10px] font-mono font-semibold ${
-                                    isDarkCard ? "text-white/75" : "text-black/70"
-                                  }`}>
-                                    ⚡ 0 tokens • 1-click execution
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <span className={`text-[9.5px] font-mono font-bold px-2 py-0.5 rounded-full ${isDark ? "bg-white/20 text-white" : "bg-black/10 text-black"}`}>
+                                    {item.workflow.steps.length} {item.workflow.steps.length === 1 ? "step" : "steps"}
                                   </span>
                                   <button
                                     type="button"
-                                    onClick={() => runSavedWorkflow(item.workflow)}
-                                    className={`px-4 py-1.5 rounded-xl font-black text-[11px] flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-sm ${
-                                      isDarkCard
-                                        ? "bg-white text-black hover:bg-neutral-100"
-                                        : "bg-black text-white hover:bg-neutral-900"
-                                    }`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      runSavedWorkflow(item.workflow);
+                                    }}
+                                    className={isDark ? "neo-btn-run-light" : "neo-btn-run"}
+                                    title="Run Routine"
                                   >
                                     <Play size={10} className="fill-current" />
-                                    <span>Run Routine</span>
                                   </button>
                                 </div>
                               </div>
                             );
                           })
                         )}
+                      </div>
+
+                      {/* Sub-actions Row */}
+                      <div className="flex items-center justify-between pt-1 px-0.5">
+                        <button
+                          type="button"
+                          onClick={() => startMacroRecording()}
+                          className="text-[11px] text-gray-300 hover:text-white flex items-center gap-1.5 font-bold cursor-pointer transition-colors"
+                          title="Teach 1 item, batch replay across N items"
+                        >
+                          <CircleDot size={12} className="text-[#D4FF00]" />
+                          <span>Teach 1 → Batch N</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab("workflows")}
+                          className="text-[11px] text-[#D4FF00] hover:text-white flex items-center gap-1 font-bold cursor-pointer transition-colors"
+                        >
+                          <span>Open Studio →</span>
+                        </button>
                       </div>
                     </div>
 
@@ -1117,15 +1071,11 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
                     {quickWorkflows.map((wf, idx) => {
                       // Cycle through vibrant neo-brutalist theme palettes
                       const themeIndex = idx % 4;
-                      const cardStyles = [
-                        // Theme 0: Electric Lime (Hero)
-                        "bg-[#D4FF00] text-black border border-black/40 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-[#c2eb00]",
-                        // Theme 1: Porcelain White
-                        "bg-white text-black border border-black/40 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-neutral-100",
-                        // Theme 2: Electric Purple
-                        "bg-[#9333EA] text-white border border-black/40 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-[#7E22CE]",
-                        // Theme 3: Punchy Fuchsia / Coral
-                        "bg-[#FF2E93] text-white border border-black/40 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-[#e02474]"
+                      const pillClass = [
+                        "neo-pill-lime",
+                        "neo-pill-white",
+                        "neo-pill-purple",
+                        "neo-pill-pink",
                       ][themeIndex];
 
                       const isLight = themeIndex === 0 || themeIndex === 1;
@@ -1133,11 +1083,12 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
                       return (
                         <button
                           key={wf.id}
+                          type="button"
                           onClick={() => {
                             if (hasMovedWfRef.current) return;
                             runSavedWorkflow(wf);
                           }}
-                          className={`h-[40px] px-3 rounded-xl flex items-center gap-2 cursor-pointer transition-all shrink-0 whitespace-nowrap active:translate-x-[1px] active:translate-y-[1px] active:shadow-none ${cardStyles}`}
+                          className={`h-[40px] rounded-xl flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap ${pillClass}`}
                           title={wf.description}
                         >
                           <span className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${

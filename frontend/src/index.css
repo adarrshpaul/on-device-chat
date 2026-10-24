@@ -87,25 +87,37 @@
   box-sizing: border-box !important;
 }
 
-/* Hardened Button Reset: Prevents host CMS / framework border or background overrides */
+/* Hardened Button Reset: Protects unstyled buttons against host CMS / framework styling */
 :is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root) button {
   font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
   font-size: inherit;
   line-height: inherit;
   color: inherit;
   text-transform: none !important;
-  border: 0 solid transparent !important;
-  border-width: 0 !important;
-  border-style: none !important;
-  background-color: transparent;
-  padding: 0;
-  margin: 0;
   outline: none !important;
-  box-shadow: none;
   cursor: pointer !important;
   -webkit-appearance: none !important;
   -moz-appearance: none !important;
   appearance: none !important;
+  margin: 0;
+}
+
+:is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root) button:not([class*="border"]):not([class*="neo-"]) {
+  border: 0 solid transparent !important;
+  border-width: 0 !important;
+  border-style: none !important;
+}
+
+:is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root) button:not([class*="bg-"]):not([class*="neo-"]) {
+  background-color: transparent !important;
+}
+
+:is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root) button:not([class*="p-"]):not([class*="px-"]):not([class*="py-"]):not([class*="neo-"]) {
+  padding: 0 !important;
+}
+
+:is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root) button:not([class*="shadow"]):not([class*="neo-"]) {
+  box-shadow: none;
 }
 
 :is(.eo-widget-container, .g4-widget-container, [data-eo-widget], [data-g4-widget], #edge-operator-root) button:focus {
@@ -452,4 +464,199 @@
 
 .g4-launcher-button:active {
   transform: translateY(0px) scale(0.97) !important;
+}
+
+/* ==========================================================================
+   Tactile Neo-Brutalist Design System (Inspired by Apple / Fintech tactile cards)
+   Guaranteed immune to host overrides with physical drop shadows and high-contrast color blocking
+   ========================================================================== */
+
+.neo-pill-lime {
+  background-color: #D4FF00 !important;
+  color: #000000 !important;
+  border: 1.5px solid #000000 !important;
+  box-shadow: 2px 2px 0px 0px #000000 !important;
+  padding: 0.5rem 0.85rem !important;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.neo-pill-lime:hover {
+  background-color: #c2eb00 !important;
+}
+.neo-pill-lime:active {
+  transform: translate(1px, 1px) !important;
+  box-shadow: 0px 0px 0px 0px #000000 !important;
+}
+
+.neo-pill-white {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border: 1.5px solid #000000 !important;
+  box-shadow: 2px 2px 0px 0px #000000 !important;
+  padding: 0.5rem 0.85rem !important;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.neo-pill-white:hover {
+  background-color: #f3f4f6 !important;
+}
+.neo-pill-white:active {
+  transform: translate(1px, 1px) !important;
+  box-shadow: 0px 0px 0px 0px #000000 !important;
+}
+
+.neo-pill-purple {
+  background-color: #B388FF !important;
+  color: #000000 !important;
+  border: 1.5px solid #000000 !important;
+  box-shadow: 2px 2px 0px 0px #000000 !important;
+  padding: 0.5rem 0.85rem !important;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.neo-pill-purple:hover {
+  background-color: #9d6fff !important;
+}
+.neo-pill-purple:active {
+  transform: translate(1px, 1px) !important;
+  box-shadow: 0px 0px 0px 0px #000000 !important;
+}
+
+.neo-pill-pink {
+  background-color: #FF2E93 !important;
+  color: #ffffff !important;
+  border: 1.5px solid #000000 !important;
+  box-shadow: 2px 2px 0px 0px #000000 !important;
+  padding: 0.5rem 0.85rem !important;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.neo-pill-pink:hover {
+  background-color: #e02474 !important;
+}
+.neo-pill-pink:active {
+  transform: translate(1px, 1px) !important;
+  box-shadow: 0px 0px 0px 0px #000000 !important;
+}
+
+/* Tactile Neo-Brutalist Cards */
+.neo-card-lime {
+  background-color: #D4FF00 !important;
+  color: #000000 !important;
+  border: 2px solid #000000 !important;
+  box-shadow: 3px 3px 0px 0px #000000 !important;
+  border-radius: 1rem !important;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.neo-card-lime:hover {
+  transform: translateY(-1px);
+  box-shadow: 4px 4px 0px 0px #000000 !important;
+}
+
+.neo-card-white {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border: 2px solid #000000 !important;
+  box-shadow: 3px 3px 0px 0px #000000 !important;
+  border-radius: 1rem !important;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.neo-card-white:hover {
+  transform: translateY(-1px);
+  box-shadow: 4px 4px 0px 0px #000000 !important;
+}
+
+.neo-card-purple {
+  background-color: #B388FF !important;
+  color: #000000 !important;
+  border: 2px solid #000000 !important;
+  box-shadow: 3px 3px 0px 0px #000000 !important;
+  border-radius: 1rem !important;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.neo-card-purple:hover {
+  transform: translateY(-1px);
+  box-shadow: 4px 4px 0px 0px #000000 !important;
+}
+
+.neo-card-pink {
+  background-color: #FF2E93 !important;
+  color: #ffffff !important;
+  border: 2px solid #000000 !important;
+  box-shadow: 3px 3px 0px 0px #000000 !important;
+  border-radius: 1rem !important;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.neo-card-pink:hover {
+  transform: translateY(-1px);
+  box-shadow: 4px 4px 0px 0px #000000 !important;
+}
+
+/* Action Buttons & Badges */
+.neo-btn-run {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border: 1.5px solid #000000 !important;
+  border-radius: 0.75rem !important;
+  padding: 0.35rem 0.75rem !important;
+  font-weight: 800 !important;
+  box-shadow: 1.5px 1.5px 0px 0px rgba(0,0,0,0.4) !important;
+  transition: all 0.15s ease !important;
+  cursor: pointer !important;
+}
+.neo-btn-run:hover {
+  background-color: #1f2937 !important;
+}
+.neo-btn-run:active {
+  transform: translate(1px, 1px) !important;
+  box-shadow: 0px 0px 0px 0px #000000 !important;
+}
+
+.neo-btn-run-light {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border: 1.5px solid #000000 !important;
+  border-radius: 0.75rem !important;
+  padding: 0.35rem 0.75rem !important;
+  font-weight: 800 !important;
+  box-shadow: 1.5px 1.5px 0px 0px #000000 !important;
+  transition: all 0.15s ease !important;
+  cursor: pointer !important;
+}
+.neo-btn-run-light:hover {
+  background-color: #f3f4f6 !important;
+}
+.neo-btn-run-light:active {
+  transform: translate(1px, 1px) !important;
+  box-shadow: 0px 0px 0px 0px #000000 !important;
+}
+
+.neo-btn-lime-hero {
+  background-color: #D4FF00 !important;
+  color: #000000 !important;
+  border: 2px solid #000000 !important;
+  box-shadow: 2px 2px 0px 0px #000000 !important;
+  border-radius: 0.75rem !important;
+  padding: 0.45rem 0.95rem !important;
+  font-weight: 900 !important;
+  transition: all 0.15s ease !important;
+  cursor: pointer !important;
+}
+.neo-btn-lime-hero:active {
+  transform: translate(1px, 1px) !important;
+  box-shadow: 0px 0px 0px 0px #000000 !important;
+}
+
+.neo-btn-send-active {
+  background-color: #D4FF00 !important;
+  color: #000000 !important;
+  border: 2px solid #000000 !important;
+  box-shadow: 2px 2px 0px 0px #000000 !important;
+  cursor: pointer !important;
+}
+.neo-btn-send-active:active {
+  transform: translate(1px, 1px) !important;
+  box-shadow: 0px 0px 0px 0px #000000 !important;
+}
+
+.neo-dot-grid {
+  background-color: #080c16 !important;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.12) 1.2px, transparent 1.2px) !important;
+  background-size: 16px 16px !important;
 }

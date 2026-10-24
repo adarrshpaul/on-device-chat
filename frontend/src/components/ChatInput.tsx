@@ -240,7 +240,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             disabled={!isReady || !hasInput}
             className={`w-[42px] h-[42px] min-w-[42px] min-h-[42px] rounded-xl flex items-center justify-center transition-all shrink-0 ${
               hasInput
-                ? "bg-[#D4FF00] hover:bg-[#c2eb00] text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] cursor-pointer active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
+                ? "neo-btn-send-active active:translate-x-[1px] active:translate-y-[1px]"
                 : "text-gray-600 bg-white/5 cursor-not-allowed opacity-35"
             }`}
             title="Send"
