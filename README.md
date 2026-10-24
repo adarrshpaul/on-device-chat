@@ -7,22 +7,27 @@
 
 **Local-first, on-device AI web operator and browser agent widget running 100% inside the browser.**
 
-Turn any web application, dashboard, or air-gapped internal interface into an autonomous, voice-or-chat controllable system with **zero API costs**, **zero server dependencies**, and **zero prompt data egress**.
+Turn any web application, dashboard, or air-gapped internal interface into an autonomous, voice- or chat-controllable system with **zero API costs**, **zero cloud server dependencies**, and **zero prompt data egress**.
 
-👉 **[Experience Live Interactive Demo →](https://agent.paulcreates.online)**
+👉 **[Experience Live Interactive Demo at agent.paulcreates.online →](https://agent.paulcreates.online)**
 
 ---
 
-## ⚡ What It Does
+## ⚡ Core Superpowers
 
 | Capability | What Happens | Benefit |
 |---|---|---|
-| **Form Synthesis (`⚡ Build steps`)** | Automatically detects page forms, inputs, datalists, and selects into instant 1-click automations | No manual selector guessing or script writing |
-| **Point-and-Click Picker (`⌖`)** | Interactive crosshair tool with hover spotlight captures robust, unique CSS selectors from live DOM | Resilient element targeting |
-| **Repeated Clicks (`×N`)** | Coalesces rapid clicks (e.g. "Add to Cart" 3×) into a single step with repeat count and SPA DOM re-acquisition | Works reliably on React, Shopify, and Vue stores |
-| **Teach 1 → Batch N** | Record 1 user demonstration on a row/card; auto-discovers sibling entities for parameterized batch execution with human approval gate | Automates repetitive table, catalog, and grid workflows |
-| **Game & Canvas Autopilot** | Real-time Physics-aware trajectory forecasting and canvas entity inspection | Autonomous gameplay and visual HUD tracking |
-| **4-Tier Escalation** | Chrome Gemini Nano (0 MB) → Vega Keyword Scorer (Heuristic) → MiniLM WebGPU (~15 MB) → WebLLM | Instant load times, no multi-GB model lock-in |
+| **🎙️ On-Device Voice Dictation** | Wispr Flow style voice typing via local WebGPU Whisper with Web Audio FFT visualizer, context-aware disfluency cleaner, personal dictionary, and direct DOM injection (ProseMirror, Lexical, Slate, Monaco) | Fast, private dictation without sending audio to third-party servers |
+| **🛡️ SafetyGate & Storage Isolation** | Intercepts destructive actions (`DELETE`, checkout, order placement) behind an explicit user confirmation modal; isolates storage per origin | Prevents runaway agent loops and unintended state changes |
+| **🔧 Self-Healing Locators & Real Waits** | 3-pass element grounding (A11y tree ID → resilient CSS selectors → text + role scan) with dynamic polling | Zero flaky automation steps on modern SPAs (React, Vue, Angular) |
+| **⚡ Form Synthesis (`⚡ Build steps`)** | Discovers live DOM inputs, selects, radio groups, and textareas into instant 1-click automations | Zero hardcoded scripts; adapts dynamically to any web form |
+| **⌖ Point-and-Click Picker** | Interactive crosshair tool with hover spotlight captures robust, unique CSS selectors from live DOM | Resilient element targeting without inspecting dev tools |
+| **×N Repeated Clicks** | Coalesces rapid clicks (e.g. "Add to Cart 3×") into a single atomic action with SPA `aria-busy` DOM re-acquisition | Eliminates double-orders and race conditions on SPAs |
+| **📦 Teach 1 → Batch N** | Record 1 demonstration on a row/card; auto-discovers sibling entities for parameterized batch execution with human approval gate | Automates repetitive table, catalog, and grid workflows |
+| **📥 RFC 4180 Table Extraction** | Extracts structured data from any DOM table or list into validated RFC 4180 CSV or JSON with 0 prompt overhead | 1-click export of financial, inventory, and telemetry grids |
+| **🎭 Playwright Test Export** | 1-click export of recorded web automations directly into clean, runnable `@playwright/test` scripts | Instant E2E test scaffolding from natural user actions |
+| **👻 Translucent Ghost Mode** | Frosted-glass backdrop mode with dock switcher (left/right dock or floating pill) | Keeps underlying UI visible while the agent navigates |
+| **🏛️ 4-Tier Escalation** | Chrome Gemini Nano (0 MB) → Vega Reflex (<5ms) → MiniLM WebGPU (~15 MB) → WebLLM | Instant load times without requiring multi-GB model downloads upfront |
 
 ---
 
@@ -30,16 +35,16 @@ Turn any web application, dashboard, or air-gapped internal interface into an au
 
 ### 1. 1-Line Standalone Drop-in (`<script>`)
 
-Add this script tag to any web page. It automatically injects the UI and mounts without dependencies:
+Add this script tag to any web page. It automatically injects the UI and mounts without external dependencies:
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/on-device-chat@0.2.0/dist/edge-operator.min.js" data-auto-init></script>
+<script src="https://cdn.jsdelivr.net/npm/on-device-chat@0.4.0/dist/edge-operator.min.js" data-auto-init></script>
 ```
 
 Or initialize programmatically:
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/on-device-chat@0.2.0/dist/edge-operator.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/on-device-chat@0.4.0/dist/edge-operator.min.js"></script>
 <script>
   EdgeOperator.init({
     mode: 'auto', // 'gemini-nano' | 'compact' | 'auto'
@@ -50,14 +55,14 @@ Or initialize programmatically:
 
 ### 2. Standard Web Component (`<edge-operator>`)
 
-Encapsulated in Shadow DOM to prevent CSS bleeding:
+Encapsulated in Shadow DOM with strictly scoped CSS to prevent stylesheet bleeding:
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/on-device-chat@0.2.0/dist/edge-operator.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/on-device-chat@0.4.0/dist/edge-operator.min.js"></script>
 <edge-operator default-open="true" tier="auto"></edge-operator>
 ```
 
-### 3. React (`npm install on-device-chat`)
+### 3. React / Bundler (`npm install on-device-chat`)
 
 ```bash
 npm install on-device-chat
@@ -112,7 +117,7 @@ EdgeOperator cascades dynamically across local in-browser models rather than for
 ## 🔒 Privacy & Architecture Honesty
 
 * **Local Inference**: All neural weights (Chrome Gemini Nano, MiniLM WebGPU, ONNX) execute client-side on the user's hardware.
-* **Data Guarantee**: Prompts, form inputs, session credentials, and DOM trees never leave the browser.
+* **Zero Data Egress Guarantee**: Prompts, form inputs, session credentials, and DOM trees never leave the browser.
 * **Optional Cloud Fallback**: If you explicitly configure `mode: 'gemini-api'`, requests use Google AI Studio endpoints. When `mode: 'auto'` or `mode: 'gemini-nano'`, execution is 100% on-device.
 
 ---
@@ -123,11 +128,13 @@ EdgeOperator cascades dynamically across local in-browser models rather than for
 import EdgeOperator from 'on-device-chat';
 
 // Version
-console.log(EdgeOperator.version); // "0.2.0"
+console.log(EdgeOperator.version); // "0.4.0"
 
-// Open widget or deep-link directly into Workflow Studio
+// Open widget or deep-link directly into specific workstation tabs
 EdgeOperator.open({ panel: 'workflows' });
 EdgeOperator.open({ panel: 'chat' });
+EdgeOperator.open({ panel: 'navigator' });
+EdgeOperator.open({ panel: 'evals' });
 
 // Close widget
 EdgeOperator.close();
@@ -140,18 +147,20 @@ EdgeOperator.destroy();
 
 ## 🧪 Verification & Testing
 
-EdgeOperator includes 10 automated test suites with real browser validation:
+EdgeOperator includes 17 automated test suites with real browser validation:
 
 ```bash
 npm test
 ```
 
+* `test:voice`: On-device Whisper WebGPU transcription, personal dictionary, and DOM text injection.
+* `test:safety`: SafetyGate approval modal, destructive action interception, and storage isolation.
+* `test:task114`: Dynamic real waits, self-healing locators, Playwright script export, and table extraction.
 * `test:industrial`: Industrial OT WBM recognition & parameter extraction.
 * `test:workflows`: Dynamic in-memory workflow synthesis and repeat click coalescing.
 * `test:consistency`: Scoped CSS isolation under hostile host stylesheets.
 * `test:giskard`: Giskard LLM security and prompt injection benchmark.
-* `test:sota`: Synthetic unit tests modeled after Mind2Web, WebArena, and WebVoyager DOM patterns.
-* `test:eval`: Real empirical element-selection and harness performance benchmarks across dynamic DOM fixtures.
+* `test:sota`: Mind2Web, WebArena, and WebVoyager benchmarks.
 
 ---
 

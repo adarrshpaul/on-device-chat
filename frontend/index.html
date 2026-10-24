@@ -190,7 +190,7 @@
         <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
           <div>
             <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
-              <span class="badge-chip">EdgeOperator v0.2.0</span>
+              <span class="badge-chip">EdgeOperator v0.4.0</span>
               <span id="tier-badge" class="tier-banner">⚡ Engine: Initializing...</span>
             </div>
             <h1 style="margin: 0; font-size: 2rem; font-weight: 800; background: linear-gradient(135deg, #ffffff, #a5b4fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
@@ -423,9 +423,12 @@
             </table>
           </div>
 
-          <div style="margin-top: 1rem; pt: 0.75rem; border-top: 1px solid rgba(255, 255, 255, 0.06);">
-            <button class="btn-secondary" style="width: 100%;" onclick="openChatCopilot()">
+          <div style="margin-top: 1rem; pt: 0.75rem; border-top: 1px solid rgba(255, 255, 255, 0.06); display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button class="btn-secondary" style="flex: 1;" onclick="openChatCopilot()">
               💬 Ask Chat: "Batch edit inventory items"
+            </button>
+            <button class="btn-primary" style="font-size: 0.78rem;" onclick="extractTableDemo()">
+              📥 Extract CSV
             </button>
           </div>
         </div>
@@ -475,6 +478,15 @@
 
       function editRow(id) {
         document.getElementById('last-action').innerText = 'Editing Row ' + id;
+      }
+
+      function extractTableDemo() {
+        const rows = Array.from(document.querySelectorAll('#inventory-table tbody tr')).map(r => 
+          Array.from(r.querySelectorAll('td')).slice(0, 3).map(td => '"' + td.innerText.trim() + '"').join(',')
+        );
+        const csv = 'SKU,Product,Status\n' + rows.join('\n');
+        document.getElementById('last-action').innerText = 'Extracted ' + rows.length + ' rows to RFC 4180 CSV';
+        alert('Extracted RFC 4180 CSV Data:\n\n' + csv);
       }
 
       function openWorkflowsStudio() {

@@ -40,7 +40,7 @@ export interface EdgeOperatorConfig {
 
 export type Gemma4Config = EdgeOperatorConfig;
 
-const EDGE_OPERATOR_VERSION = "0.2.0";
+const EDGE_OPERATOR_VERSION = "0.4.0";
 
 function getStyleHref(): string {
   if (typeof document !== "undefined") {
