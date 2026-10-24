@@ -4,6 +4,8 @@ dist/
 docs/
 frontend/docs/
 frontend/dist/
+frontend/tests/results/
+tests/results/
 *.log
 
 npm-debug.log*

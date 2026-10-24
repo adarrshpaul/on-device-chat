@@ -117,15 +117,29 @@
 
   // 3. Toggle Widget Open/Close
   function toggleWidget() {
-    const launcher = document.querySelector("#eo-floating-launcher, #g4-floating-launcher, .eo-launcher-button, .g4-launcher-button, button[aria-label='Toggle AI Assistant'], button[aria-label='Open On-Device AI Chat'], button[aria-label='Open EdgeOperator']");
+    const launcher = document.querySelector(
+      "#eo-floating-launcher, #g4-floating-launcher, [data-eo-launcher], .eo-launcher-button, .g4-launcher-button, button[aria-label='Toggle AI Assistant'], button[aria-label='Open On-Device AI Chat'], button[aria-label='Open EdgeOperator']"
+    );
     if (launcher) {
       launcher.click();
+      return true;
+    }
+
+    const agent = window.EdgeOperator || window.OnDeviceChat;
+    if (agent && typeof agent.open === "function") {
+      agent.open();
       return true;
     }
 
     // Fallback: If not yet initialized, initialize with defaultOpen: true
     if (!isInitialized) {
       initAgent({ defaultOpen: true });
+      return true;
+    }
+
+    // If initialized but launcher not yet committed to DOM by React, dispatch eo:open
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("eo:open"));
       return true;
     }
 
@@ -148,6 +162,10 @@
     let isRecording = false;
 
     const agent = window.EdgeOperator || window.OnDeviceChat;
+    const hasWidgetOrLauncher = Boolean(
+      document.querySelector("#eo-floating-launcher, #g4-floating-launcher, [data-eo-launcher], [data-eo-widget], [data-g4-widget]")
+    );
+
     if (agent && agent.EntityExtractor) {
       try {
         const entities = agent.EntityExtractor.extractEntities();
@@ -162,7 +180,7 @@
     }
 
     return {
-      isInitialized,
+      isInitialized: isInitialized && hasWidgetOrLauncher,
       isRecording,
       entitiesCount,
       title: document.title,

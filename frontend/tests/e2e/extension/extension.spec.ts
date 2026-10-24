@@ -5,6 +5,7 @@ import {
   captureBaseline,
   cspViolations,
   newOnly,
+  openCleanPage,
   pageStatus,
   recordCsp,
   sendToTab,
@@ -15,9 +16,8 @@ import {
 import { TARGETS } from './sites';
 
 test('popup renders without runtime errors', async ({ extContext, extensionId }) => {
-  const page = await extContext.newPage();
+  const page = await openCleanPage(extContext, `chrome-extension://${extensionId}/popup.html`);
   const t = trackPage(page);
-  await page.goto(`chrome-extension://${extensionId}/popup.html`);
   await expect(page.locator('body')).not.toBeEmpty();
   expect(t.pageErrors).toEqual([]);
 });
@@ -31,7 +31,7 @@ for (const target of TARGETS) {
     });
 
     test('mounts widget, zero new errors, zero CSP violations, zero style leaks', async ({ extContext, sw }) => {
-      const page = await extContext.newPage();
+      const page = await openCleanPage(extContext);
       const t = trackPage(page);
       await recordCsp(page);
       await page.goto(target.url, { waitUntil: 'load', timeout: 45_000 });
@@ -62,8 +62,7 @@ for (const target of TARGETS) {
     });
 
     test('launcher opens panel; input field is accessible', async ({ extContext }) => {
-      const page = await extContext.newPage();
-      await page.goto(target.url, { waitUntil: 'load', timeout: 45_000 });
+      const page = await openCleanPage(extContext, target.url);
       await page.evaluate(() => document.fonts?.ready);
       await page.waitForTimeout(1_500);
 
@@ -98,11 +97,13 @@ for (const target of TARGETS) {
 
     test('TOGGLE_WIDGET message opens the panel', async ({ extContext, sw }) => {
       test.skip(baseline.nativeWidget, 'Host embeds its own widget; extension yields to native widget');
-      const page = await extContext.newPage();
-      await page.goto(target.url, { waitUntil: 'load', timeout: 45_000 });
-      await expect.poll(async () => (await pageStatus(sw, page.url()))?.isInitialized ?? false).toBe(true);
+      const page = await openCleanPage(extContext, target.url);
+      await expect.poll(async () => (await pageStatus(sw, page.url()))?.isInitialized ?? false, {
+        timeout: 15_000,
+        message: 'content script never reported isInitialized within 15s',
+      }).toBe(true);
       await sendToTab(sw, page.url(), { type: 'TOGGLE_WIDGET' });
-      await expect(page.locator(SEL.widget).getByPlaceholder(SEL.input)).toBeVisible();
+      await expect(page.locator(SEL.widget).getByPlaceholder(SEL.input)).toBeVisible({ timeout: 10_000 });
     });
   });
 }

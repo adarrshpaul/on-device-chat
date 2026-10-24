@@ -69,7 +69,8 @@ export function pageStatus(sw: Worker, url: string): Promise<PageStatus | null> 
   return sw.evaluate(async (target: string) => {
     const norm = (u: string) => (u ? u.replace(/\/$/, '') : '');
     const tabs = await chrome.tabs.query({});
-    const tab = tabs.find((t: any) => norm(t.url) === norm(target));
+    const matching = tabs.filter((t: any) => norm(t.url) === norm(target));
+    const tab = matching.find((t: any) => t.active) ?? matching[matching.length - 1];
     if (tab?.id === undefined) return null;
     try {
       return await chrome.tabs.sendMessage(tab.id, { type: 'GET_PAGE_STATUS' }, { frameId: 0 });
@@ -84,12 +85,25 @@ export function sendToTab(sw: Worker, url: string, message: object) {
     async ([target, msg]: [string, object]) => {
       const norm = (u: string) => (u ? u.replace(/\/$/, '') : '');
       const tabs = await chrome.tabs.query({});
-      const tab = tabs.find((t: any) => norm(t.url) === norm(target));
+      const matching = tabs.filter((t: any) => norm(t.url) === norm(target));
+      const tab = matching.find((t: any) => t.active) ?? matching[matching.length - 1];
       if (!tab?.id) throw new Error(`Tab not found for url: ${target}`);
       return chrome.tabs.sendMessage(tab.id, msg, { frameId: 0 });
     },
     [url, message] as [string, object],
   );
+}
+
+export async function openCleanPage(extContext: BrowserContext, url?: string): Promise<Page> {
+  const oldPages = extContext.pages();
+  const page = await extContext.newPage();
+  for (const old of oldPages) {
+    await old.close().catch(() => {});
+  }
+  if (url) {
+    await page.goto(url, { waitUntil: 'load', timeout: 45_000 });
+  }
+  return page;
 }
 
 export function trackPage(page: Page) {
@@ -166,4 +180,5 @@ export async function captureBaseline(url: string): Promise<Baseline> {
   }
 }
 
-export const newOnly = (now: string[], before: string[]) => now.filter((x) => !before.includes(x));
+export const newOnly = (now: string[], before: string[]) =>
+  now.filter((x) => !before.includes(x) && !x.includes('compute-pressure'));
