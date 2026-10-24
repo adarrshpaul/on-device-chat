@@ -1,5 +1,12 @@
 # OKF Transition Log
 
+## 2026-10-24T17:53:00Z - Domain Mandate: agent.paulcreates.online Exclusively Serves AI Agent
+- **Hard Rule Enforced**:
+  - `https://automation.paulcreates.online/` = Automation Suite ONLY (`process-automation-hub`).
+  - `https://agent.paulcreates.online/` = `on-device-chat` / EdgeOperator AI Agent ONLY (`local-agent-harness`). Zero automation suite files permitted.
+  - Recorded in `okf/facts/fact_subdomain_division_agent_vs_automation_20261024.md`.
+
+
 ## 2026-10-24T16:45:00Z - Gate 2: Merged to main, Cut Prerelease v0.4.0-next.1, and Pushed to Origin
 - **Scope & Implementation**:
   - Merged `feat/task-118-pre-release-fixes` into `main` (fast-forward to commit `8c5f2c0`).
