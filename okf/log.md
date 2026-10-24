@@ -1,5 +1,19 @@
 # OKF Transition Log
 
+## 2026-10-24T13:46:00Z - TASK-115: On-Device Voice Transcription, Disfluency Polish & DOM Text Injection
+- **Scope & Implementation**:
+  - Implemented `frontend/src/lib/voiceEngine.ts`: Web Audio `AudioContext` + `AnalyserNode` real-time audio volume capture, Web Speech API instant STT (0 weight), and optional Whisper WebGPU (`onnx-community/whisper-tiny`).
+  - Implemented `frontend/src/lib/voicePolish.ts`: removes disfluency fillers ("um", "uh", "you know"), resolves spoken self-corrections ("4, no 5pm" -> "5pm"), adapts tone for search/code/general contexts.
+  - Implemented `frontend/src/lib/personalDictionary.ts`: offline IndexedDB store (`eo_voice_dictionary`) for technical acronym and jargon replacement (SCADA, SCALANCE, SNTP, WebGPU, EdgeOperator).
+  - Implemented `frontend/src/lib/textInjector.ts`: tri-tier text injection (`execCommand('insertText')`, synthetic paste, prototype setter fallback) and clipboard preservation.
+  - Added push-to-talk mic button with dynamic waveform pulse in `ChatInput.tsx` and extension popup (`popup.html`, `popup.css`, `popup.js`).
+- **Empirical Measurements & Git**:
+  - `test_task_115_voice_input.mjs`: 15/15 passing. Full `npm test`: 14/14 test suites passing.
+  - Empirical evaluation on this Mac: Raw ASR WER 231.7% reduced to 58.3% (173.4 percentage points reduction) with 0.018 ms/sample latency.
+  - TypeScript `tsc --noEmit` and ESLint passing cleanly. Production build and extension sync verified.
+  - Committed to branch `feat/task-115-on-device-voice` (commit `09edd04`).
+  - Artifact/Fact: `okf/facts/fact_task_115_on_device_voice_and_disfluency_polish_20261024.md`.
+
 ## 2026-10-24T13:38:00Z - TASK-116: Harness-Held Todo List, Plan Approval Gate, DeepSeek Reasoning-History Rule & Observation Budget
 - **Scope & Implementation**:
   - Implemented `frontend/src/lib/todoManager.ts`: harness owns task list state, lifecycle, and reactive UI updates.
