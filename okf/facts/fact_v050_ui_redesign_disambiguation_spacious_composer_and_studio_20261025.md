@@ -45,11 +45,23 @@ Added `extractContextualButtonAction(btn: HTMLElement)` with multi-tier heuristi
 - **Enhanced Proportions**: Form padding upgraded to `p-1.5 sm:p-2`, text floor to `text-[15px] sm:text-[16px]`, and touch target actions to `44x44px` tactile neo-brutalist buttons.
 - **Untruncated Placeholder**: `"Ask anything, run an action, or speak..."`.
 
-### C. Elevated Workflows Studio (`WorkflowStudio.tsx`)
+### C. Elevated Workflows Studio & 3-Stage Visual Builder (`WorkflowStudio.tsx`, `WorkflowStepEditor.tsx`)
 - **Streamlined Deck Header**: Eliminated duplicate `ArrowLeft` icon. Replaced with `⚡ Automations Studio` deck toolbar featuring an active count pill (`6 active`) and a lime `+ New Flow` button.
+- **Workflow Category Tabs**: Added filter tabs `All Flows (N)`, `⚡ Actions`, `📝 Form Fillers`, `🧭 Tours` with active counts and glowing badges.
 - **Glyph Sanitization**: Applied `stripLeadingEmoji` to workflow card titles to eliminate double-emojis.
 - **Visual Flowchart Sequence**: Replaced raw selector text with clean numbered step pills connected by flow arrows:
   `[ 1 ] CLICK Headphones → [ 2 ] WAIT 800ms → [ 3 ] CLICK Checkout`
+- **3-Stage Visual Automation Builder Modal**: Completely overhauled the "Create New Automation" drawer into an intuitive 3-stage visual builder inspired by modern clean orchestration patterns:
+  - **Stage Breadcrumbs Header**: `[ 1 ] Profile` → `[ 2 ] Pipeline (N)` → `[ 3 ] Save` with real-time active indicators and step count badges.
+  - **Stage 1 (Identity & Trigger)**: Obsidian `#0c1222` card with high-contrast inputs for Title, `/trigger` shortcut keyword, and short description.
+  - **Stage 2 (Execution Pipeline)**:
+    - Quick-add step buttons: `+ Click` (lime), `+ Type` (cyan), `+ Wait` (amber), `+ Custom` (white), and `🎯 Pick Element` (cyan badge).
+    - Tactile Step Cards: Color-coded action tags, parameter stepper (`[ - ] [ ×N ] [ + ]`), interval delay editor, and live selector crosshair with active pulse.
+    - Connector arrows between sequence steps.
+  - **Stage 3 (Smart Accelerators & Save)**:
+    - Detected Live Form inspection with 1-click auto-build.
+    - AI Prompt-to-flow generator card.
+    - Obsidian action footer with ghost `Cancel` and solid high-contrast lime `Save Automation (N)`.
 - **Tactile Accent Borders**: Cards feature obsidian neo-brutalist borders in lime (`#D4FF00`), purple (`#A855F7`), and hot pink (`#FF2E93`).
 
 ## 3. Version Bump & Zero-NPM Enforcement
@@ -67,3 +79,4 @@ Added `extractContextualButtonAction(btn: HTMLElement)` with multi-tier heuristi
 - **Live Cloudflare Deployment**: Live URL `https://agent.paulcreates.online` verified returning HTTP 200 with deployment complete. Screenshots captured:
   - `live_deployed_v050_chat.png`
   - `live_deployed_v050_studio.png`
+  - `live_deployed_v050_redesigned_builder.png`

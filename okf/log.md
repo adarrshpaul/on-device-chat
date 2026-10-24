@@ -1,5 +1,25 @@
 # OKF Transition Log
 
+## 2026-10-25T04:48:00+05:30 - Visual Automation Builder Overhaul: 3-Stage Pipeline Flow & Category Filters
+- **3-Stage Visual Automation Builder Modal (`WorkflowStudio.tsx`)**:
+  - Overhauled "Create New Automation" drawer into an intuitive 3-stage visual builder inspired by modern clean orchestration designs.
+  - **Stage Breadcrumbs Header**: `[ 1 ] Profile` → `[ 2 ] Pipeline (N)` → `[ 3 ] Save` with real-time active indicators and step count badges.
+  - **Stage 1 (Identity & Trigger)**: Obsidian `#0c1222` card with high-contrast inputs for Title, `/trigger` shortcut keyword, and short description.
+  - **Stage 2 (Execution Pipeline)**:
+    - Quick-add step buttons: `+ Click` (lime), `+ Type` (cyan), `+ Wait` (amber), `+ Custom` (white), and `🎯 Pick Element` (cyan badge).
+    - Tactile Step Cards (`WorkflowStepEditor.tsx`): Color-coded action tags, parameter stepper (`[ - ] [ ×N ] [ + ]`), interval delay editor, and live selector crosshair with active pulse.
+    - Connector arrows between sequence steps.
+  - **Stage 3 (Smart Accelerators & Save)**:
+    - Detected Live Form inspection with 1-click auto-build.
+    - AI Prompt-to-flow generator card.
+    - Obsidian action footer with ghost `Cancel` and solid high-contrast lime `Save Automation (N)`.
+- **Deck Category Filters**:
+  - Added filter tabs: `All Flows (N)`, `⚡ Actions`, `📝 Form Fillers`, `🧭 Tours` with active counts.
+- **Verification & Deployment**:
+  - Deployed cleanly to `https://agent.paulcreates.online` Cloudflare Pages project `local-agent-harness`.
+  - Playwright live verified and captured: `live_deployed_v050_redesigned_builder.png`.
+  - Pushed to `origin/main` (commit `5900c1b`).
+
 ## 2026-10-25T04:34:00+05:30 - Release v0.5.0: Action Disambiguation, Spacious Composer, Elevated Workflow Studio
 - **Action Button Contextual Disambiguation**:
   - Implemented `extractContextualButtonAction(btn)` in `workflowPredictor.ts`.
