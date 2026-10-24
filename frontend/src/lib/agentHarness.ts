@@ -31,7 +31,7 @@ import { SomOverlayManager } from "./somOverlay";
 import { ActionDispatcher } from "./actionDispatcher";
 import { StateDeltaVerifier } from "./stateDeltaVerifier";
 import { runSandboxExpression } from "./safeExpression";
-import { NavPersistenceManager } from "./navPersistence";
+import { NavPersistenceManager, InFlightTaskState } from "./navPersistence";
 import { SafetyGate } from "./safetyGate";
 import { TodoManager, globalTodoManager, TodoStatus, PlanState } from "./todoManager";
 import { ReasoningManager } from "./reasoningManager";
@@ -46,12 +46,25 @@ export interface HarnessExecutionResult {
   isMacro: boolean;
   totalDurationMs: number;
   decision?: DecisionTrace;
+  plan?: PlanState | null;
+  thinking?: string;
+  tokensSavedPct?: number;
 }
 
 export interface HarnessConfig {
   maxSteps?: number;
   onAskUser?: (question: string) => Promise<string>;
-  onStepProgress?: (step: number, tool: string, observation: string) => void;
+  onStepProgress?: (
+    step: number,
+    tool: string,
+    observation: string,
+    meta?: {
+      durationMs?: number;
+      args?: Record<string, unknown>;
+      thinking?: string;
+      planMilestone?: string;
+    }
+  ) => void;
   customHostTools?: Record<string, (args: Record<string, unknown>) => Promise<unknown>>;
   customToolDefs?: ToolDefinition[];
   todoManager?: TodoManager;
@@ -59,18 +72,43 @@ export interface HarnessConfig {
 }
 
 export function isFailureObservation(obs: string): boolean {
-  const lower = (obs || "").toLowerCase();
-  const patterns = [
-    "not found",
-    "0 results",
-    "0 occurrences",
-    "error:",
-    "syntax error",
-    "failed:",
-    "unknown tool",
-    "does not appear",
-  ];
-  return patterns.some((p) => lower.includes(p));
+  if (!obs || typeof obs !== "string") return false;
+  const lower = obs.toLowerCase().trim();
+
+  // Explicit tool execution error or failure prefixes
+  if (
+    lower.startsWith("error") ||
+    lower.startsWith("failed") ||
+    lower.includes("error executing tool") ||
+    lower.includes("action blocked by safety gate") ||
+    lower.includes("blocked by safety gate") ||
+    lower.includes("timed out") ||
+    lower.includes("execution timeout") ||
+    lower.includes("unknown tool") ||
+    lower.includes("unknown browse action") ||
+    lower.includes("syntax error") ||
+    lower.includes("click failed") ||
+    lower.includes("hover failed") ||
+    lower.includes("download failed") ||
+    lower.includes("selector required") ||
+    lower.includes("target [id] or selector required") ||
+    lower.includes("irreversible action denied")
+  ) {
+    return true;
+  }
+
+  // Not found errors specifically tied to targets/elements/catalog
+  if (
+    lower.includes("not found on page") ||
+    lower.includes("no matching download element") ||
+    lower.includes("catalog verification failed") ||
+    lower.includes("0 occurrences matching selector") ||
+    lower.includes("does not appear in")
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
 export function isSafeNavigationUrl(url: string): boolean {
@@ -105,7 +143,7 @@ export function isSafeNavigationUrl(url: string): boolean {
 export class AgentHarness {
   private maxSteps: number;
   private onAskUser?: (question: string) => Promise<string>;
-  private onStepProgress?: (step: number, tool: string, observation: string) => void;
+  private onStepProgress?: HarnessConfig["onStepProgress"];
   private customHostTools: Record<string, (args: Record<string, unknown>) => Promise<unknown>>;
   private customToolDefs: ToolDefinition[];
   private memoryStore: Map<string, string> = new Map();
@@ -818,7 +856,10 @@ export class AgentHarness {
   /**
    * Dispatch tool call to the corresponding primitive or custom host tool
    */
-  async executeTool(toolName: string, rawArgs: Record<string, unknown> = {}): Promise<string> {
+  async executeTool(toolName: string, rawArgs: Record<string, unknown> = {}, signal?: AbortSignal): Promise<string> {
+    if (signal?.aborted) {
+      return `Action aborted: Tool "${toolName}" cancelled or timed out.`;
+    }
     const args = (typeof rawArgs === "object" && rawArgs !== null) ? rawArgs : {};
     const startTime = Date.now();
 
@@ -829,7 +870,11 @@ export class AgentHarness {
     }
     const finalArgs = (preHook.modifiedArgs || args) as Record<string, unknown>;
 
-    const result = await this.dispatchToolInternal(toolName, finalArgs);
+    if (signal?.aborted) {
+      return `Action aborted: Tool "${toolName}" cancelled or timed out.`;
+    }
+
+    const result = await this.dispatchToolInternal(toolName, finalArgs, signal);
 
     // Deterministic Post-Tool Hook Chain (Logging, telemetry, validation)
     const durationMs = Date.now() - startTime;
@@ -838,7 +883,10 @@ export class AgentHarness {
     return result;
   }
 
-  private async dispatchToolInternal(toolName: string, args: Record<string, unknown>): Promise<string> {
+  private async dispatchToolInternal(toolName: string, args: Record<string, unknown>, signal?: AbortSignal): Promise<string> {
+    if (signal?.aborted) {
+      return `Action aborted: Tool "${toolName}" cancelled or timed out.`;
+    }
     // 1. Check custom host tools first
     if (this.customHostTools[toolName]) {
       // Security & boundary validation for common host tools
@@ -1035,6 +1083,30 @@ export class AgentHarness {
   }
 
   /**
+   * Synthesize clean, human-verifiable milestones for harness execution and UI tracking.
+   */
+  public synthesizeMilestones(goal: string): Array<{ title: string; id?: string }> {
+    const clean = (goal || "").trim();
+    const clauses = clean.split(/\s+(?:then|and then|after that)\s+/i);
+    if (clauses.length >= 2) {
+      return [
+        { title: `Locate elements for: ${clauses[0].slice(0, 42)}`, id: "task_1" },
+        ...clauses.slice(1).map((c, i) => ({
+          title: `Execute: ${c.slice(0, 45)}`,
+          id: `task_${i + 2}`,
+        })),
+        { title: "Verify state delta and compile summary", id: `task_${clauses.length + 1}` },
+      ];
+    }
+
+    return [
+      { title: `Auditing layout & targeting elements for: ${clean.slice(0, 36)}`, id: "task_1" },
+      { title: `Executing browser interactions`, id: "task_2" },
+      { title: `Verifying state transition and finalizing result`, id: "task_3" },
+    ];
+  }
+
+  /**
    * Run the harness loop wrapping the given text-generation model function.
    * "The model stays a text function. The harness is the loop, the tools, the memory, and the permission check."
    */
@@ -1042,7 +1114,8 @@ export class AgentHarness {
     userGoal: string,
     modelPredictor: (messages: Array<{ role: string; content: string }>) => Promise<string>,
     activeTier: ModelTier = ModelTier.TIER_0_GEMINI_NANO,
-    conversationHistory: Array<{ role: string; content: string }> = []
+    conversationHistory: Array<{ role: string; content: string }> = [],
+    resumeSnapshot?: InFlightTaskState
   ): Promise<HarnessExecutionResult> {
     this.currentUserGoal = userGoal;
     // DeepSeek Rule: Sanitize historical dialogue across user turns
@@ -1056,8 +1129,14 @@ export class AgentHarness {
     this.activeAbortController = new AbortController();
     const abortSignal = this.activeAbortController.signal;
 
+    // Plan Management: Auto-synthesize plan milestones if none exists or previous completed
+    let activePlan = this.todoManager.getPlan();
+    if (!activePlan || activePlan.status === "completed" || activePlan.status === "failed") {
+      const milestones = this.synthesizeMilestones(userGoal);
+      activePlan = this.todoManager.createPlan(userGoal, milestones, true /* autoApprove */);
+    }
+
     // Plan Approval Gate (TASK-116): User approves multi-task plan before acting
-    const activePlan = this.todoManager.getPlan();
     if (activePlan && !activePlan.approved && activePlan.tasks.length > 1 && this.onPlanApprovalRequired) {
       const approved = await this.onPlanApprovalRequired(activePlan);
       if (!approved) {
@@ -1113,31 +1192,33 @@ export class AgentHarness {
           const finalMsg = `Executed verified site recipe for "${userGoal}" (${matchingMacro.actions.length} steps).`;
           const macroDecision: DecisionTrace = {
             type: "macro",
-            title: "Host Recipe Verified (System 1)",
+            title: "Host Recipe Verified (Deterministic)",
             selectedOption: `Execute "${matchingMacro.triggerPhrase}"`,
             confidence: 1.0,
-            margin: 0.88,
+            margin: 1.0,
             primitive: "choice",
             latencyMs: Math.round(performance.now() - startTime),
             engineUsed: "Host Recipe Store (0 Tokens)",
             distribution: [
               { label: `Recipe: "${matchingMacro.triggerPhrase}"`, score: 1.0, isWinner: true },
-              { label: "Search Page Elements", score: 0.12, isWinner: false },
-              { label: "Site Tour", score: 0.08, isWinner: false },
             ],
             hallucinationShield: {
               verified: true,
-              check: `Verified deterministic ${matchingMacro.actions.length}-step macro on live site`,
+              check: `Deterministic ${matchingMacro.actions.length}-step macro executed without neural sampling`,
               probability: 1.0,
             },
-            explanation: `Executed cached zero-token verified recipe for "${matchingMacro.triggerPhrase}". 100% deterministic, 0 hallucination risk.`,
+            explanation: `Executed cached zero-token verified recipe for "${matchingMacro.triggerPhrase}". Deterministic execution on live DOM.`,
           };
+          this.todoManager.updateTaskStatus("task_1", "completed");
+          this.todoManager.updateTaskStatus("task_2", "completed");
+          this.todoManager.updateTaskStatus("task_3", "completed");
           return {
             final: finalMsg,
             trajectory,
             isMacro: true,
             totalDurationMs: Math.round(performance.now() - startTime),
             decision: macroDecision,
+            plan: this.todoManager.getPlan(),
           };
         }
         // If macro failed or was empty, fall through into the dynamic harness loop!
@@ -1203,12 +1284,25 @@ export class AgentHarness {
       }
     }
 
-    messages.push({
-      role: "user",
-      content: `Task Goal: "${userGoal}"\nInitial State: scrollY=${workingMemory.currentScrollY}, origin=${siteOrigin}${initialCandidatesNotice}`,
-    });
+    const startStep = resumeSnapshot ? Math.min(resumeSnapshot.stepIndex, this.maxSteps - 1) : 0;
+    if (resumeSnapshot) {
+      messages.push({
+        role: "user",
+        content: `Task Goal: "${userGoal}" (RESUMED from step ${startStep + 1} after navigation to ${siteOrigin}${typeof window !== "undefined" ? window.location.pathname : ""})\nPrior actions completed: ${resumeSnapshot.trajectory.map(t => `${t.tool}`).join(" -> ")}\nContinue fulfilling the goal from the current page state.\nInitial State: scrollY=${workingMemory.currentScrollY}${initialCandidatesNotice}`,
+      });
+      if (resumeSnapshot.workingMemory) {
+        Object.assign(workingMemory, resumeSnapshot.workingMemory);
+      }
+    } else {
+      messages.push({
+        role: "user",
+        content: `Task Goal: "${userGoal}"\nInitial State: scrollY=${workingMemory.currentScrollY}, origin=${siteOrigin}${initialCandidatesNotice}`,
+      });
+    }
 
-    const trajectory: AgentStepTrace[] = [];
+    const trajectory: AgentStepTrace[] = resumeSnapshot
+      ? resumeSnapshot.trajectory.map((t) => ({ ...t, args: t.args || {} }))
+      : [];
     this.currentTrajectory = trajectory;
     let lastToolCallSignature = "";
     let consecutiveFailures = 0;
@@ -1217,8 +1311,9 @@ export class AgentHarness {
 
     let consecutiveIdenticalCalls = 0;
     let consecutiveZeroDeltaCalls = 0;
+    let lastThinking = "";
 
-    for (let step = 0; step < this.maxSteps; step++) {
+    for (let step = startStep; step < this.maxSteps; step++) {
       this.currentStepIndex = step;
       if (abortSignal.aborted) {
         return {
@@ -1313,29 +1408,31 @@ export class AgentHarness {
 
         let executionDecision: DecisionTrace | undefined;
         if (trajectory.length > 0) {
-          const firstStep = trajectory[0];
+          const successfulSteps = trajectory.filter((s) => !isFailureObservation(s.observationSummary || ""));
+          const successRatio = successfulSteps.length / trajectory.length;
           executionDecision = {
             type: "system1_gate",
-            title: `Action: ${firstStep.tool}`,
-            selectedOption: `${firstStep.tool} (${firstStep.durationMs}ms)`,
-            confidence: 0.94,
-            margin: 0.72,
+            title: `Agent Execution (${trajectory.length} steps)`,
+            selectedOption: `Completed trajectory (${trajectory.length} steps, ${duration}ms)`,
+            confidence: Number(successRatio.toFixed(2)),
+            margin: Number(Math.max(0, successRatio - 0.5).toFixed(2)),
             primitive: "choice",
             latencyMs: duration,
-            engineUsed: "Agent Harness Loop",
+            engineUsed: "Agent Harness ReAct Loop",
             distribution: [
-              { label: `${firstStep.tool} (Executed)`, score: 0.94, isWinner: true },
-              { label: "Site Tour", score: 0.22, isWinner: false },
-              { label: "Search Page", score: 0.15, isWinner: false },
+              { label: `Observed Action Trajectory (${successfulSteps.length}/${trajectory.length} steps succeeded)`, score: Number(successRatio.toFixed(2)), isWinner: true },
             ],
             hallucinationShield: {
-              verified: true,
-              check: `Trajectory verified (${trajectory.length} steps executed on DOM)`,
-              probability: 0.95,
+              verified: successRatio > 0.6,
+              check: `Empirical DOM state delta verification (${trajectory.length} steps executed on live DOM)`,
+              probability: Number(successRatio.toFixed(2)),
             },
-            explanation: `Completed ${trajectory.length} action steps in ${duration}ms with on-device verification.`,
+            explanation: `Executed ${trajectory.length} steps on DOM. Empirical success rate: ${Math.round(successRatio * 100)}%.`,
           };
         }
+
+        this.todoManager.updateTaskStatus("task_2", "completed");
+        this.todoManager.updateTaskStatus("task_3", "completed");
 
         SomOverlayManager.clearBadges();
         NavPersistenceManager.clearTask();
@@ -1345,6 +1442,8 @@ export class AgentHarness {
           isMacro: false,
           totalDurationMs: duration,
           decision: executionDecision,
+          plan: this.todoManager.getPlan(),
+          thinking: lastThinking,
         };
       }
 
@@ -1400,15 +1499,31 @@ export class AgentHarness {
       // Host runs the tool with pre/post environment state delta capture (bounded by OpenHarness 8s watchdog)
       const beforeState = StateDeltaVerifier.captureSnapshot();
       let observation: string;
+      const stepAbortController = new AbortController();
+      let stepTimeout: any;
+
+      if (abortSignal) {
+        if (abortSignal.aborted) {
+          throw new Error("Execution aborted by user");
+        }
+        abortSignal.addEventListener("abort", () => stepAbortController.abort(), { once: true });
+      }
+
       try {
         observation = await Promise.race([
-          this.executeTool(decision.tool, decision.args),
-          new Promise<string>((_, reject) =>
-            setTimeout(() => reject(new Error(`Tool ${decision.tool} timed out after 8000ms`)), 8000)
-          ),
+          this.executeTool(decision.tool, decision.args, stepAbortController.signal),
+          new Promise<string>((_, reject) => {
+            stepTimeout = setTimeout(() => {
+              stepAbortController.abort();
+              reject(new Error(`Tool ${decision.tool} timed out after 8000ms`));
+            }, 8000);
+          }),
         ]);
       } catch (err: any) {
+        stepAbortController.abort();
         observation = `Error executing tool "${decision.tool}": ${err?.message || "Execution timeout"}`;
+      } finally {
+        if (stepTimeout) clearTimeout(stepTimeout);
       }
 
       // OpenHarness & Claude Code Pattern: Per-Turn Tool-Output Truncation Budget (TASK-116 & TASK-117)
@@ -1426,25 +1541,20 @@ export class AgentHarness {
       const stateDelta = StateDeltaVerifier.computeDelta(beforeState, afterState);
       const stepDuration = Math.round(performance.now() - stepStart);
 
+      // Dynamic Re-grounding per step: Refresh accessible elements map if DOM mutated
+      if (typeof document !== "undefined" && stateDelta.hasStateChanged) {
+        const freshNodes = A11yTreeEngine.scan({ viewportOnly: true, maxItems: 36 });
+        if (freshNodes.length > 0) {
+          const freshTreeDump = A11yTreeEngine.formatForPrompt(freshNodes);
+          observation += `\n\n[Updated Page Interactive Elements after state transition]:\n${SafetyGate.wrapUntrustedPageContent(freshTreeDump)}`;
+        }
+      }
+
       // Cycle detector: Prevent model from calling identical tool and args consecutively IF it produces zero state change
       if (isIdenticalCall && !stateDelta.hasStateChanged) {
         consecutiveZeroDeltaCalls++;
         if (consecutiveZeroDeltaCalls >= 2) {
-          const lastStep = trajectory[trajectory.length - 1];
-          let successOutput = lastStep?.observationSummary
-            ? lastStep.observationSummary
-            : `Action "${decision.tool}" completed (no further state changes detected).`;
-
-          if (successOutput.includes("[selector:") || successOutput.startsWith("[selector:")) {
-            const visionStep = trajectory.find((t) => t.observationSummary?.includes("[Visual Observation"));
-            if (visionStep) {
-              successOutput = visionStep.observationSummary.replace(/^\[Visual Observation \([^)]+\)\]:\s*/, "");
-            } else {
-              const scene = VisionService.extractVisualScene();
-              successOutput = `Viewing "${scene.title}"${scene.headings[0] ? ` (${scene.headings[0]})` : ""}${scene.items.length > 0 ? `, featuring items such as ${scene.items.slice(0, 2).join(' and ')}` : ""}.`;
-            }
-          }
-
+          const failMsg = `Execution stopped: Action "${decision.tool}" produced zero state change across ${consecutiveZeroDeltaCalls} consecutive attempts. The target element or state transition is unavailable on this page.`;
           const duration = Math.round(performance.now() - startTime);
           const trace: EvalTrace = {
             id: `trace_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
@@ -1452,16 +1562,23 @@ export class AgentHarness {
             siteOrigin,
             userGoal,
             trajectory,
-            finalOutput: successOutput,
+            finalOutput: failMsg,
             activeTier,
           };
           await expertJudge.logTrace(trace);
 
+          const activeTask = this.todoManager.getActiveTask();
+          if (activeTask) {
+            this.todoManager.updateTaskStatus(activeTask.id, "blocked", failMsg);
+          }
+
           return {
-            final: successOutput,
+            final: failMsg,
             trajectory,
             isMacro: false,
             totalDurationMs: duration,
+            plan: this.todoManager.getPlan(),
+            thinking: lastThinking,
           };
         }
       } else {
@@ -1492,7 +1609,13 @@ export class AgentHarness {
       });
 
       if (this.onStepProgress) {
-        this.onStepProgress(step + 1, decision.tool, observation);
+        const activeMilestone = this.todoManager.getActiveTask()?.title;
+        this.onStepProgress(step + 1, decision.tool, observation, {
+          durationMs: stepDuration,
+          args: decision.args,
+          thinking: lastThinking,
+          planMilestone: activeMilestone,
+        });
       }
 
       // Fix 2: Track consecutive failures
@@ -1514,11 +1637,18 @@ export class AgentHarness {
           };
           await expertJudge.logTrace(trace);
 
+          const activeTask = this.todoManager.getActiveTask();
+          if (activeTask) {
+            this.todoManager.updateTaskStatus(activeTask.id, "blocked", failMsg);
+          }
+
           return {
             final: failMsg,
             trajectory,
             isMacro: false,
             totalDurationMs: Math.round(performance.now() - startTime),
+            plan: this.todoManager.getPlan(),
+            thinking: lastThinking,
           };
         }
       } else {
@@ -1547,6 +1677,9 @@ export class AgentHarness {
 
       // DeepSeek Rule: Intra-turn tool loop preserves intermediate thinking for reasoning continuity
       const { thinking } = ReasoningManager.extractThinking(bestCandidate.raw);
+      if (thinking) {
+        lastThinking = thinking;
+      }
       const loopAssistantMsg = ReasoningManager.formatLoopAssistantMessage(
         { tool: decision.tool, args: decision.args },
         thinking
@@ -1582,7 +1715,13 @@ export class AgentHarness {
       // when conversation depth exceeds 10 messages (>4 steps) to avoid token bloat and context drift.
       if (messages.length > 12) {
         const sys = messages[0];
-        const goal = messages[1];
+        // Claude audit fix: find the actual task goal message, don't blindly assume messages[1]
+        const goal = messages.find(
+          (m) => m.role === "user" && typeof m.content === "string" && m.content.startsWith("Task Goal:")
+        ) || messages[1] || {
+          role: "user" as const,
+          content: `Task Goal: "${userGoal}"`,
+        };
         const recent = messages.slice(-6); // Keep last 3 full tool interaction turns
         const compactedSummary = {
           role: "user" as const,
@@ -1605,6 +1744,11 @@ export class AgentHarness {
     };
     await expertJudge.logTrace(trace);
 
+    const activeTask = this.todoManager.getActiveTask();
+    if (activeTask) {
+      this.todoManager.updateTaskStatus(activeTask.id, "blocked", "Max steps reached without resolution");
+    }
+
     SomOverlayManager.clearBadges();
     NavPersistenceManager.clearTask();
     return {
@@ -1612,6 +1756,8 @@ export class AgentHarness {
       trajectory,
       isMacro: false,
       totalDurationMs: Math.round(performance.now() - startTime),
+      plan: this.todoManager.getPlan(),
+      thinking: lastThinking,
     };
   }
 }

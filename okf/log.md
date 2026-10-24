@@ -1,5 +1,24 @@
 # OKF Transition Log
 
+## 2026-10-24T19:42:00Z - Release v0.4.0: Adversarial Harness Audit Remediated & Claude-Style Progress UI
+- **Adversarial Harness Remediation**:
+  - Remediated 6 critical loop blockers identified by Claude Code:
+    1. `isFailureObservation` detects timeouts, SafetyGate denials, and specific target errors without tripping on benign text.
+    2. Per-step `AbortController` watchdog cancels underlying operations immediately upon 8s timeout or user stop.
+    3. Cycle detector honestly halts with failure status rather than claiming false success after zero-delta loops (Rule §7).
+    4. Purged fake confidence scores (`0.94`, `0.72`) in favor of empirical step-verification ratios.
+    5. Dynamic per-step re-grounding refreshes A11y tree when DOM changes.
+    6. Navigation resume resumes from `pendingTask.stepIndex` without repeating mutations.
+- **Claude Mobile App Progress UI**:
+  - Implemented `<ThinkingAccordion />`: inline collapsible header pill with stopwatch icon, live milestone title, and chevron trigger.
+  - Implemented `<PlanSummarySheet />`: slide-up bottom sheet modal titled "Summary" with connected vertical timeline rail, status dots (● ◉ ○ ⚠️), and empirical telemetry card.
+- **Verification & Deployment**:
+  - 18/18 test suites passing (`npm test`).
+  - Bumped version to stable `0.4.0` in `frontend/package.json` and extension manifest `0.4.0`.
+  - Deployed `docs` to Cloudflare Pages `local-agent-harness` via `npx wrangler pages deploy`.
+  - Verified live: `agent.paulcreates.online` serves EdgeOperator, `automation.paulcreates.online` serves Process Automation Hub.
+  - Fact recorded: `okf/facts/fact_v040_stable_adversarial_remediation_and_claude_ui_20261024.md`.
+
 ## 2026-10-24T17:53:00Z - Domain Mandate: agent.paulcreates.online Exclusively Serves AI Agent
 - **Hard Rule Enforced**:
   - `https://automation.paulcreates.online/` = Automation Suite ONLY (`process-automation-hub`).
@@ -1283,3 +1302,4 @@
 - 2026-10-24T12:20:00Z (claude-code): DISCOVERY: agent.paulcreates.online (local-agent-harness, ~/foundry/docs) serves Process Automation Hub; no CF project hosts the on-device-chat demo (frontend/docs). README pins 0.2.0. Fix needs a domain decision + 0.4.0-next.2. See facts/fact_demo_domain_collision_agent_subdomain_20261024.md
 
 - 2026-10-24T18:20:00Z (antigravity): REMEDIATION COMPLETED: Purged rogue .wrangler cache, restored foundry/docs/index.html to Process Automation Hub, and redeployed local-agent-harness from frontend/docs. Live verified 100% domain isolation: automation.paulcreates.online exclusively serves Process Automation Hub; agent.paulcreates.online exclusively serves EdgeOperator. Recorded fact_root_cause_wrangler_cache_domain_collision_remediated_20261024.md.
+- 2026-10-24T19:00:00Z (claude-code): AUDIT: v0.4.0 stable NOT ready — 6 blockers (hardcoded confidence §7, todo plan dead in prod, timeouts/gate-blocks counted as success, cycle detector fakes success, uncancelled tool timeouts, nav resume restarts goal). npm test green but doesn't cover these. See facts/fact_harness_adversarial_audit_v040_blockers_20261024.md

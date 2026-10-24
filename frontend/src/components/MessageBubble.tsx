@@ -5,6 +5,7 @@ import { DecisionCard } from "./DecisionCard";
 import { ActionOutputCard } from "./ActionOutputCard";
 import { BatchConfirmationCard } from "./BatchConfirmationCard";
 import { GameAutopilotCard } from "./GameAutopilotCard";
+import { ThinkingAccordion } from "./ThinkingAccordion";
 import UISpecRenderer from "./UISpecRenderer";
 import type { DisplayMessage } from "../hooks/useChat";
 import type { BatchProposal } from "../lib/types";
@@ -193,6 +194,19 @@ export default function MessageBubble({
             </span>
           )}
         </div>
+
+        {/* Claude Mobile App Style: Thinking Accordion Pill & Summary Modal */}
+        {(message.plan || (message.stepTrace && message.stepTrace.length > 0) || message.thinking) && (
+          <div className="mb-2">
+            <ThinkingAccordion
+              plan={message.plan}
+              stepTrace={message.stepTrace}
+              durationMs={message.durationMs}
+              tokensSavedPct={message.tokensSavedPct}
+              thinking={message.thinking}
+            />
+          </div>
+        )}
 
         {/* Monospace Tool Row when tools execute */}
         {message.stepTrace && message.stepTrace.length > 0 && (

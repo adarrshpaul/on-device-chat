@@ -34,6 +34,7 @@ import { WorkflowPredictor, PredictedWorkflowCandidate } from "../lib/workflowPr
 import { NavPersistenceManager } from "../lib/navPersistence";
 import { CanvasGameController } from "../lib/canvasGameController";
 import { SafetyConfirmationCard } from "./SafetyConfirmationCard";
+import { ThinkingAccordion } from "./ThinkingAccordion";
 
 export interface ChatWidgetProps {
   config?: Gemma4Config;
@@ -184,6 +185,7 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
     modelLoadingProgress,
     nanoSupported,
     activeSteps,
+    activeThinking,
     setTier,
     triggerEscalation,
     handleFeedback,
@@ -965,16 +967,13 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
 
                 {/* In-Flight Streaming & Steps Indicator */}
                 {isLoading && (
-                  <div className="flex items-center justify-between gap-1.5 text-gray-400 font-mono text-[11px] py-1 select-none w-full">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="inline-block w-1.5 h-3.5 bg-purple-400 animate-pulse shrink-0" />
-                      <span className="shrink-0">Thinking...</span>
-                      {activeSteps.length > 0 && (
-                        <span className="text-gray-500 truncate max-w-[170px]">
-                          (step {activeSteps.length}: {activeSteps[activeSteps.length - 1].tool})
-                        </span>
-                      )}
-                    </div>
+                  <div className="flex items-center justify-between gap-2 py-1 select-none w-full">
+                    <ThinkingAccordion
+                      plan={currentPlan}
+                      stepTrace={activeSteps}
+                      thinking={activeThinking}
+                      isLive={true}
+                    />
                     <button
                       type="button"
                       onClick={() => stopGeneration()}

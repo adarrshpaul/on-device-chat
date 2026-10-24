@@ -121,6 +121,7 @@ export class SomOverlayManager {
       clearTimeout(this.cleanupTimer);
       this.cleanupTimer = null;
     }
+    if (typeof document === "undefined") return;
     const root = document.getElementById(OVERLAY_CONTAINER_ID);
     if (root) {
       root.innerHTML = "";
@@ -132,6 +133,7 @@ export class SomOverlayManager {
    */
   public static destroy(): void {
     this.clearBadges();
+    if (typeof document === "undefined") return;
     const root = document.getElementById(OVERLAY_CONTAINER_ID);
     if (root && root.parentElement) {
       root.parentElement.removeChild(root);

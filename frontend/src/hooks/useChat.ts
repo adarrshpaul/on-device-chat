@@ -18,7 +18,7 @@ import type { DecisionTrace, ActionExecutionOutput, WebWorkflow, BatchProposal, 
 import { workflowRunner } from "../lib/workflowRunner";
 import { workflowStore } from "../lib/workflowStore";
 import { ensembleDecisionEngine } from "../lib/ensembleDecision";
-import { NavPersistenceManager } from "../lib/navPersistence";
+import { NavPersistenceManager, InFlightTaskState } from "../lib/navPersistence";
 import { batchRunner, BatchProposalManager } from "../lib/batchEngine";
 import { MacroRecorder } from "../lib/macroRecorder";
 import { CanvasGameController, GameProgressEvent } from "../lib/canvasGameController";
@@ -55,6 +55,9 @@ export interface DisplayMessage {
   batchProposal?: BatchProposal;
   gameProgress?: GameProgressEvent & { isFinished?: boolean; summary?: string };
   ui?: UISpec[];
+  plan?: PlanState;
+  thinking?: string;
+  tokensSavedPct?: number;
 }
 
 export type EngineStatus = "idle" | "loading" | "ready" | "generating" | "error";
@@ -74,6 +77,7 @@ export function useChat(config: Gemma4Config) {
 
   // Agent Harness & Evals Telemetry state
   const [activeSteps, setActiveSteps] = useState<AgentStepTrace[]>([]);
+  const [activeThinking, setActiveThinking] = useState<string>("");
   const [evalMetrics, setEvalMetrics] = useState<EvalMetrics | null>(null);
   const [recentTraces, setRecentTraces] = useState<EvalTrace[]>([]);
   const [siteMacros, setSiteMacros] = useState<SiteMacroRecipe[]>([]);
@@ -312,17 +316,20 @@ export function useChat(config: Gemma4Config) {
           });
         });
       },
-      onStepProgress: (step, tool, obs) => {
+      onStepProgress: (step, tool, obs, meta) => {
         setActiveSteps((prev) => [
           ...prev,
           {
             step,
             tool,
-            args: {},
+            args: meta?.args || {},
             observationSummary: obs.slice(0, 100),
-            durationMs: 0,
+            durationMs: meta?.durationMs || 0,
           },
         ]);
+        if (meta?.thinking) {
+          setActiveThinking(meta.thinking);
+        }
       },
     });
 
@@ -341,12 +348,12 @@ export function useChat(config: Gemma4Config) {
       const resumeNotice: DisplayMessage = {
         id: `resume_${Date.now()}`,
         role: "assistant",
-        content: `📍 Navigated to **${typeof window !== "undefined" ? window.location.pathname : "page"}**. Resuming task: *"${pendingTask.userGoal}"*...`,
+        content: `📍 Navigated to **${typeof window !== "undefined" ? window.location.pathname : "page"}**. Resuming task (step ${pendingTask.stepIndex + 1}): *"${pendingTask.userGoal}"*...`,
       };
       setMessages((prev) => [...prev, resumeNotice]);
       setTimeout(() => {
         if (harnessRef.current && escalationManagerRef.current) {
-          sendMessage(pendingTask.userGoal);
+          sendMessage(pendingTask.userGoal, pendingTask);
         }
       }, 500);
     }
@@ -634,7 +641,7 @@ export function useChat(config: Gemma4Config) {
    * Execute task through Agent Harness Loop
    */
   const sendMessage = useCallback(
-    async (content: string) => {
+    async (content: string, resumeSnapshot?: InFlightTaskState) => {
       if (!content.trim()) return;
 
       const cleanLower = content.toLowerCase().trim();
@@ -769,16 +776,19 @@ export function useChat(config: Gemma4Config) {
         return;
       }
 
-      const userMsg: DisplayMessage = {
-        id: `user_${Date.now()}`,
-        role: "user",
-        content,
-      };
-
-      setMessages((prev) => [...prev, userMsg]);
+      let userMsg: DisplayMessage | undefined;
+      if (!resumeSnapshot) {
+        userMsg = {
+          id: `user_${Date.now()}`,
+          role: "user",
+          content,
+        };
+        setMessages((prev) => [...prev, userMsg!]);
+      }
       setIsLoading(true);
       setError(null);
       setActiveSteps([]);
+      setActiveThinking("");
 
       try {
         const activeTier = escalationManagerRef.current.currentTier;
@@ -797,7 +807,8 @@ export function useChat(config: Gemma4Config) {
             return await escalationManagerRef.current!.predictText(prompt, msgs);
           },
           activeTier,
-          conversationHistory
+          conversationHistory,
+          resumeSnapshot
         );
 
         const decisionTrace = harnessResult.decision || escalationManagerRef.current.lastDecisionTrace || undefined;
@@ -838,15 +849,18 @@ export function useChat(config: Gemma4Config) {
           durationMs: harnessResult.totalDurationMs,
           decision: decisionTrace,
           ui: generatedUiSpecs,
+          plan: harnessResult.plan || currentPlan || undefined,
+          thinking: harnessResult.thinking,
+          tokensSavedPct: harnessResult.tokensSavedPct,
         };
 
-        const updatedMessages = [...messages, userMsg, assistantMsg];
+        const updatedMessages = userMsg ? [...messages, userMsg, assistantMsg] : [...messages, assistantMsg];
         setMessages((prev) => [...prev, assistantMsg]);
         await refreshEvalsData();
 
         // Persist session to IndexedDB
         const siteOrigin = typeof window !== "undefined" ? window.location.origin : "web";
-        const title = userMsg.content ? userMsg.content.slice(0, 35) : "Chat Session";
+        const title = (userMsg?.content || content).slice(0, 35);
         await sessionStore.saveSession({
           id: currentSessionId,
           title,
@@ -1024,6 +1038,7 @@ export function useChat(config: Gemma4Config) {
     nanoSupported,
     nanoDiagnostic,
     activeSteps,
+    activeThinking,
     evalMetrics,
     recentTraces,
     siteMacros,
