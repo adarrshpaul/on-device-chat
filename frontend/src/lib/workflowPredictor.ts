@@ -18,6 +18,127 @@ export interface PredictedWorkflowCandidate {
   rationale: string;
 }
 
+/**
+ * Extracts a contextual title and description for an action button by inspecting
+ * surrounding DOM landmarks, item cards, tables, or product containers.
+ * Disambiguates repeating button names like "Add to Cart" vs "Add to Cart".
+ */
+function extractContextualButtonAction(btn: HTMLElement): { name: string; description: string; triggerPhrase: string } {
+  const rawText = (btn.textContent || btn.getAttribute("aria-label") || (btn as HTMLInputElement).value || "Action").trim();
+  const cleanAction = rawText.replace(/^[\p{Emoji}\p{Symbol}\s]+/u, "").slice(0, 24).trim();
+
+  // 1. Direct explicit attributes
+  let subject = btn.getAttribute("data-product") || 
+                btn.getAttribute("data-item") || 
+                btn.getAttribute("data-title") || 
+                btn.getAttribute("data-target") || 
+                btn.getAttribute("title") || "";
+
+  // 1b. Check inline handlers (e.g. onclick="addToCart('Ultra ANC Headphones')")
+  if (!subject) {
+    const onclickStr = btn.getAttribute("onclick") || "";
+    const handlerMatch = onclickStr.match(/(?:cart|item|product|buy|add)\s*\(\s*['"]([^'"]{2,40})['"]/i) || onclickStr.match(/['"]([A-Z][a-zA-Z0-9\s]{2,35})['"]/);
+    if (handlerMatch && handlerMatch[1]) {
+      subject = handlerMatch[1].trim();
+    }
+  }
+
+  // 2. Nearest card / row / item container
+  if (!subject) {
+    const container = btn.closest("tr, li, article, [role='row'], [role='listitem'], [class*='card'], [class*='product'], [class*='item'], [class*='row'], form, fieldset, section");
+    if (container && container !== document.body) {
+      // 2a. Priority headings or title elements
+      const heading = container.querySelector("h1, h2, h3, h4, h5, h6, strong, b, [class*='title'], [class*='name']");
+      if (heading && heading !== btn && !btn.contains(heading)) {
+        const text = (heading.textContent || "").trim();
+        const clean = text.replace(/[$€£¥]\s*[\d,.]+/g, "").replace(/[-–|•].*$/, "").trim();
+        if (clean && clean.length >= 2 && clean.length <= 40 && clean.toLowerCase() !== cleanAction.toLowerCase()) {
+          subject = clean;
+        }
+      }
+
+      // 2b. If no semantic heading, look for prominent text in container (excluding prices)
+      if (!subject) {
+        const textElements = Array.from(container.querySelectorAll("div, span, p, a, td")) as HTMLElement[];
+        for (const el of textElements) {
+          if (el === btn || btn.contains(el)) continue;
+          // Skip pure price tags or sub-counters
+          const txt = (el.textContent || "").trim();
+          if (/^\s*[$€£¥]\s*[\d,.]+\s*$/.test(txt)) continue;
+          const clean = txt.replace(/[$€£¥]\s*[\d,.]+/g, "").replace(/[-–|•].*$/, "").trim();
+          if (clean.length >= 2 && clean.length <= 40 && clean.toLowerCase() !== cleanAction.toLowerCase() && !/^(in stock|out of stock|free shipping|qty|quantity|\d+)$/i.test(clean)) {
+            subject = clean;
+            break;
+          }
+        }
+      }
+
+      // 2c. Container ID or class product slug
+      if (!subject && container.id) {
+        const slugMatch = container.id.match(/(?:product|item|card)[-_]([a-zA-Z0-9_-]+)/i);
+        if (slugMatch && slugMatch[1]) {
+          subject = slugMatch[1].replace(/[-_]/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+        }
+      }
+    }
+  }
+
+  // 3. Preceding siblings
+  if (!subject) {
+    let prev = btn.previousElementSibling;
+    while (prev) {
+      const headingCandidate = prev.querySelector("h1, h2, h3, h4, h5, h6, strong, b, [class*='title'], [class*='name']") || prev;
+      const text = (headingCandidate.textContent || "").trim().replace(/[$€£¥]\s*[\d,.]+/g, "").trim();
+      if (text && text.length >= 2 && text.length <= 40 && text.toLowerCase() !== cleanAction.toLowerCase()) {
+        subject = text;
+        break;
+      }
+      prev = prev.previousElementSibling;
+    }
+  }
+
+  // 4. Button ID or testid slug fallback (e.g. btn-add-headphones -> Headphones)
+  if (!subject) {
+    const rawId = btn.id || btn.getAttribute("data-testid") || "";
+    const idMatch = rawId.match(/(?:btn[-_]add[-_]|add[-_]|btn[-_])([a-zA-Z0-9]+)/i);
+    if (idMatch && idMatch[1] && !/^(btn|button|action|cart|item)$/i.test(idMatch[1])) {
+      subject = idMatch[1].replace(/\b\w/g, c => c.toUpperCase());
+    }
+  }
+
+  if (subject) {
+    const words = subject.split(/\s+/);
+    // Keep subject concise, e.g. "Ultra ANC Headphones" -> "Headphones" or last 2 words
+    const shortSubject = words.length > 2 ? (words[words.length - 1].length > 3 ? words[words.length - 1] : words.slice(-2).join(" ")) : subject;
+
+    if (/add to cart/i.test(cleanAction)) {
+      return {
+        name: `⚡ Add ${shortSubject} to Cart`,
+        description: `Add ${subject} to cart directly on this page.`,
+        triggerPhrase: `add ${shortSubject.toLowerCase()} to cart`,
+      };
+    }
+    if (/buy|order|checkout|purchase/i.test(cleanAction)) {
+      return {
+        name: `⚡ ${cleanAction} ${shortSubject}`,
+        description: `${cleanAction} ${subject} directly on this page.`,
+        triggerPhrase: `${cleanAction.toLowerCase()} ${shortSubject.toLowerCase()}`,
+      };
+    }
+    return {
+      name: `⚡ ${cleanAction}: ${shortSubject}`,
+      description: `${cleanAction} on ${subject} directly on this page.`,
+      triggerPhrase: `${cleanAction.toLowerCase()} ${shortSubject.toLowerCase()}`,
+    };
+  }
+
+  return {
+    name: `⚡ ${cleanAction}`,
+    description: `Execute ${cleanAction} action directly on this page.`,
+    triggerPhrase: cleanAction.toLowerCase(),
+  };
+}
+
 export class WorkflowPredictor {
   /**
    * Predict novel or adjacent workflows for the active page using Vega decision dynamics
@@ -71,24 +192,23 @@ export class WorkflowPredictor {
         const txt = (b.textContent || b.getAttribute("aria-label") || (b as HTMLInputElement).value || "").trim();
         return txt.length >= 2 && txt.length <= 30 && /^(?:run|play|start|launch|execute|calculate|benchmark|search|add to cart|checkout|subscribe|filter|explore)\b/i.test(txt);
       })
-      .slice(0, 2) as HTMLElement[];
+      .slice(0, 3) as HTMLElement[];
 
     actionButtons.forEach((btn, idx) => {
-      const rawText = (btn.textContent || btn.getAttribute("aria-label") || (btn as HTMLInputElement).value || "Action").trim();
-      const cleanLabel = rawText.replace(/^[\p{Emoji}\p{Symbol}\s]+/u, "").slice(0, 22);
+      const { name, description, triggerPhrase } = extractContextualButtonAction(btn);
       candidates.push({
         id: `wf_pred_btn_${idx}_${Date.now()}`,
-        name: `⚡ ${cleanLabel}`,
-        description: `Execute ${cleanLabel} action directly on this page.`,
+        name,
+        description,
         siteOrigin: host,
         executionCount: 0,
         createdAt: Date.now(),
-        tags: [cleanLabel.toLowerCase(), "action"],
-        triggerPhrase: cleanLabel.toLowerCase(),
+        tags: [triggerPhrase, "action"],
+        triggerPhrase,
         steps: [
           {
             id: "step_1",
-            title: `Click ${cleanLabel}`,
+            title: `Click ${name.replace(/^[\p{Emoji}\p{Symbol}\s]+/u, "")}`,
             action: "click",
             target: getCleanElementSelector(btn),
             delayMs: 800,

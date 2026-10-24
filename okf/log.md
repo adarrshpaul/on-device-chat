@@ -1,5 +1,26 @@
 # OKF Transition Log
 
+## 2026-10-25T04:34:00+05:30 - Release v0.5.0: Action Disambiguation, Spacious Composer, Elevated Workflow Studio
+- **Action Button Contextual Disambiguation**:
+  - Implemented `extractContextualButtonAction(btn)` in `workflowPredictor.ts`.
+  - Disambiguated duplicate "Add to Cart" actions on e-commerce pages into specific item routines (`⚡ Add Headphones to Cart`, `⚡ Add Titanium Smartwatch to Cart`, `⚡ Add Mechanical Keyboard to Cart`).
+  - Added multi-tier discovery: explicit attributes (`data-product`, `data-item`), inline event handlers (`onclick="addToCart('...')"`), parent container headings, non-price text blocks, and element IDs.
+- **Spacious Human-Grade Chat Composer**:
+  - Extracted page-context badge out of the input flex row into the top ergonomics shelf alongside the Whisper engine indicator.
+  - Conferred 100% horizontal card width to the text input with generous padding (`p-1.5 sm:p-2`) and 44x44px touch-target action buttons.
+  - Updated placeholder to untruncated `"Ask anything, run an action, or speak..."`.
+- **Elevated Workflows & Automations Studio**:
+  - Removed duplicate `ArrowLeft` icon beneath `ChatHeader`'s top navigation bar.
+  - Added clean deck header toolbar `⚡ Automations Studio` with live active count badge (`6 active`) and a tactile lime `+ New Flow` button.
+  - Sanitized titles using `stripLeadingEmoji` to eliminate double-emoji glyphs.
+  - Upgraded steps preview shelf into an interactive visual flowchart sequence with numbered step badges, uppercase action tags, and arrow connectors (`[ 1 ] CLICK Headphones → [ 2 ] WAIT 800ms`).
+- **Version Bump & Subdomain Isolation**:
+  - Bumped version to `0.5.0` in `frontend/package.json`, `extension/manifest.json`, `frontend/src/main.tsx`, and `frontend/index.html`.
+  - Enforced zero-npm publishing constraint (`npm publish` was NOT executed).
+  - Deployed exclusively to Cloudflare Pages `local-agent-harness` (`https://agent.paulcreates.online`).
+  - Fact recorded: `okf/facts/fact_v050_ui_redesign_disambiguation_spacious_composer_and_studio_20261025.md`.
+
+
 ## 2026-10-24T19:42:00Z - Release v0.4.0: Adversarial Harness Audit Remediated & Claude-Style Progress UI
 - **Adversarial Harness Remediation**:
   - Remediated 6 critical loop blockers identified by Claude Code:

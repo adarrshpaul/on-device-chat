@@ -11,7 +11,6 @@ import {
   RefreshCw,
   X,
   Edit2,
-  ArrowLeft,
   Crosshair,
   Wand2,
 } from "lucide-react";
@@ -19,6 +18,7 @@ import { WebWorkflow, WorkflowStep, clickRepeatCount } from "../lib/types";
 import { workflowStore } from "../lib/workflowStore";
 import { workflowRunner } from "../lib/workflowRunner";
 import { StepEditor } from "./WorkflowStepEditor";
+import { stripLeadingEmoji } from "./tierBadges";
 import {
   PageScan,
   PageFormGroup,
@@ -38,7 +38,7 @@ interface WorkflowStudioProps {
 }
 
 export const WorkflowStudio: React.FC<WorkflowStudioProps> = ({
-  onBackToChat,
+  onBackToChat: _onBackToChat,
   onWorkflowExecuted,
 }) => {
   const [workflows, setWorkflows] = useState<WebWorkflow[]>([]);
@@ -319,35 +319,31 @@ export const WorkflowStudio: React.FC<WorkflowStudioProps> = ({
 
   return (
     <div className="flex flex-col h-full bg-[var(--g4-bg-panel)] text-gray-200 select-none overflow-hidden">
-      {/* Top Bar Banner */}
-      <div className="p-3 bg-black/40 border-b border-white/8 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-2">
-          {onBackToChat && (
-            <button
-              onClick={onBackToChat}
-              className="p-1 rounded hover:bg-white/10 text-gray-400 hover:text-white cursor-pointer mr-0.5"
-              title="Back to chat"
-            >
-              <ArrowLeft size={14} />
-            </button>
-          )}
-          <div className="p-1 rounded-md bg-purple-500/10 border border-purple-500/20 text-purple-400">
-            <Zap size={15} />
+      {/* Top Bar Banner - Tactile Neo-Brutalist Deck Header */}
+      <div className="p-3 bg-black/60 border-b border-white/10 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-black text-[#D4FF00] border border-[#D4FF00]/30 flex items-center justify-center font-bold shadow-[0_0_10px_rgba(212,255,0,0.2)]">
+            <Zap size={14} className="fill-current" />
           </div>
           <div>
-            <h3 className="text-xs font-semibold text-white leading-none">Automations & Workflows</h3>
-            <p className="text-[10px] text-gray-400 mt-0.5">
-              Repeat multi-step website actions with 1 click & 0 tokens
+            <div className="flex items-center gap-2">
+              <h3 className="text-xs font-black text-white tracking-wide uppercase font-mono">Automations Studio</h3>
+              <span className="px-1.5 py-0.2 rounded-full bg-white/10 text-gray-300 text-[10px] font-mono font-bold">
+                {workflows.length} active
+              </span>
+            </div>
+            <p className="text-[10.5px] text-gray-400 mt-0.5">
+              Zero-token deterministic browser routines
             </p>
           </div>
         </div>
 
         <button
           onClick={handleOpenCreate}
-          className="px-2.5 py-1 rounded-[6px] bg-purple-600 hover:bg-purple-500 text-white text-[11px] font-medium flex items-center gap-1 cursor-pointer transition-colors shadow-sm"
+          className="px-3 py-1.5 rounded-xl bg-[#D4FF00] hover:bg-[#b8dd00] text-black text-xs font-black flex items-center gap-1.5 cursor-pointer transition-all shadow-[0_0_12px_rgba(212,255,0,0.25)] active:scale-95"
         >
-          <Plus size={12} />
-          <span>New</span>
+          <Plus size={13} strokeWidth={3} />
+          <span>New Flow</span>
         </button>
       </div>
 
@@ -549,7 +545,7 @@ export const WorkflowStudio: React.FC<WorkflowStudioProps> = ({
                 <button
                   onClick={handleSaveWorkflow}
                   disabled={!formName.trim() || formSteps.length === 0 || invalidSteps > 0}
-                  className="px-3 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium disabled:opacity-50 cursor-pointer shadow-sm"
+                  className="px-3.5 py-1.5 rounded-xl bg-[#D4FF00] hover:bg-[#b8dd00] text-black text-xs font-black disabled:opacity-50 cursor-pointer shadow-sm transition-all"
                 >
                   Save Automation
                 </button>
@@ -624,22 +620,24 @@ export const WorkflowStudio: React.FC<WorkflowStudioProps> = ({
               ? "border-l-4 border-l-[#A855F7] bg-[#0c111e]" 
               : "border-l-4 border-l-[#FF2E93] bg-[#0c111e]";
 
+            const cleanTitle = stripLeadingEmoji(wf.name);
+
             return (
               <div
                 key={wf.id}
                 data-testid={`workflow-card-${wf.id}`}
-                className={`p-3.5 rounded-2xl border border-white/10 hover:border-white/20 transition-all space-y-2.5 shadow-md ${cardAccent}`}
+                className={`p-3.5 rounded-2xl border border-white/10 hover:border-white/20 transition-all space-y-3 shadow-md ${cardAccent}`}
               >
                 <div className="flex items-start justify-between gap-2.5">
                   <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                    <div className="w-8 h-8 rounded-full bg-black text-[#D4FF00] flex items-center justify-center font-bold shrink-0 mt-0.5 shadow-sm">
+                    <div className="w-8 h-8 rounded-full bg-black text-[#D4FF00] flex items-center justify-center font-bold shrink-0 mt-0.5 shadow-sm border border-white/10">
                       <Zap size={14} className="fill-current" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-extrabold text-[13px] text-white tracking-tight truncate">{wf.name}</span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-extrabold text-[13px] text-white tracking-tight truncate">{cleanTitle}</span>
                         {wf.isSystemStarter && (
-                          <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded-full bg-black text-[#D4FF00] font-mono shrink-0">
+                          <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-black text-[#D4FF00] font-mono border border-[#D4FF00]/30 shrink-0">
                             Verified
                           </span>
                         )}
@@ -660,26 +658,53 @@ export const WorkflowStudio: React.FC<WorkflowStudioProps> = ({
                   </button>
                 </div>
 
-                {/* Steps Preview Shelf with Visual Flow Badges */}
-                <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-white/8">
-                  <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 mr-0.5 font-mono">Steps:</span>
-                  {wf.steps.map((st, sIdx) => {
-                    const repeats = clickRepeatCount(st);
-                    return (
-                      <div
-                        key={sIdx}
-                        className="px-2 py-0.5 rounded-lg bg-black/60 border border-white/10 text-[10px] font-mono text-gray-200 flex items-center gap-1 shadow-xs"
-                      >
-                        <span className="text-purple-300 font-bold">{st.action}</span>
-                        {repeats > 1 && (
-                          <span className="px-1 py-0.2 rounded bg-purple-500/30 text-purple-200 font-bold text-[9px]">
-                            ×{repeats}
-                          </span>
-                        )}
-                        {st.target && <span className="text-gray-400 truncate max-w-[80px]">({st.target})</span>}
-                      </div>
-                    );
-                  })}
+                {/* Visual Flowchart Sequence */}
+                <div className="pt-2 border-t border-white/8 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9.5px] font-black uppercase tracking-wider text-gray-400 font-mono">
+                      Pipeline Flow ({wf.steps.length} {wf.steps.length === 1 ? "step" : "steps"}):
+                    </span>
+                    <span className="text-[9.5px] font-mono text-gray-500">
+                      ~{wf.steps.reduce((acc, s) => acc + (s.delayMs || 500), 0)}ms
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {wf.steps.map((st, sIdx) => {
+                      const repeats = clickRepeatCount(st);
+                      const stepAction = st.action || "step";
+                      const stepLabel = st.title
+                        ? stripLeadingEmoji(st.title).replace(/^(Click|Type into|Wait for|Navigate to)\s+/i, "")
+                        : (st.target ? st.target.replace(/^[.#]/, "").slice(0, 16) : stepAction);
+
+                      return (
+                        <React.Fragment key={sIdx}>
+                          <div
+                            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-black/70 border border-white/12 text-[10.5px] font-mono text-gray-200 shadow-sm"
+                          >
+                            <span className="w-4 h-4 rounded-full bg-white/10 text-[9px] font-bold text-gray-300 flex items-center justify-center shrink-0">
+                              {sIdx + 1}
+                            </span>
+                            <span className="text-[#D4FF00] font-black uppercase text-[9.5px] tracking-wider">
+                              {stepAction}
+                            </span>
+                            {stepLabel && (
+                              <span className="text-gray-300 font-medium truncate max-w-[110px]" title={st.title || st.target}>
+                                {stepLabel}
+                              </span>
+                            )}
+                            {repeats > 1 && (
+                              <span className="px-1 py-0.2 rounded bg-purple-500/30 text-purple-200 font-bold text-[9px]">
+                                ×{repeats}
+                              </span>
+                            )}
+                          </div>
+                          {sIdx < wf.steps.length - 1 && (
+                            <span className="text-gray-600 text-xs font-bold shrink-0">→</span>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* Card Footer */}

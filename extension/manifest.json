@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "EdgeOperator AI • On-Device Web Agent",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "On-device AI agent & workflow operator for any website. Private SLMs, automated macros, 0 cloud API cost, 100% in-browser.",
   "author": "Adarrsh Paul <adarrsh@paulcreates.online>",
   "homepage_url": "https://agent.paulcreates.online",
@@ -79,5 +79,5 @@
       ]
     }
   ],
-  "version_name": "0.4.0"
+  "version_name": "0.5.0"
 }

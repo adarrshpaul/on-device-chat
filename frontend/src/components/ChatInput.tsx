@@ -110,8 +110,28 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         </div>
       )}
 
-      {/* Voice Provider Disclosure & Switcher Pill (TASK-118 Rule 7 Honesty & Neo-Brutalist Status Badge) */}
-      <div className="flex items-center justify-between text-[11px] mb-2 px-0.5">
+      {/* Status & Ergonomics Shelf: Page Context on Left, Voice Engine on Right */}
+      <div className="flex items-center justify-between text-[11px] mb-2 px-0.5 gap-2">
+        {/* Dismissible Left Page-Context Pill */}
+        {!isContextDismissed && contextLabel ? (
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[10.5px] font-mono text-gray-300 shadow-xs">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 shadow-[0_0_6px_#34d399]" />
+            <span className="truncate max-w-[140px] font-semibold">{contextLabel}</span>
+            <button
+              type="button"
+              onClick={() => setIsContextDismissed(true)}
+              className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-gray-400 hover:text-white cursor-pointer ml-0.5"
+              title="Dismiss context tag"
+              aria-label="Dismiss context tag"
+            >
+              <X size={10} />
+            </button>
+          </div>
+        ) : (
+          <div />
+        )}
+
+        {/* Voice Provider Disclosure & Switcher Pill */}
         <button
           type="button"
           onClick={() => {
@@ -159,31 +179,15 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         </div>
       )}
 
-      <form onSubmit={onSubmit} className="flex items-center gap-2 p-1 rounded-2xl bg-[#090d18] border-2 border-white/15 focus-within:border-[#D4FF00] focus-within:shadow-[0_0_18px_rgba(212,255,0,0.18)] transition-all">
-        <div className="flex-1 flex items-center gap-1.5 px-2.5 py-1 min-w-0">
-          {/* Dismissible Left Page-Context Tag */}
-          {!isContextDismissed && contextLabel && !hasInput && (
-            <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-purple-500/20 text-purple-200 border border-purple-500/35 text-[10px] font-mono font-bold leading-none">
-              <span className="truncate max-w-[70px] sm:max-w-[120px]">{contextLabel}</span>
-              <button
-                type="button"
-                onClick={() => setIsContextDismissed(true)}
-                className="w-4 h-4 flex items-center justify-center text-gray-400 hover:text-white cursor-pointer ml-0.5"
-                title="Dismiss context tag"
-                aria-label="Dismiss context tag"
-              >
-                <X size={10} />
-              </button>
-            </span>
-          )}
-
-          {/* Clean Central Input Field (16px minimum body floor, zero auto-zoom) */}
+      {/* Spacious, Inviting Composer Field with Human-Grade Proportions */}
+      <form onSubmit={onSubmit} className="flex items-center gap-2 p-1.5 sm:p-2 rounded-2xl bg-[#090d18] border-2 border-white/15 focus-within:border-[#D4FF00] focus-within:shadow-[0_0_22px_rgba(212,255,0,0.22)] transition-all">
+        <div className="flex-1 flex items-center px-2 py-0.5 min-w-0">
           <input
             type="text"
             value={inputValue}
             onChange={(e) => onInputChange(e.target.value)}
             placeholder={
-              isReady ? "Ask about this page or command..." : "Initializing local engine..."
+              isReady ? "Ask anything, run an action, or speak..." : "Initializing local engine..."
             }
             disabled={!isReady}
             style={{
@@ -194,7 +198,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               boxShadow: "none",
               WebkitAppearance: "none",
             }}
-            className="flex-1 bg-transparent text-white placeholder-gray-500 px-1 py-1 text-[16px] leading-[1.5] focus:outline-none disabled:opacity-50 min-w-0 font-medium"
+            className="w-full bg-transparent text-white placeholder-gray-400 py-2 text-[15px] sm:text-[16px] leading-[1.5] focus:outline-none disabled:opacity-50 min-w-0 font-medium"
           />
         </div>
 
@@ -203,7 +207,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           type="button"
           onClick={toggleVoiceRecording}
           disabled={!isReady || isLoading}
-          className={`w-[42px] h-[42px] min-w-[42px] min-h-[42px] rounded-xl flex items-center justify-center transition-all shrink-0 shadow-sm g4-mic-btn ${
+          className={`w-[44px] h-[44px] min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center transition-all shrink-0 shadow-sm g4-mic-btn ${
             isListening ? "listening" : ""
           }`}
           style={isListening ? { transform: `scale(${1 + audioLevel * 0.15})` } : undefined}
@@ -218,7 +222,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               : `Start voice input (${useWhisper ? "On-device Whisper" : "Browser speech (sent to Google)"})`
           }
         >
-          <Mic size={18} className={isListening ? "text-white animate-bounce" : "text-gray-200"} />
+          <Mic size={19} className={isListening ? "text-white animate-bounce" : "text-gray-200"} />
         </button>
 
         {/* Right Action: Stop or Send (High-Contrast Tactile Button) */}
@@ -226,17 +230,17 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           <button
             type="button"
             onClick={onStop}
-            className="w-[42px] h-[42px] min-w-[42px] min-h-[42px] rounded-xl bg-white/20 hover:bg-white/30 text-white flex items-center justify-center cursor-pointer transition-colors shrink-0 shadow-sm active:scale-95"
+            className="w-[44px] h-[44px] min-w-[44px] min-h-[44px] rounded-xl bg-white/20 hover:bg-white/30 text-white flex items-center justify-center cursor-pointer transition-colors shrink-0 shadow-sm active:scale-95"
             title="Stop generation"
             aria-label="Stop generation"
           >
-            <Square size={13} className="fill-current text-gray-100" />
+            <Square size={14} className="fill-current text-gray-100" />
           </button>
         ) : (
           <button
             type="submit"
             disabled={!isReady || !hasInput}
-            className={`w-[42px] h-[42px] min-w-[42px] min-h-[42px] rounded-xl flex items-center justify-center transition-all shrink-0 ${
+            className={`w-[44px] h-[44px] min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center transition-all shrink-0 ${
               hasInput
                 ? "neo-btn-send-active active:translate-x-[1px] active:translate-y-[1px]"
                 : "g4-send-btn-disabled"
