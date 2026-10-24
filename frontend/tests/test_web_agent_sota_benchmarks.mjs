@@ -1,13 +1,16 @@
 /**
- * SOTA Web Agent Benchmark Test Suite
+ * Web Agent Unit Test Suite (Synthetic DOM Mocks)
  *
- * Implements automated validation inspired by foundational web agent datasets:
+ * Implements unit test verification on mock DOM elements modeled after patterns in web agent datasets:
  * 1. Mind2Web (OSU): Canonical DOM element selection & synthetic event propagation
  * 2. WebArena (CMU): Programmatic state assertions (Deterministic Oracle)
  * 3. WebVoyager (Tsinghua): Set-of-Marks (SoM) dual modality & execution error recovery
  * 4. SeeClick / ScreenSpot (NJU): Resolution-invariant normalized coordinate clicking [0, 1000]
  * 5. WebShop (Princeton): E-commerce multi-attribute constraint verification
  * 6. OSWorld / WorkArena (ServiceNow): Modal dialog trapping & isolated enterprise workflows
+ *
+ * NOTE: These are local unit tests on synthetic mock DOMs; see test_empirical_harness_eval.mjs
+ * for measured empirical element selection benchmarks across real multi-domain pages.
  */
 
 class MockElement {
@@ -83,7 +86,7 @@ globalThis.MouseEvent = class { constructor(type, init = {}) { this.type = type;
 
 async function runSotaBenchmarks() {
   console.log("======================================================================");
-  console.log("🌐 SOTA WEB AGENT BENCHMARK SUITE (Mind2Web / WebArena / SeeClick / OSWorld)");
+  console.log("🌐 WEB AGENT UNIT TESTS (Synthetic DOM Mocks Modeled After SOTA Benchmarks)");
   console.log("======================================================================\n");
 
   let passed = 0;

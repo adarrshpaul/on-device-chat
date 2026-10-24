@@ -180,20 +180,25 @@ export class ActionDispatcher {
   /**
    * Click an element with visual highlight and human mouse events
    */
-  public static async click(target: HTMLElement | number | string): Promise<boolean> {
+  public static async click(
+    target: HTMLElement | number | string,
+    options?: { skipSafetyCheck?: boolean }
+  ): Promise<boolean> {
     const element = isElementNode(target) ? target : this.resolveTarget(target).element;
     if (!element) return false;
 
     // Safety Gate Check: irreversible / destructive / financial actions require confirmation
-    const safety = await SafetyGate.checkAndConfirm({
-      actionType: "click",
-      element,
-      targetDescription: typeof target === "string" ? target : undefined,
-    });
-    this.lastSafetyResult = safety;
-    if (!safety.allowed) {
-      console.warn("[ActionDispatcher] Click blocked by SafetyGate:", safety.reason);
-      return false;
+    if (!options?.skipSafetyCheck) {
+      const safety = await SafetyGate.checkAndConfirm({
+        actionType: "click",
+        element,
+        targetDescription: typeof target === "string" ? target : undefined,
+      });
+      this.lastSafetyResult = safety;
+      if (!safety.allowed) {
+        console.warn("[ActionDispatcher] Click blocked by SafetyGate:", safety.reason);
+        return false;
+      }
     }
 
     const isCanvasNode = (typeof target === "number" || typeof target === "string")

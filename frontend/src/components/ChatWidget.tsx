@@ -33,6 +33,7 @@ import { WorkflowPredictor, PredictedWorkflowCandidate } from "../lib/workflowPr
 
 import { NavPersistenceManager } from "../lib/navPersistence";
 import { CanvasGameController } from "../lib/canvasGameController";
+import { SafetyConfirmationCard } from "./SafetyConfirmationCard";
 
 export interface ChatWidgetProps {
   config?: Gemma4Config;
@@ -210,6 +211,9 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
     currentPlan,
     approvePlan,
     rejectPlan,
+    pendingSafetyConfirmation,
+    approveSafetyAction,
+    rejectSafetyAction,
   } = useChat(config);
 
   const loadQuickWorkflows = async () => {
@@ -1087,6 +1091,15 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
                     <span>Add</span>
                   </button>
                 </div>
+              )}
+
+              {/* Safety Gate Confirmation Dialog (TASK-112 / TASK-117) */}
+              {pendingSafetyConfirmation && (
+                <SafetyConfirmationCard
+                  classification={pendingSafetyConfirmation.classification}
+                  onApprove={approveSafetyAction}
+                  onReject={rejectSafetyAction}
+                />
               )}
 
               {/* Anchor Composer */}

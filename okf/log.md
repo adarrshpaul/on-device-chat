@@ -1,5 +1,24 @@
 # OKF Transition Log
 
+## 2026-10-24T14:24:00Z - TASK-117: Fix Review Blockers in Safety Gate, Voice Honesty, and Harness Lifecycle
+- **Scope & Implementation**:
+  - Implemented isolated allowlist storage (`IAllowlistStore`, `MemoryAllowlistStore`, `ExtensionAllowlistStore`). Never reads or trusts host page `localStorage`.
+  - Removed `(window as any).SafetyGate` and pruned `SafetyGate` from `EdgeOperator` instance exports in `main.tsx`. Page scripts can no longer tamper with gates.
+  - Implemented fail-closed permission policy (`PermissionPolicy`) and interactive `<SafetyConfirmationCard>` in chat widget.
+  - Fixed classifier holes with OCP rule table (`CLASSIFICATION_RULES`), ensuring irreversible precedence over safe contexts ("Next: Place order", "Close account", "Confirm deletion", "Show more and buy now", "Revoke API Key").
+  - Extended mutation detection across all `browse` sub-actions (`click`, `type`, `pressEnter`, `fill`, `input`, `hover`, `clickCoordinates`).
+  - Added Chromium cloud STT privacy notice to `voiceEngine.ts` and UI, separating it from on-device Whisper WebGPU. Replaced fabricated ASR WER with empirical transcript disfluency reduction.
+  - Added DeepSeek official documentation citation in `reasoningManager.ts` and added Gemma 4 `<|channel>thought...<channel|>` delimiters.
+  - Preserved normal speech in `voicePolish.ts` ("Meeting at 4, no 5pm", "Thanks, I mean it", "What kind of car").
+  - Stopped silent clipboard overwrites in `textInjector.ts`.
+  - Prevented double prompting in `AgentHarness` and `UISpecEngine`. Fixed memory read-back loops and validated `primitiveUpdateTask` parameters.
+- **Verification & Git**:
+  - `test_task_117_review_fixes.mjs`: 18/18 passing.
+  - All 16 test suites passing in `npm test` (including `test:safety`, `test:todo`, `test:voice`, `test:uispec`, `test:eval`).
+  - TypeScript `tsc --noEmit` and ESLint passing cleanly. Production build and extension sync verified.
+  - Committed to branch `feat/task-117-fix-review-blockers`.
+  - Artifact/Fact: `okf/facts/fact_task_117_review_blockers_fixed_20261024.md`.
+
 ## 2026-10-24T13:46:00Z - TASK-115: On-Device Voice Transcription, Disfluency Polish & DOM Text Injection
 - **Scope & Implementation**:
   - Implemented `frontend/src/lib/voiceEngine.ts`: Web Audio `AudioContext` + `AnalyserNode` real-time audio volume capture, Web Speech API instant STT (0 weight), and optional Whisper WebGPU (`onnx-community/whisper-tiny`).
@@ -1205,3 +1224,4 @@
 - 2026-10-24T07:30:00Z (claude-code): COMPARED Siemens Eigen Engineering Agent (TIA Portal copilot, structured project edits) with on-device-chat (local general browser agent). Different categories; ideas: typed adapters, @file ingestion, macro test generation. See facts/fact_siemens_eea_vs_on_device_chat_20261024.md
 - 2026-10-24T08:00:00Z (claude-code): PROPOSED importing Claude Code/DeepSeek/Wispr Flow techniques; mapped vs existing code. New: permission modes + hooks (folded into TASK-112), TASK-115 on-device voice, TASK-116 harness-held todo + reasoning-history rule. See facts/intention_best_harness_techniques_voice_20261024.md
 - 2026-10-24T08:15:00Z (claude-code): USER DIRECTIVE relayed: Antigravity priority track = on-device-chat harness (TASK-112 → 116 → 115 → 113 → 114), pinned at top of ~/workspace/.tasks/queue.md.
+- 2026-10-24T09:30:00Z (claude-code): REVIEW of TASK-112/115/116: 8 blockers (page-writable allowlist, global SafetyGate, no confirm UI, gate bypasses, Web Speech not on-device, fake ASR WER) + functional bugs (Whisper captures no audio, todo plan never created). Queued TASK-117. See facts/fact_review_task_112_115_116_20261024.md

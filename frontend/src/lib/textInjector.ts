@@ -1,20 +1,24 @@
 /**
- * Tri-Tier Text Injection Engine (TASK-115)
+ * Text Injection Utility (TASK-115 / TASK-117)
  *
- * Implements the universal DOM injection sequence from flow-voice-harness:
+ * Implements focused element text insertion:
  * 1. Deep active element & selection range resolution (including open shadow roots).
- * 2. Tri-Tier Injection Sequence:
- *    - Tier 1: document.execCommand("insertText", false, text) [preserves native undo stack]
- *    - Tier 2: Synthetic ClipboardEvent("paste") with DataTransfer
- *    - Tier 3: Prototype value setter fallback with InputEvent dispatch
- * 3. Dictated text verification & clipboard fallback: guarantees user speech is never lost.
+ * 2. Injection fallbacks:
+ *    - execCommand("insertText") (native undo stack)
+ *    - Synthetic ClipboardEvent("paste")
+ *    - Prototype value setter fallback
+ * 3. Does NOT silently overwrite the user's system clipboard unless explicitly requested.
  */
 
 export interface InjectionResult {
   success: boolean;
-  tierUsed: "execCommand" | "clipboardEvent" | "prototypeSetter" | "clipboardFallback";
+  tierUsed: "execCommand" | "clipboardEvent" | "prototypeSetter" | "clipboardFallback" | "none";
   element: HTMLElement | null;
   verified: boolean;
+}
+
+export interface InjectionOptions {
+  copyToClipboardOnFail?: boolean;
 }
 
 export class TextInjector {
@@ -53,22 +57,33 @@ export class TextInjector {
   }
 
   /**
-   * Inject text into the target element using the Tri-Tier sequence.
+   * Inject text into the target element using the multi-tier sequence.
    */
-  static async injectText(text: string, targetEl?: HTMLElement | null): Promise<InjectionResult> {
+  static async injectText(
+    text: string,
+    targetEl?: HTMLElement | null,
+    options?: InjectionOptions
+  ): Promise<InjectionResult> {
     if (!text) {
       return { success: true, tierUsed: "execCommand", element: null, verified: true };
     }
 
     const target = targetEl || this.getDeepActiveElement();
     if (!target || !this.isEditable(target)) {
-      // No active editable field found: copy to clipboard as graceful fallback
-      await this.copyToClipboard(text);
+      if (options?.copyToClipboardOnFail) {
+        await this.copyToClipboard(text);
+        return {
+          success: false,
+          tierUsed: "clipboardFallback",
+          element: null,
+          verified: false,
+        };
+      }
       return {
-        success: true,
-        tierUsed: "clipboardFallback",
+        success: false,
+        tierUsed: "none",
         element: null,
-        verified: true,
+        verified: false,
       };
     }
 
@@ -155,11 +170,20 @@ export class TextInjector {
       }
     }
 
-    // Fallback: Copy to clipboard if host page rejected all injection attempts
-    await this.copyToClipboard(text);
+    // Fallback: Copy to clipboard ONLY if explicitly permitted by options
+    if (options?.copyToClipboardOnFail) {
+      await this.copyToClipboard(text);
+      return {
+        success: false,
+        tierUsed: "clipboardFallback",
+        element: target,
+        verified: false,
+      };
+    }
+
     return {
-      success: true,
-      tierUsed: "clipboardFallback",
+      success: false,
+      tierUsed: "none",
       element: target,
       verified: false,
     };

@@ -1,12 +1,16 @@
 /**
- * Vega Decision Engine (vegaml)
+ * Vega Decision Engine (Heuristic Scorer)
  * 
- * Typed decisions from a frozen language model and a small physics engine:
- * - Reference: NandhaKishorM/vegaml (14.3M parameters, 57 MB)
- * - Mechanism: Damped Hamiltonian dynamics in 64-dimensional latent space integrated via symplectic Euler.
- * - Architecture: One read of state -> Gaussian potential wells per candidate option -> particle relaxation.
- * - Calibrated Outputs: Calibrated probabilities summing to 1.0, split-conformal prediction sets,
- *   explicit abstain flag, unbound out-of-distribution flag, settle steps, and free energy.
+ * Keyword-overlap heuristic scorer with Hamiltonian particle relaxation:
+ * - Mechanism: Keyword overlap scoring projected into 64-dimensional pseudo-random latent space,
+ *   followed by damped Hamiltonian dynamics integrated via symplectic Euler.
+ * - Architecture: One read of state -> potential wells per candidate option -> particle relaxation.
+ * - Heuristic Outputs: Softmax-normalized probability distribution, candidate prediction sets
+ *   (heuristic threshold filtering), explicit abstain flag, unbound out-of-distribution flag,
+ *   settle steps, and free energy.
+ * - Note on Model Weights: This client-side engine executes a keyword-overlap heuristic and
+ *   Hamiltonian relaxation algorithm in TypeScript. It does NOT load the 14.3M parameter
+ *   NandhaKishorM/vegaml weights (which require a frozen 0.8B reader model like Qwen3.5-0.8B).
  * 
  * Single Decision Layer Policy:
  * - Exactly ONE decision layer runs at a time.
@@ -46,7 +50,7 @@ export interface VegaAnswer {
   score?: number;
   expected_score?: number;
   boolean?: number; // P(true)
-  probs: Record<string, number>; // Calibrated, sums to 1.0
+  probs: Record<string, number>; // Softmax-normalized probabilities, sums to 1.0
   confidence: number;
   prediction_set: string[] | number[];
   abstain: boolean;
@@ -377,7 +381,7 @@ export class VegaDecisionEngine {
       const sim = this.simulateHamiltonian(stateVec, probeVec, optVectors, logDepths, qtype);
       const tau = this.computeTau(qtype, sim.kineticEnergy, sim.nearestDistance, sim.settleSteps, labels.length);
 
-      // Calibrated Boltzmann distribution: P_k = softmax(logits / tau)
+      // Softmax Boltzmann distribution: P_k = softmax(logits / tau)
       const scaledLogits = sim.logits.map((l) => l / tau);
       const maxLogit = Math.max(...scaledLogits);
       const expValues = scaledLogits.map((l) => Math.exp(l - maxLogit));
@@ -399,9 +403,9 @@ export class VegaDecisionEngine {
       const margin = Math.round((bestScore - secondScore) * 1000) / 1000;
       const confidence = bestScore;
 
-      // Conformal prediction set (LAC set at alpha = 0.10, ensuring argmax is always present)
-      const conformalThreshold = 0.85;
-      const predictionSet = labels.filter((_, idx) => probsList[idx] >= 1.0 - conformalThreshold || idx === bestIdx);
+      // Candidate prediction set (heuristic threshold filter at alpha = 0.15, ensuring argmax is always present)
+      const candidateThreshold = 0.85;
+      const predictionSet = labels.filter((_, idx) => probsList[idx] >= 1.0 - candidateThreshold || idx === bestIdx);
 
       // Explicit Abstain & Unbound flags
       const abstain = confidence < this.defaultAbstainThreshold;
@@ -538,24 +542,25 @@ export class VegaDecisionEngine {
         margin: vegaAction.margin,
         primitive: "choice",
         latencyMs: vegaRes.latencyMs,
-        engineUsed: "Vega Physics Engine (Hamiltonian Euler)",
+        engineUsed: "Vega Keyword Heuristic (Hamiltonian Euler)",
         distribution: alternatives.slice(0, 5),
         needsClarification: false,
         vegaMetrics: {
           kineticEnergy: 0,
           settleSteps: vegaAction.settle_steps,
           conformalSet: vegaAction.prediction_set.map(String),
+          candidateSet: vegaAction.prediction_set.map(String),
           abstain: vegaAction.abstain,
           unbound: vegaAction.unbound,
           tau: vegaAction.tau,
         },
-        explanation: `Settled in ${vegaAction.settle_steps} integration steps (Hamiltonian energy: ${vegaAction.energy}, tau: ${vegaAction.tau}, conformal set: [${vegaAction.prediction_set.join(", ")}]).`,
+        explanation: `Settled in ${vegaAction.settle_steps} integration steps (Hamiltonian energy: ${vegaAction.energy}, tau: ${vegaAction.tau}, candidate set: [${vegaAction.prediction_set.join(", ")}]).`,
       };
 
       return {
         selectedTool: vegaAction.choice,
         confidence: vegaAction.confidence,
-        reason: `Vega Physics Decision (${vegaRes.latencyMs}ms, 0 tokens)`,
+        reason: `Vega Keyword Heuristic Decision (${vegaRes.latencyMs}ms, 0 tokens)`,
         decisionTrace,
       };
     }
@@ -685,7 +690,7 @@ export class VegaDecisionEngine {
         margin: targetAnswer.margin,
         primitive: "choice",
         latencyMs: vegaRes.latencyMs,
-        engineUsed: "Vega Physics Engine (Hamiltonian Euler)",
+        engineUsed: "Vega Keyword Heuristic (Hamiltonian Euler)",
         distribution: alternatives.slice(0, 5),
         needsClarification: combinedConf < 0.68 || targetAnswer.margin < 0.15,
         hallucinationShield,
@@ -693,11 +698,12 @@ export class VegaDecisionEngine {
           kineticEnergy: 0,
           settleSteps: targetAnswer.settle_steps,
           conformalSet: targetAnswer.prediction_set.map(String),
+          candidateSet: targetAnswer.prediction_set.map(String),
           abstain: targetAnswer.abstain,
           unbound: targetAnswer.unbound,
           tau: targetAnswer.tau,
         },
-        explanation: `Vega settled particle in ${targetAnswer.settle_steps} steps (tau: ${targetAnswer.tau}, conformal set: [${targetAnswer.prediction_set.join(", ")}]). Verified against live DOM.`,
+        explanation: `Vega settled particle in ${targetAnswer.settle_steps} steps (tau: ${targetAnswer.tau}, candidate set: [${targetAnswer.prediction_set.join(", ")}]). Verified against live DOM.`,
       };
 
       // Candidate 2 Integration: Escalate to d3-nano when Vega confidence margin is tight (< 0.15)
@@ -790,13 +796,14 @@ export class VegaDecisionEngine {
         margin: ans.margin,
         primitive: "choice",
         latencyMs: vegaRes.latencyMs,
-        engineUsed: "Vega Physics Engine (Hamiltonian Euler)",
+        engineUsed: "Vega Keyword Heuristic (Hamiltonian Euler)",
         distribution: alternatives.slice(0, 5),
         needsClarification: ans.margin < 0.15 || ans.confidence < 0.65,
         vegaMetrics: {
           kineticEnergy: 0,
           settleSteps: ans.settle_steps,
           conformalSet: ans.prediction_set.map(String),
+          candidateSet: ans.prediction_set.map(String),
           abstain: ans.abstain,
           unbound: ans.unbound,
           tau: ans.tau,
@@ -859,7 +866,7 @@ export class VegaDecisionEngine {
         margin: ans.margin,
         primitive: "boolean",
         latencyMs: vegaRes.latencyMs,
-        engineUsed: "Vega Physics Engine (Hamiltonian Euler)",
+        engineUsed: "Vega Keyword Heuristic (Hamiltonian Euler)",
         distribution: [
           { label: "Supported (True)", score: prob, isWinner: value },
           { label: "Contradicted (False)", score: Math.round((1 - prob) * 1000) / 1000, isWinner: !value },
@@ -869,11 +876,12 @@ export class VegaDecisionEngine {
           kineticEnergy: 0,
           settleSteps: ans.settle_steps,
           conformalSet: ans.prediction_set.map(String),
+          candidateSet: ans.prediction_set.map(String),
           abstain: ans.abstain,
           unbound: ans.unbound,
           tau: ans.tau,
         },
-        explanation: `Vega calibrated P(true) = ${prob} (settle steps: ${ans.settle_steps}, tau: ${ans.tau}).`,
+        explanation: `Vega estimated P(true) = ${prob} (settle steps: ${ans.settle_steps}, tau: ${ans.tau}).`,
       };
 
       return {

@@ -352,7 +352,11 @@ export class AgentHarness {
 
         const repeatCount = typeof rawArgs.repeatCount === "number" && rawArgs.repeatCount > 0 ? rawArgs.repeatCount : 1;
         for (let r = 0; r < repeatCount; r++) {
-          await ActionDispatcher.click(resolved.element);
+          const clicked = await ActionDispatcher.click(resolved.element, { skipSafetyCheck: true });
+          if (!clicked) {
+            const failReason = ActionDispatcher.lastSafetyResult?.reason || "element click was dropped or not interactable";
+            return `Click failed on ${resolved.identifierDescription}: ${failReason}.`;
+          }
           if (r < repeatCount - 1) {
             await new Promise((res) => setTimeout(res, 250));
           }
@@ -651,11 +655,18 @@ export class AgentHarness {
     return `[Compacted ${rawText.length} chars to ${memKey}]. ${label}:\n[Head]: ${head}...\n[Tail]: ...${tail}\n(use read { target: "${memKey}" } if full observation required)`;
   }
 
-  /** Primitive: update_task (Harness-held task list management, TASK-116) */
+  /** Primitive: update_task (Harness-held task list management, TASK-116 & TASK-117) */
   private async primitiveUpdateTask(args: Record<string, unknown> = {}): Promise<string> {
     const rawArgs = args || {};
-    const taskId = String(rawArgs.taskId || rawArgs.id || rawArgs.task || "1");
-    const rawStatus = String(rawArgs.status || "completed").toLowerCase();
+    const rawTaskId = rawArgs.taskId || rawArgs.id || rawArgs.task;
+    if (!rawTaskId) {
+      return "Error: taskId (e.g. 1 or task_1) is required to update task status.";
+    }
+    const rawStatus = rawArgs.status ? String(rawArgs.status).toLowerCase() : null;
+    if (!rawStatus) {
+      return "Error: status (e.g. in_progress, completed, blocked) is required to update task status.";
+    }
+    const taskId = String(rawTaskId);
     const status: TodoStatus = (rawStatus === "blocked" || rawStatus === "failed")
       ? "blocked"
       : rawStatus === "in_progress"
@@ -1246,10 +1257,12 @@ export class AgentHarness {
         observation = `Error executing tool "${decision.tool}": ${err?.message || "Execution timeout"}`;
       }
 
-      // OpenHarness & Claude Code Pattern: Per-Turn Tool-Output Truncation Budget (TASK-116)
+      // OpenHarness & Claude Code Pattern: Per-Turn Tool-Output Truncation Budget (TASK-116 & TASK-117)
       // Large observations (>1200 chars) are stored in memory and summarized with a mem:// reference.
+      // Explicit read(mem://...) requests are preserved in full without infinite re-truncation.
+      const isReadingStoredMemory = decision.tool === "read" && String(decision.args?.target || "").startsWith("mem://");
       const MAX_OBSERVATION_CHARS = 1200;
-      if (observation && observation.length > MAX_OBSERVATION_CHARS) {
+      if (!isReadingStoredMemory && observation && observation.length > MAX_OBSERVATION_CHARS) {
         const memKey = `mem://obs_step${step + 1}_${Date.now().toString(36)}`;
         this.memoryStore.set(memKey, observation);
         const previewLimit = 400;

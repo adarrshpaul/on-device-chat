@@ -17,7 +17,7 @@ import { WorkflowPredictor } from "./lib/workflowPredictor";
 import { WorkflowRunner, workflowRunner } from "./lib/workflowRunner";
 import { UISpecEngine } from "./lib/uiSpecEngine";
 import { decisionScorerRegistry, VegaOnDeviceScorer, D3NanoDecisionScorer } from "./lib/decisionScorer";
-import { SafetyGate } from "./lib/safetyGate";
+import { SafetyGate, type PermissionMode } from "./lib/safetyGate";
 
 export interface EdgeOperatorConfig {
   /** DOM element ID to mount into (auto-created if missing) */
@@ -148,7 +148,7 @@ Object.assign(instance, {
   decisionScorerRegistry,
   VegaOnDeviceScorer,
   D3NanoDecisionScorer,
-  SafetyGate,
+  setPermissionMode: (mode: PermissionMode) => SafetyGate.setPermissionMode(mode),
 });
 
 if (typeof window !== "undefined") {
@@ -170,7 +170,6 @@ if (typeof window !== "undefined") {
   (window as any).UISpecEngine = UISpecEngine;
   (window as any).decisionScorerRegistry = decisionScorerRegistry;
   (window as any).VegaOnDeviceScorer = VegaOnDeviceScorer;
-  (window as any).SafetyGate = SafetyGate;
   (window as any).D3NanoDecisionScorer = D3NanoDecisionScorer;
 
   /**

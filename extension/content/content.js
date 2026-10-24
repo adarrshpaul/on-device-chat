@@ -96,9 +96,10 @@
 
   function applyPermissionModeSetting(mode) {
     const agent = window.EdgeOperator || window.OnDeviceChat;
-    const safetyGate = agent && agent.SafetyGate;
-    if (safetyGate && typeof safetyGate.setPermissionMode === "function" && mode) {
-      safetyGate.setPermissionMode(mode);
+    if (agent && typeof agent.setPermissionMode === "function" && mode) {
+      agent.setPermissionMode(mode);
+    } else if (agent && agent.SafetyGate && typeof agent.SafetyGate.setPermissionMode === "function" && mode) {
+      agent.SafetyGate.setPermissionMode(mode);
     }
   }
 

@@ -181,7 +181,7 @@ export class UISpecEngine {
         case "click": {
           const count = Math.max(1, Math.min(50, action.repeatCount || 1));
           for (let i = 0; i < count; i++) {
-            await ActionDispatcher.click(el);
+            await ActionDispatcher.click(el, { skipSafetyCheck: true });
             if (count > 1 && i < count - 1) {
               await new Promise((r) => setTimeout(r, 200));
             }

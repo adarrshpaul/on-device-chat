@@ -22,7 +22,8 @@ export interface PolishOptions {
 export class VoicePolishEngine {
   private static FILLERS = [
     /\b(?:um+h?|uh+h?|er+h?|ah+h?)\b/gi,
-    /\b(?:you know|sort of|kind of)\b/gi,
+    /\byou\s+know(?!\s+(?:what|that|who|how)\b)/gi,
+    /(?<!\b(?:what|which|that|this|these|those|a|an|any|every|some|each)\s+)\b(?:sort\s+of|kind\s+of)\b(?!\s+(?:car|vehicle|person|thing|object|file|food|book|animal|music|place|item|device|clothing|art|problem|question|job|work|data|tool|game|movie|app|software|product|element|button|website|page|type|breed|genre|style|color|size|shape|model|brand|category|tier)\b)/gi,
   ];
 
   /**
@@ -73,7 +74,7 @@ export class VoicePolishEngine {
     // Pattern: "[X], no [Y]" or "[X], wait [Y]"
     // e.g. "Meeting at 4, no 5pm" -> "Meeting at 5pm"
     // e.g. "Send email to Bob, actually Sarah" -> "Send email to Sarah"
-    const regex = /\b([\w\s]+?),\s*(?:no\s+actually|no\s+wait|actually|scratch that|i mean|wait)\s+([\w\s]+?)(?=[.,;!?]|$)/i;
+    const regex = /\b([\w\s]+?),\s*(?:no\s+actually|no\s+wait|no(?!\s+(?:problem|thanks|worries|doubt))|actually|scratch that|i\s+mean(?!\s+(?:it|what))\b|wait)\s+([\w\s]+?)(?=[.,;!?]|$)/i;
     let match = result.match(regex);
     let iterations = 0;
 

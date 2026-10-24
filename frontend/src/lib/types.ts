@@ -488,7 +488,8 @@ export interface DecisionTrace {
   vegaMetrics?: {
     kineticEnergy: number;
     settleSteps: number;
-    conformalSet: string[];
+    conformalSet: string[]; // Retained for backwards compatibility with legacy fixtures
+    candidateSet?: string[];
     abstain: boolean;
     unbound: boolean;
     tau: number;

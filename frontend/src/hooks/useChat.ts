@@ -25,7 +25,13 @@ import { CanvasGameController, GameProgressEvent } from "../lib/canvasGameContro
 import { CanvasInspector } from "../lib/canvasInspector";
 import { UISpecEngine } from "../lib/uiSpecEngine";
 import { globalTodoManager, PlanState } from "../lib/todoManager";
+import { SafetyGate, type SafetyClassification } from "../lib/safetyGate";
 import type { Gemma4Config } from "../main";
+
+export interface PendingSafetyConfirmation {
+  classification: SafetyClassification;
+  resolve: (approved: boolean) => void;
+}
 
 export interface DisplayMessage {
   id?: string;
@@ -75,6 +81,11 @@ export function useChat(config: Gemma4Config) {
   const [pageAnalysis, setPageAnalysis] = useState<PageAnalysisResult | null>(null);
   const [isRecordingMacro, setIsRecordingMacro] = useState<boolean>(false);
   const [currentPlan, setCurrentPlan] = useState<PlanState | null>(null);
+  const [pendingSafetyConfirmation, setPendingSafetyConfirmation] = useState<PendingSafetyConfirmation | null>(null);
+  const [pendingPlanApproval, setPendingPlanApproval] = useState<{
+    plan: PlanState;
+    resolve: (approved: boolean) => void;
+  } | null>(null);
 
   useEffect(() => {
     const unsub = globalTodoManager.onPlanChange((plan) => {
@@ -83,13 +94,52 @@ export function useChat(config: Gemma4Config) {
     return unsub;
   }, []);
 
+  // Register interactive SafetyGate confirmation handler
+  useEffect(() => {
+    SafetyGate.setConfirmHandler((classification) => {
+      return new Promise<boolean>((resolve) => {
+        setPendingSafetyConfirmation({
+          classification,
+          resolve: (approved: boolean) => {
+            setPendingSafetyConfirmation(null);
+            resolve(approved);
+          },
+        });
+      });
+    });
+
+    return () => {
+      SafetyGate.setConfirmHandler(null);
+    };
+  }, []);
+
+  const approveSafetyAction = useCallback(() => {
+    if (pendingSafetyConfirmation) {
+      pendingSafetyConfirmation.resolve(true);
+    }
+  }, [pendingSafetyConfirmation]);
+
+  const rejectSafetyAction = useCallback(() => {
+    if (pendingSafetyConfirmation) {
+      pendingSafetyConfirmation.resolve(false);
+    }
+  }, [pendingSafetyConfirmation]);
+
   const approvePlan = useCallback(() => {
     globalTodoManager.approvePlan();
-  }, []);
+    if (pendingPlanApproval) {
+      pendingPlanApproval.resolve(true);
+      setPendingPlanApproval(null);
+    }
+  }, [pendingPlanApproval]);
 
   const rejectPlan = useCallback(() => {
     globalTodoManager.rejectPlan("User cancelled plan.");
-  }, []);
+    if (pendingPlanApproval) {
+      pendingPlanApproval.resolve(false);
+      setPendingPlanApproval(null);
+    }
+  }, [pendingPlanApproval]);
 
   const escalationManagerRef = useRef<EscalationManager | null>(null);
   const harnessRef = useRef<AgentHarness | null>(null);
@@ -251,6 +301,17 @@ export function useChat(config: Gemma4Config) {
       maxSteps: 10,
       customHostTools,
       customToolDefs: config.tools || [],
+      onPlanApprovalRequired: (plan) => {
+        return new Promise<boolean>((resolve) => {
+          setPendingPlanApproval({
+            plan,
+            resolve: (approved: boolean) => {
+              setPendingPlanApproval(null);
+              resolve(approved);
+            },
+          });
+        });
+      },
       onStepProgress: (step, tool, obs) => {
         setActiveSteps((prev) => [
           ...prev,
@@ -993,5 +1054,8 @@ export function useChat(config: Gemma4Config) {
     currentPlan,
     approvePlan,
     rejectPlan,
+    pendingSafetyConfirmation,
+    approveSafetyAction,
+    rejectSafetyAction,
   };
 }

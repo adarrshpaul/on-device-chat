@@ -227,7 +227,7 @@ export default function MessageBubble({
           </div>
         )}
 
-        {/* Decision Card (if calibrated choice alternatives exist) */}
+        {/* Decision Card (if candidate choice alternatives exist) */}
         {message.decision && (
           <div className="mb-2 w-full">
             <DecisionCard

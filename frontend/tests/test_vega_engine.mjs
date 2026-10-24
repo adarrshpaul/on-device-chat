@@ -2,14 +2,14 @@ import assert from "node:assert";
 const { VegaDecisionEngine } = await import("../dist/index.js");
 
 console.log("======================================================================");
-console.log("🚀 TESTING VEGA DECISION ENGINE (VEGAML HAMILTONIAN DYNAMICS & GATING)");
+console.log("🚀 TESTING VEGA DECISION ENGINE (KEYWORD HEURISTIC & HAMILTONIAN RELAXATION)");
 console.log("======================================================================");
 
 const vega = new VegaDecisionEngine();
 
 async function runVegaTests() {
-  // Test 1: Choice Question & Calibrated Probabilities
-  console.log("\n📌 Category 1: Choice Primitive & Calibrated Physics Output");
+  // Test 1: Choice Primitive & Heuristic Physics Output
+  console.log("\n📌 Category 1: Choice Primitive & Heuristic Physics Output");
   {
     const questions = {
       team: {
@@ -30,19 +30,19 @@ async function runVegaTests() {
     const ans = result.answers.team;
     console.log(`  Vega chosen team: "${ans.choice}" (confidence: ${ans.confidence}, margin: +${ans.margin})`);
     console.log(`  Physics metrics: settle_steps=${ans.settle_steps}, energy=${ans.energy}, tau=${ans.tau}`);
-    console.log(`  Conformal set: [${ans.prediction_set.join(", ")}]`);
+    console.log(`  Candidate set: [${ans.prediction_set.join(", ")}]`);
 
     assert.strictEqual(ans.choice, "billing", "Should identify billing team as winner");
     assert.ok(ans.confidence > 0.5, "Confidence should exceed 0.5");
     assert.ok(ans.settle_steps > 0 && ans.settle_steps <= 24, "Should settle within step budget");
-    assert.ok(ans.prediction_set.includes("billing"), "Conformal set must include billing");
+    assert.ok(ans.prediction_set.includes("billing"), "Candidate set must include billing");
     assert.strictEqual(ans.abstain, false, "Should not abstain on confident billing query");
     assert.strictEqual(ans.unbound, false, "Should not be unbound on in-distribution query");
 
     // Probabilities must sum to ~1.0
     const probSum = Object.values(ans.probs).reduce((a, b) => a + b, 0);
     assert.ok(Math.abs(probSum - 1.0) < 0.05, `Probabilities must sum to 1.0 (got ${probSum})`);
-    console.log("  ✅ PASS: Choice primitive correctly evaluated with calibrated probabilities.");
+    console.log("  ✅ PASS: Choice primitive correctly evaluated with heuristic probabilities.");
   }
 
   // Test 2: Boolean Primitive (Evidence Verification)

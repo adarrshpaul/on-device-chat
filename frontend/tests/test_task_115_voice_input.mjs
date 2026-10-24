@@ -161,9 +161,15 @@ it("Correctly identifies editable elements vs static elements", () => {
   assert.strictEqual(TextInjector.isEditable(fakeEditableDiv), true);
 });
 
-await itAsync("Falls back safely to clipboard without throwing when no active field exists", async () => {
+await itAsync("Returns failure and avoids overwriting clipboard when no active field exists", async () => {
   const res = await TextInjector.injectText("hello world", null);
-  assert.strictEqual(res.success, true);
+  assert.strictEqual(res.success, false);
+  assert.strictEqual(res.tierUsed, "none");
+});
+
+await itAsync("Respects copyToClipboardOnFail opt-in if requested", async () => {
+  const res = await TextInjector.injectText("hello world", null, { copyToClipboardOnFail: true });
+  assert.strictEqual(res.success, false);
   assert.strictEqual(res.tierUsed, "clipboardFallback");
 });
 
@@ -192,8 +198,9 @@ it("Fails closed with transparent error message when mic is unavailable", () => 
 // ---------------------------------------------------------------------------
 // 7. Measured Benchmark (WER Reduction & Latency on this Mac)
 // ---------------------------------------------------------------------------
-console.log("\n--- Category 7: Empirical Evaluation (WER & Latency on this Mac) ---");
+console.log("\n--- Category 7: Transcript Polish Evaluation (Word Error Rate & Latency) ---");
 
+// Test cases simulating transcripts containing speech disfluencies, self-corrections, and jargon
 const benchmarkDataset = [
   {
     raw: "um please check out now, no wait view cart",
@@ -261,11 +268,11 @@ const avgLatency = (totalLatencyMs / benchmarkDataset.length).toFixed(3);
 const avgRawWer = ((rawWerSum / benchmarkDataset.length) * 100).toFixed(1);
 const avgPolishedWer = ((polishedWerSum / benchmarkDataset.length) * 100).toFixed(1);
 
-console.log(`  📊 Benchmark Results across ${benchmarkDataset.length} spoken speech samples:`);
-console.log(`     • Raw ASR Disfluent Word Error Rate:    ${avgRawWer}%`);
-console.log(`     • Post-Polish Grounded Word Error Rate: ${avgPolishedWer}%`);
-console.log(`     • Average Polish Latency on this Mac:   ${avgLatency} ms/sample`);
-console.log(`     • Error Reduction:                      ${(parseFloat(avgRawWer) - parseFloat(avgPolishedWer)).toFixed(1)} percentage points`);
+console.log(`  📊 Benchmark Results across ${benchmarkDataset.length} disfluent speech transcript samples:`);
+console.log(`     • Raw Disfluent Transcript Error Rate:    ${avgRawWer}%`);
+console.log(`     • Post-Polish Clean Transcript Error Rate: ${avgPolishedWer}%`);
+console.log(`     • Average Polish Latency on this Mac:      ${avgLatency} ms/sample`);
+console.log(`     • Error Reduction:                         ${(parseFloat(avgRawWer) - parseFloat(avgPolishedWer)).toFixed(1)} percentage points`);
 
 it("Demonstrates empirical disfluency reduction without cloud token overhead", () => {
   assert.ok(parseFloat(avgPolishedWer) < parseFloat(avgRawWer), "Polished WER must be strictly lower than raw WER");

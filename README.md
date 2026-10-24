@@ -22,7 +22,7 @@ Turn any web application, dashboard, or air-gapped internal interface into an au
 | **Repeated Clicks (`×N`)** | Coalesces rapid clicks (e.g. "Add to Cart" 3×) into a single step with repeat count and SPA DOM re-acquisition | Works reliably on React, Shopify, and Vue stores |
 | **Teach 1 → Batch N** | Record 1 user demonstration on a row/card; auto-discovers sibling entities for parameterized batch execution with human approval gate | Automates repetitive table, catalog, and grid workflows |
 | **Game & Canvas Autopilot** | Real-time Physics-aware trajectory forecasting and canvas entity inspection | Autonomous gameplay and visual HUD tracking |
-| **4-Tier Escalation** | Chrome Gemini Nano (0 MB) → Vega Reflex (<5ms) → MiniLM WebGPU (~15 MB) → WebLLM | Instant load times, no multi-GB model lock-in |
+| **4-Tier Escalation** | Chrome Gemini Nano (0 MB) → Vega Keyword Scorer (Heuristic) → MiniLM WebGPU (~15 MB) → WebLLM | Instant load times, no multi-GB model lock-in |
 
 ---
 
@@ -150,7 +150,8 @@ npm test
 * `test:workflows`: Dynamic in-memory workflow synthesis and repeat click coalescing.
 * `test:consistency`: Scoped CSS isolation under hostile host stylesheets.
 * `test:giskard`: Giskard LLM security and prompt injection benchmark.
-* `test:sota`: Mind2Web, WebArena, and WebVoyager benchmarks.
+* `test:sota`: Synthetic unit tests modeled after Mind2Web, WebArena, and WebVoyager DOM patterns.
+* `test:eval`: Real empirical element-selection and harness performance benchmarks across dynamic DOM fixtures.
 
 ---
 

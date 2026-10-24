@@ -39,6 +39,11 @@ export { DecisionScorerRegistry, decisionScorerRegistry, VegaOnDeviceScorer, D3N
 export type { DecisionScorer, CandidateElement, ScoringResult, ScoringDistributionItem } from './lib/decisionScorer';
 export { SafetyGate } from './lib/safetyGate';
 export type { PermissionMode, SafetyClassification, SafetyCheckResult, SafetyConfirmHandler, PreToolHook, PostToolHook } from './lib/safetyGate';
+export { ActionClassifier } from './lib/safety/actionClassifier';
+export { MemoryAllowlistStore, ExtensionAllowlistStore } from './lib/safety/allowlistStore';
+export type { IAllowlistStore } from './lib/safety/allowlistStore';
+export { PermissionPolicy } from './lib/safety/permissionPolicy';
+export { HookPipeline } from './lib/safety/hookPipeline';
 export { TodoManager, globalTodoManager } from './lib/todoManager';
 export type { TodoItem, TodoStatus, PlanState, PlanChangeListener } from './lib/todoManager';
 export { ReasoningManager } from './lib/reasoningManager';

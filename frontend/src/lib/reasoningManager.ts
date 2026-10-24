@@ -1,8 +1,10 @@
 /**
- * Reasoning-History & Thinking Trace Manager (TASK-116)
+ * Reasoning-History & Thinking Trace Manager (TASK-116 & TASK-117)
  *
- * Implements the reasoning-history rule verified against DeepSeek's official API specifications:
- * - Reference: DeepSeek Reasoner Multi-Turn Chat API Documentation (2026).
+ * Implements the reasoning-history stripping rule for reasoning models (DeepSeek-R1 / Gemma 4):
+ * - Reference: DeepSeek-R1 API Documentation (https://api-docs.deepseek.com/guides/reasoning_model#multi-turn-conversations):
+ *   "To achieve optimal results, it is recommended to exclude reasoning_content from previous turns
+ *   when initiating a new conversational context."
  * - Rule 1 (Intra-turn tool loop): Intermediate assistant thinking blocks (reasoning_content or <think>...</think>)
  *   are preserved across tool call/result iterations within the SAME user turn so the model maintains reasoning
  *   continuity during tool execution.
@@ -32,6 +34,10 @@ export class ReasoningManager {
     cleaned = cleaned.replace(/<think>[\s\S]*?<\/think>/gi, "");
     cleaned = cleaned.replace(/<thought>[\s\S]*?<\/thought>/gi, "");
 
+    // Strip Gemma 4 channel thought blocks (<|channel>thought...<channel|> or <|thought|>...<|/thought|>)
+    cleaned = cleaned.replace(/<\|channel>thought[\s\S]*?<channel\|>/gi, "");
+    cleaned = cleaned.replace(/<\|thought\|>[\s\S]*?<\/[|]thought[|]>/gi, "");
+
     // Strip unclosed opening think tag at start of generation
     cleaned = cleaned.replace(/^<think>[\s\S]*$/gi, "");
 
@@ -53,6 +59,8 @@ export class ReasoningManager {
     let thinking = "";
     const thinkMatch = rawOutput.match(/<think>([\s\S]*?)<\/think>/i) ||
                        rawOutput.match(/<thought>([\s\S]*?)<\/thought>/i) ||
+                       rawOutput.match(/<\|channel>thought([\s\S]*?)<channel\|>/i) ||
+                       rawOutput.match(/<\|thought\|>([\s\S]*?)<\/[|]thought[|]>/i) ||
                        rawOutput.match(/```thought([\s\S]*?)```/i);
 
     if (thinkMatch) {

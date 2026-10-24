@@ -327,9 +327,9 @@ export const DecisionCard: React.FC<DecisionCardProps> = ({
                     <span className="px-1.5 py-0.5 rounded bg-cyan-950/40 text-cyan-300 border border-cyan-500/30">
                       τ: {decision.vegaMetrics.tau}
                     </span>
-                    {decision.vegaMetrics.conformalSet.length > 0 && (
+                    {(decision.vegaMetrics.candidateSet || decision.vegaMetrics.conformalSet).length > 0 && (
                       <span className="px-1.5 py-0.5 rounded bg-purple-950/40 text-purple-300 border border-purple-500/30">
-                        Conformal Set: [{decision.vegaMetrics.conformalSet.join(", ")}]
+                        Candidate Set: [{(decision.vegaMetrics.candidateSet || decision.vegaMetrics.conformalSet).join(", ")}]
                       </span>
                     )}
                   </div>
@@ -340,7 +340,7 @@ export const DecisionCard: React.FC<DecisionCardProps> = ({
                   <div className="space-y-1 pt-1 border-t border-white/6">
                     <div className="flex items-center justify-between text-gray-500 text-[9px]">
                       <span>CANDIDATE OPTION</span>
-                      <span>CALIBRATED PROBABILITY</span>
+                      <span>MATCH SCORE / PROBABILITY</span>
                     </div>
 
                     {decision.distribution.map((alt, idx) => {

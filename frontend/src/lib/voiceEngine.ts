@@ -1,14 +1,18 @@
 /**
- * On-Device Voice Transcription & Audio Engine (TASK-115)
+ * Voice Transcription & Audio Engine (TASK-115 & TASK-117)
  *
- * Implements private, on-device voice processing:
- * 1. Audio Capture: getUserMedia with Web Audio AnalyserNode for real-time waveform levels.
- * 2. Dual STT Pipeline:
- *    - Tier 1 (Instant): Web Speech API (webkitSpeechRecognition / SpeechRecognition) with zero download overhead.
- *    - Tier 2 (Local ML): Whisper WebGPU via transformers.js pipeline("automatic-speech-recognition").
- * 3. Fail-closed error handling: transparently alerts user if mic permission or engine is unavailable (Rule 7).
- * 4. Automatic Disfluency Polish via VoicePolishEngine.
- * 5. Dual dispatch: Agent prompt command or direct DOM text injection via TextInjector.
+ * Implements speech-to-text input with two distinct tiers:
+ * 1. Tier 1 (Browser Built-In): Web Speech API (webkitSpeechRecognition)
+ *    - Instant zero-download start.
+ *    - PRIVACY NOTICE (§7): In Google Chrome and Chromium browsers, the Web Speech API
+ *      transmits speech audio to Google cloud servers for transcription. It is NOT fully
+ *      on-device private.
+ * 2. Tier 2 (100% Offline On-Device): Whisper WebGPU (transformers.js / onnx-community/whisper-tiny)
+ *    - Runs fully client-side inside the browser tab via WebGPU / WASM.
+ *    - Zero external network requests; speech audio NEVER leaves the local machine.
+ *    - Captures PCM audio via Web Audio ScriptProcessor/Analyser and resamples to 16kHz Float32Array.
+ * 3. Automatic Disfluency Polish via VoicePolishEngine.
+ * 4. Dual dispatch: Agent prompt command or direct DOM text injection via TextInjector.
  */
 
 import { VoicePolishEngine } from "./voicePolish.ts";
@@ -31,16 +35,34 @@ export interface VoiceEngineConfig {
   onFinalTranscript?: (rawText: string, polishedText: string) => void;
 }
 
+function resampleTo16kHz(audio: Float32Array, srcRate: number): Float32Array {
+  if (srcRate === 16000) return audio;
+  const ratio = srcRate / 16000;
+  const newLength = Math.round(audio.length / ratio);
+  const result = new Float32Array(newLength);
+  for (let i = 0; i < newLength; i++) {
+    const origIdx = i * ratio;
+    const idxFloor = Math.floor(origIdx);
+    const idxCeil = Math.min(audio.length - 1, idxFloor + 1);
+    const fraction = origIdx - idxFloor;
+    result[i] = audio[idxFloor] * (1 - fraction) + audio[idxCeil] * fraction;
+  }
+  return result;
+}
+
 export class VoiceEngine {
   private state: VoiceEngineState = "idle";
   private config: VoiceEngineConfig;
   private audioStream: MediaStream | null = null;
   private audioContext: AudioContext | null = null;
   private analyser: AnalyserNode | null = null;
+  private audioSourceNode: MediaStreamAudioSourceNode | null = null;
+  private scriptProcessorNode: ScriptProcessorNode | null = null;
   private animFrameId: number | null = null;
 
   // Web Speech API
   private recognition: any = null;
+  private currentWebSpeechTranscript = "";
 
   // Whisper WebGPU pipeline instance
   private whisperPipeline: any = null;
@@ -110,32 +132,37 @@ export class VoiceEngine {
   }
 
   /**
-   * Stop recording, transcribe, polish, and dispatch output.
+   * Stop recording, transcribe speech, polish disfluencies, and dispatch.
    */
   async stopRecording(): Promise<string> {
     if (this.state !== "listening") {
       return "";
     }
 
-    this.cleanupAudio();
-
+    let transcript = "";
     if (this.config.useWhisperWebGPU) {
-      return this.finishWhisperRecording();
+      transcript = await this.finishWhisperRecording();
     } else {
-      return this.finishWebSpeechRecording();
+      transcript = await this.finishWebSpeechRecording();
     }
+
+    this.cleanupAudio();
+    return transcript;
   }
 
   /**
-   * Cancel in-flight recording and discard audio.
+   * Cancel ongoing recording and discard audio.
    */
-  cancelRecording(): void {
-    this.cleanupAudio();
+  cancelRecording() {
     if (this.recognition) {
-      try { this.recognition.abort(); } catch {}
+      try {
+        this.recognition.abort();
+      } catch {}
       this.recognition = null;
     }
+    this.cleanupAudio();
     this.audioChunks = [];
+    this.currentWebSpeechTranscript = "";
     this.setState("idle");
   }
 
@@ -155,6 +182,7 @@ export class VoiceEngine {
       this.recognition.continuous = true;
       this.recognition.interimResults = true;
       this.recognition.lang = "en-US";
+      this.currentWebSpeechTranscript = "";
 
       let finalSoFar = "";
 
@@ -169,6 +197,7 @@ export class VoiceEngine {
           }
         }
         const current = (finalSoFar + " " + interim).trim();
+        this.currentWebSpeechTranscript = current;
         if (this.config.onInterimTranscript) {
           this.config.onInterimTranscript(current);
         }
@@ -199,18 +228,8 @@ export class VoiceEngine {
         return;
       }
 
-      let capturedText = "";
-
-      this.recognition.onresult = (event: any) => {
-        let transcript = "";
-        for (let i = 0; i < event.results.length; i++) {
-          transcript += " " + event.results[i][0].transcript;
-        }
-        capturedText = transcript.trim();
-      };
-
       this.recognition.onend = () => {
-        const raw = capturedText.trim();
+        const raw = this.currentWebSpeechTranscript.trim();
         const polished = VoicePolishEngine.polish(raw, { tone: this.config.tone });
 
         if (this.config.onFinalTranscript) {
@@ -225,8 +244,10 @@ export class VoiceEngine {
       try {
         this.recognition.stop();
       } catch {
+        const raw = this.currentWebSpeechTranscript.trim();
+        const polished = VoicePolishEngine.polish(raw, { tone: this.config.tone });
         this.setState("idle");
-        resolve("");
+        resolve(polished);
       }
     });
   }
@@ -236,10 +257,33 @@ export class VoiceEngine {
   // ---------------------------------------------------------------------------
   private async startWhisperRecording(): Promise<boolean> {
     this.audioChunks = [];
+
+    if (this.audioContext && this.audioSourceNode) {
+      try {
+        this.scriptProcessorNode = this.audioContext.createScriptProcessor(4096, 1, 1);
+        this.scriptProcessorNode.onaudioprocess = (e) => {
+          if (this.state !== "listening") return;
+          const channelData = e.inputBuffer.getChannelData(0);
+          this.audioChunks.push(new Float32Array(channelData));
+        };
+        this.audioSourceNode.connect(this.scriptProcessorNode);
+        this.scriptProcessorNode.connect(this.audioContext.destination);
+      } catch (err: any) {
+        console.warn("[VoiceEngine] ScriptProcessor error for Whisper:", err);
+      }
+    }
+
     return true;
   }
 
   private async finishWhisperRecording(): Promise<string> {
+    if (this.scriptProcessorNode) {
+      try {
+        this.scriptProcessorNode.disconnect();
+      } catch {}
+      this.scriptProcessorNode = null;
+    }
+
     this.setState("transcribing", "Transcribing with on-device Whisper WebGPU...");
     try {
       const transformers = await loadTransformers();
@@ -261,7 +305,11 @@ export class VoiceEngine {
         offset += chunk.length;
       }
 
-      const output = await this.whisperPipeline(mergedAudio);
+      // Resample to 16kHz for Whisper
+      const sampleRate = this.audioContext?.sampleRate || 44100;
+      const resampledAudio = resampleTo16kHz(mergedAudio, sampleRate);
+
+      const output = await this.whisperPipeline(resampledAudio);
       const rawText = (output && output.text ? output.text : "").trim();
 
       this.setState("polishing");
@@ -289,10 +337,10 @@ export class VoiceEngine {
       if (!AudioCtx) return;
 
       this.audioContext = new AudioCtx();
-      const source = this.audioContext.createMediaStreamSource(stream);
+      this.audioSourceNode = this.audioContext.createMediaStreamSource(stream);
       this.analyser = this.audioContext.createAnalyser();
       this.analyser.fftSize = 256;
-      source.connect(this.analyser);
+      this.audioSourceNode.connect(this.analyser);
 
       const bufferLength = this.analyser.frequencyBinCount;
       const dataArray = new Uint8Array(bufferLength);
@@ -312,12 +360,21 @@ export class VoiceEngine {
           this.config.onAudioLevel(normalized);
         }
 
-        this.animFrameId = requestAnimationFrame(checkLevel);
+        if (this.state === "listening") {
+          this.animFrameId = requestAnimationFrame(checkLevel);
+        }
       };
 
       this.animFrameId = requestAnimationFrame(checkLevel);
-    } catch {
-      // Non-fatal audio analysis
+    } catch (err: any) {
+      console.warn("[VoiceEngine] Audio analysis setup skipped:", err.message);
+    }
+  }
+
+  private dispatchOutput(text: string) {
+    if (!text) return;
+    if (this.config.outputMode === "dictate") {
+      TextInjector.injectText(text);
     }
   }
 
@@ -326,28 +383,30 @@ export class VoiceEngine {
       cancelAnimationFrame(this.animFrameId);
       this.animFrameId = null;
     }
+    if (this.scriptProcessorNode) {
+      try {
+        this.scriptProcessorNode.disconnect();
+      } catch {}
+      this.scriptProcessorNode = null;
+    }
+    if (this.audioSourceNode) {
+      try {
+        this.audioSourceNode.disconnect();
+      } catch {}
+      this.audioSourceNode = null;
+    }
     if (this.audioStream) {
-      this.audioStream.getTracks().forEach((t) => t.stop());
+      for (const track of this.audioStream.getTracks()) {
+        track.stop();
+      }
       this.audioStream = null;
     }
     if (this.audioContext) {
-      try { this.audioContext.close(); } catch {}
+      try {
+        this.audioContext.close();
+      } catch {}
       this.audioContext = null;
-      this.analyser = null;
     }
-    if (this.config.onAudioLevel) {
-      this.config.onAudioLevel(0);
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Output Dispatch (Dictate to Target vs. Agent Command)
-  // ---------------------------------------------------------------------------
-  private async dispatchOutput(text: string) {
-    if (!text) return;
-    const mode = this.config.outputMode || "agent_command";
-    if (mode === "dictate") {
-      await TextInjector.injectText(text);
-    }
+    this.analyser = null;
   }
 }

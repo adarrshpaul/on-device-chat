@@ -227,7 +227,7 @@ export class EnsembleDecisionEngine {
       hallucinationShield,
       ensemble: consensus,
       executableAction: winningCandidate?.actionPayload,
-      explanation: `Pool consensus across ${modelsUsed.join(", ")}. Winner "${winner.label}" received ${(winner.score * 100).toFixed(0)}% calibrated confidence (+${Math.round(margin * 100)}% margin). Verified live in ${durationMs}ms.`,
+      explanation: `Pool consensus across ${modelsUsed.join(", ")}. Winner "${winner.label}" received ${(winner.score * 100).toFixed(0)}% consensus score (+${Math.round(margin * 100)}% margin). Verified live in ${durationMs}ms.`,
     };
   }
 

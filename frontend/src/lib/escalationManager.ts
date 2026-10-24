@@ -225,13 +225,13 @@ export class EscalationManager {
             percent: pct,
           });
         });
-        // Vega 14.3M Physics Engine is primary decision engine; Laya is kept as secondary load
+        // Vega Heuristic Scorer is primary decision engine; Laya is kept as secondary load
         this.onProgress?.({
           active: true,
           tier,
           modelName: meta.name,
           size: meta.size,
-          text: `[2/2] Vega Physics Engine ready ⚡ (Laya kept as secondary load)`,
+          text: `[2/2] Vega Keyword Scorer ready ⚡ (Laya kept as secondary load)`,
           percent: 95,
         });
       } else if (tier === ModelTier.TIER_2_SMOLLM_GENERATIVE) {
@@ -1526,13 +1526,13 @@ export class EscalationManager {
         const res = await answerFromPage(cleanQuery, this.compactEngine);
         this.lastDecisionTrace = {
           type: "system1_gate",
-          title: "Vega Physics System 1: Direct Q&A",
+          title: "Vega Heuristic System 1: Direct Q&A",
           selectedOption: "Grounded Knowledge Retrieval",
           confidence: 0.96,
           margin: 0.84,
           primitive: "choice",
           latencyMs: 8,
-          engineUsed: "Vega Physics Engine (Hamiltonian Euler)",
+          engineUsed: "Vega Keyword Heuristic Scorer",
           distribution: [
             { label: "Direct Q&A (Grounded)", score: 0.96, isWinner: true },
             { label: "DOM Element Discovery", score: 0.10, isWinner: false },
