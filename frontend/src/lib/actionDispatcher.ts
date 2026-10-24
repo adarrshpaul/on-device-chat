@@ -16,6 +16,7 @@
 
 import { A11yTreeEngine } from "./a11yTree";
 import { smartQuerySelector, smoothScrollTo, isElementNode, isTextField, topLevelRect } from "./domUtils";
+import { SafetyGate, SafetyCheckResult } from "./safetyGate";
 
 export interface TargetResolutionResult {
   element: HTMLElement | null;
@@ -58,6 +59,9 @@ export class ActionDispatcher {
 
   /** How the most recent click / type / hover was delivered; harness observations report it */
   public static lastInputMode: InputMode = "synthetic";
+
+  /** Most recent SafetyGate classification & confirmation result */
+  public static lastSafetyResult: SafetyCheckResult | null = null;
 
   /** Installs (or removes, with null) a trusted input provider. Without one, events are synthetic. */
   public static setTrustedInputBridge(bridge: TrustedInputBridge | null): void {
@@ -179,6 +183,18 @@ export class ActionDispatcher {
   public static async click(target: HTMLElement | number | string): Promise<boolean> {
     const element = isElementNode(target) ? target : this.resolveTarget(target).element;
     if (!element) return false;
+
+    // Safety Gate Check: irreversible / destructive / financial actions require confirmation
+    const safety = await SafetyGate.checkAndConfirm({
+      actionType: "click",
+      element,
+      targetDescription: typeof target === "string" ? target : undefined,
+    });
+    this.lastSafetyResult = safety;
+    if (!safety.allowed) {
+      console.warn("[ActionDispatcher] Click blocked by SafetyGate:", safety.reason);
+      return false;
+    }
 
     const isCanvasNode = (typeof target === "number" || typeof target === "string")
       && A11yTreeEngine.getNodeById(target)?.tag === "canvas-element";

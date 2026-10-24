@@ -37,6 +37,8 @@ export { UISpecEngine } from './lib/uiSpecEngine';
 export { UISpecRenderer } from './components/UISpecRenderer';
 export { DecisionScorerRegistry, decisionScorerRegistry, VegaOnDeviceScorer, D3NanoDecisionScorer } from './lib/decisionScorer';
 export type { DecisionScorer, CandidateElement, ScoringResult, ScoringDistributionItem } from './lib/decisionScorer';
+export { SafetyGate } from './lib/safetyGate';
+export type { PermissionMode, SafetyClassification, SafetyCheckResult, SafetyConfirmHandler, PreToolHook, PostToolHook } from './lib/safetyGate';
 export * from './lib/types';
 
 

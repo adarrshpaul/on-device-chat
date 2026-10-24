@@ -94,12 +94,24 @@
     dispatcher.setTrustedInputBridge(enabled && window === window.top ? makeTrustedInputBridge() : null);
   }
 
+  function applyPermissionModeSetting(mode) {
+    const agent = window.EdgeOperator || window.OnDeviceChat;
+    const safetyGate = agent && agent.SafetyGate;
+    if (safetyGate && typeof safetyGate.setPermissionMode === "function" && mode) {
+      safetyGate.setPermissionMode(mode);
+    }
+  }
+
   function loadTrustedInputSetting() {
-    chrome.storage.sync.get(["trustedInput"], (res) => applyTrustedInputSetting(res.trustedInput === true));
+    chrome.storage.sync.get(["trustedInput", "permissionMode"], (res) => {
+      applyTrustedInputSetting(res.trustedInput === true);
+      if (res.permissionMode) applyPermissionModeSetting(res.permissionMode);
+    });
   }
 
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === "sync" && changes.trustedInput) applyTrustedInputSetting(changes.trustedInput.newValue === true);
+    if (area === "sync" && changes.permissionMode) applyPermissionModeSetting(changes.permissionMode.newValue);
   });
 
   // 3. Toggle Widget Open/Close

@@ -30,6 +30,7 @@ import { ActionDispatcher } from "./actionDispatcher";
 import { StateDeltaVerifier } from "./stateDeltaVerifier";
 import { runSandboxExpression } from "./safeExpression";
 import { NavPersistenceManager } from "./navPersistence";
+import { SafetyGate } from "./safetyGate";
 
 export type { HarnessToolCall };
 
@@ -303,6 +304,16 @@ export class AgentHarness {
         if (!resolved.element) {
           return `Click failed: target "${resolved.identifierDescription}" not found on page.`;
         }
+
+        const safety = await SafetyGate.checkAndConfirm({
+          actionType: "click",
+          element: resolved.element,
+          targetDescription: resolved.identifierDescription,
+        });
+        if (!safety.allowed) {
+          return `Action blocked by Safety Gate: ${safety.reason || "Irreversible action denied by user."}`;
+        }
+
         highlightElement(resolved.element, "Clicked");
 
         const before = StateDeltaVerifier.captureSnapshot();
@@ -347,6 +358,17 @@ export class AgentHarness {
         if (!resolved.element) {
           return `Type failed: target "${resolved.identifierDescription}" not found on page.`;
         }
+
+        const safety = await SafetyGate.checkAndConfirm({
+          actionType: "type",
+          element: resolved.element,
+          value,
+          targetDescription: resolved.identifierDescription,
+        });
+        if (!safety.allowed) {
+          return `Action blocked by Safety Gate: ${safety.reason || "Irreversible action denied by user."}`;
+        }
+
         highlightElement(resolved.element, "Typing");
 
         const before = StateDeltaVerifier.captureSnapshot();
@@ -448,6 +470,16 @@ export class AgentHarness {
         if (!isSafeNavigationUrl(url)) {
           return `Error: Blocked navigation to unsafe scheme in "${url}". Only http:, https:, and relative routes are allowed.`;
         }
+
+        const safety = await SafetyGate.checkAndConfirm({
+          actionType: "navigate",
+          url,
+          targetDescription: `navigate -> ${url}`,
+        });
+        if (!safety.allowed) {
+          return `Action blocked by Safety Gate: ${safety.reason || "Navigation to irreversible destination denied by user."}`;
+        }
+
         if (typeof window !== "undefined") {
           // If hash navigation
           if (url.startsWith("#")) {
@@ -612,7 +644,25 @@ export class AgentHarness {
    */
   async executeTool(toolName: string, rawArgs: Record<string, unknown> = {}): Promise<string> {
     const args = (typeof rawArgs === "object" && rawArgs !== null) ? rawArgs : {};
+    const startTime = Date.now();
 
+    // Deterministic Pre-Tool Hook Chain (SafetyGate, permission modes, argument rewrite)
+    const preHook = await SafetyGate.runPreHooks(toolName, args);
+    if (!preHook.proceed) {
+      return `Action blocked by Safety Gate: ${preHook.reason || "Action rejected by pre-tool hook."}`;
+    }
+    const finalArgs = (preHook.modifiedArgs || args) as Record<string, unknown>;
+
+    const result = await this.dispatchToolInternal(toolName, finalArgs);
+
+    // Deterministic Post-Tool Hook Chain (Logging, telemetry, validation)
+    const durationMs = Date.now() - startTime;
+    await SafetyGate.runPostHooks(toolName, finalArgs, result, durationMs);
+
+    return result;
+  }
+
+  private async dispatchToolInternal(toolName: string, args: Record<string, unknown>): Promise<string> {
     // 1. Check custom host tools first
     if (this.customHostTools[toolName]) {
       // Security & boundary validation for common host tools
@@ -893,7 +943,7 @@ export class AgentHarness {
     if (typeof document !== "undefined") {
       const a11yNodes = A11yTreeEngine.scan({ viewportOnly: true, maxItems: 24 });
       if (a11yNodes.length > 0) {
-        initialCandidatesNotice = `\nInteractive Elements on Screen (Reference by numeric [ID] or selector):\n${A11yTreeEngine.formatForPrompt(a11yNodes)}`;
+        initialCandidatesNotice = `\nInteractive Elements on Screen (Reference by numeric [ID] or selector):\n${SafetyGate.wrapUntrustedPageContent(A11yTreeEngine.formatForPrompt(a11yNodes))}`;
       }
     }
 

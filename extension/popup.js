@@ -17,6 +17,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const toggleAutoInject = document.getElementById("toggle-autoinject");
   const toggleDefaultOpen = document.getElementById("toggle-defaultopen");
   const toggleTrustedInput = document.getElementById("toggle-trustedinput");
+  const selectPermissionMode = document.getElementById("select-permissionmode");
 
   // 1. Display Version from Manifest
   const manifest = chrome.runtime.getManifest();
@@ -25,16 +26,24 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // 2. Load Stored User Settings
-  chrome.storage.sync.get(["autoInject", "defaultOpen"], (res) => {
+  chrome.storage.sync.get(["autoInject", "defaultOpen", "permissionMode"], (res) => {
     if (toggleAutoInject) {
       toggleAutoInject.checked = res.autoInject !== false;
     }
     if (toggleDefaultOpen) {
       toggleDefaultOpen.checked = res.defaultOpen === true;
     }
+    if (selectPermissionMode && res.permissionMode) {
+      selectPermissionMode.value = res.permissionMode;
+    }
   });
 
   // 3. Save Settings on Change
+  if (selectPermissionMode) {
+    selectPermissionMode.addEventListener("change", (e) => {
+      chrome.storage.sync.set({ permissionMode: e.target.value });
+    });
+  }
   if (toggleAutoInject) {
     toggleAutoInject.addEventListener("change", (e) => {
       chrome.storage.sync.set({ autoInject: e.target.checked });
