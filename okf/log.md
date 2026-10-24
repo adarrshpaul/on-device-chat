@@ -1,5 +1,21 @@
 # OKF Transition Log
 
+## 2026-10-24T16:22:00Z - Gate 1: Multi-Site Extension E2E Suite & Pre-Release Hardening Passed
+- **Scope & Implementation**:
+  - Implemented `openCleanPage` tab lifecycle management in `frontend/tests/e2e/extension/fixtures.ts` to prevent multi-tab target ambiguity under Playwright persistent worker contexts.
+  - Hardened `sendToTab` and `pageStatus` in `fixtures.ts` to resolve active or most recently opened tabs.
+  - Hardened `extension/content/content.js` `getPageStatus` to verify physical DOM attachment of launcher/widget before reporting `isInitialized: true`.
+  - Added ambient `compute-pressure` console warning filter and mapped `store` target to canonical Cloudflare Pages URL `https://tshirt-experiment.pages.dev/`.
+  - Ignored `tests/results/` in `.gitignore`.
+- **Verification & Git**:
+  - `npm run release:gate1` executed:
+    - 17/17 unit test suites passed with 0 errors.
+    - `npm run lint`: 0 errors.
+    - `playwright test --project=gate1-extension`: 11 passed, 2 skipped, 0 failed across `local`, `portfolio`, `store`, and `agent`.
+  - Working tree committed on branch `feat/task-118-pre-release-fixes` (commits `f62aed8` and `9594352`).
+  - Fact recorded: `okf/facts/fact_gate1_multi_site_verification_20261024.md`.
+
+
 ## 2026-10-24T14:41:00Z - TASK-114: Browser Automation Superpowers (Items 4, 5, 6, 8)
 - **Scope & Implementation**:
   - Implemented `WaitManager` (`frontend/src/lib/waitManager.ts`): MutationObserver quiet period (DOM settle) + Network idle (CDP Network.* in extension, PerformanceObserver in widget) replacing fixed sleeps. Added `wait` tool to `AgentHarness`.
