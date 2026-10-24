@@ -613,55 +613,66 @@ export const WorkflowStudio: React.FC<WorkflowStudioProps> = ({
           </div>
         )}
 
-        {/* Workflows List */}
-        <div className="space-y-2.5">
-          {workflows.map((wf) => {
+        {/* Workflows List - Tactile Neo-Brutalist Deck */}
+        <div className="space-y-3">
+          {workflows.map((wf, wIdx) => {
             const isCurrentlyRunning = runningWorkflowId === wf.id;
+            const themeMod = wIdx % 3;
+            const cardAccent = themeMod === 0 
+              ? "border-l-4 border-l-[#D4FF00] bg-[#0c111e]" 
+              : themeMod === 1 
+              ? "border-l-4 border-l-[#A855F7] bg-[#0c111e]" 
+              : "border-l-4 border-l-[#FF2E93] bg-[#0c111e]";
 
             return (
               <div
                 key={wf.id}
                 data-testid={`workflow-card-${wf.id}`}
-                className="p-3 rounded-[8px] bg-[#0c101d] border border-white/8 hover:border-purple-500/30 transition-all space-y-2 shadow-sm"
+                className={`p-3.5 rounded-2xl border border-white/10 hover:border-white/20 transition-all space-y-2.5 shadow-md ${cardAccent}`}
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-semibold text-xs text-white truncate">{wf.name}</span>
-                      {wf.isSystemStarter && (
-                        <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-purple-950/60 text-purple-300 border border-purple-500/30 shrink-0">
-                          Verified
-                        </span>
-                      )}
+                <div className="flex items-start justify-between gap-2.5">
+                  <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                    <div className="w-8 h-8 rounded-full bg-black text-[#D4FF00] flex items-center justify-center font-bold shrink-0 mt-0.5 shadow-sm">
+                      <Zap size={14} className="fill-current" />
                     </div>
-                    <p className="text-[11px] text-gray-400 mt-0.5 leading-snug">{wf.description}</p>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-extrabold text-[13px] text-white tracking-tight truncate">{wf.name}</span>
+                        {wf.isSystemStarter && (
+                          <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded-full bg-black text-[#D4FF00] font-mono shrink-0">
+                            Verified
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-gray-300 mt-0.5 leading-snug">{wf.description}</p>
+                    </div>
                   </div>
 
-                  {/* 1-Click Run Button */}
+                  {/* High-Contrast Tactile Run Button */}
                   <button
                     onClick={() => handleRunWorkflow(wf)}
                     disabled={isCurrentlyRunning}
-                    className="px-2.5 py-1 rounded-[6px] bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 text-xs font-semibold flex items-center gap-1 cursor-pointer transition-all hover:scale-105 active:scale-95 disabled:opacity-50 shrink-0"
+                    className="px-3.5 py-1.5 rounded-xl bg-[#D4FF00] hover:bg-[#c2eb00] text-black text-xs font-black flex items-center gap-1.5 cursor-pointer transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none disabled:opacity-50 shrink-0"
                     title="Run this entire workflow now"
                   >
-                    <Play size={11} className="fill-current text-emerald-400" />
+                    <Play size={10} className="fill-current stroke-none" />
                     <span>Run</span>
                   </button>
                 </div>
 
-                {/* Steps Preview Shelf */}
-                <div className="flex flex-wrap items-center gap-1 pt-1 border-t border-white/5">
-                  <span className="text-[9px] font-mono text-gray-500 mr-1">Steps:</span>
+                {/* Steps Preview Shelf with Visual Flow Badges */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-white/8">
+                  <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 mr-0.5 font-mono">Steps:</span>
                   {wf.steps.map((st, sIdx) => {
                     const repeats = clickRepeatCount(st);
                     return (
                       <div
                         key={sIdx}
-                        className="px-1.5 py-0.5 rounded bg-black/40 border border-white/6 text-[10px] font-mono text-gray-300 flex items-center gap-1"
+                        className="px-2 py-0.5 rounded-lg bg-black/60 border border-white/10 text-[10px] font-mono text-gray-200 flex items-center gap-1 shadow-xs"
                       >
-                        <span className="text-purple-400">{st.action}</span>
+                        <span className="text-purple-300 font-bold">{st.action}</span>
                         {repeats > 1 && (
-                          <span className="px-1 py-0.2 rounded bg-purple-500/25 text-purple-300 font-bold text-[9px]">
+                          <span className="px-1 py-0.2 rounded bg-purple-500/30 text-purple-200 font-bold text-[9px]">
                             ×{repeats}
                           </span>
                         )}

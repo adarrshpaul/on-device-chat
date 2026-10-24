@@ -110,8 +110,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         </div>
       )}
 
-      {/* Voice Provider Disclosure & Switcher Pill (TASK-118 Rule 7 Honesty) */}
-      <div className="flex items-center justify-between text-[11px] mb-1.5 px-0.5">
+      {/* Voice Provider Disclosure & Switcher Pill (TASK-118 Rule 7 Honesty & Neo-Brutalist Status Badge) */}
+      <div className="flex items-center justify-between text-[11px] mb-2 px-0.5">
         <button
           type="button"
           onClick={() => {
@@ -123,10 +123,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             setUseWhisper(next);
             voiceEngineRef.current?.setUseWhisperWebGPU(next);
           }}
-          className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors cursor-pointer border ${
+          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold tracking-wide uppercase transition-all cursor-pointer border shadow-sm ${
             useWhisper
-              ? "bg-emerald-950/70 text-emerald-300 border-emerald-500/40 hover:bg-emerald-900/70"
-              : "bg-amber-950/70 text-amber-300 border-amber-500/40 hover:bg-amber-900/70"
+              ? "bg-emerald-950/80 text-emerald-300 border-emerald-500/50 hover:bg-emerald-900/80"
+              : "bg-amber-950/80 text-amber-300 border-amber-500/50 hover:bg-amber-900/80"
           }`}
           title={
             useWhisper
@@ -134,36 +134,36 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               : "Browser speech: Transmits audio to Google cloud servers for transcription. Click to switch to On-device Whisper."
           }
         >
-          <span className={`w-1.5 h-1.5 rounded-full ${useWhisper ? "bg-emerald-400" : "bg-amber-400"}`} />
-          <span>{useWhisper ? "On-device Whisper" : "Browser speech (sent to Google)"}</span>
-          <span className="text-[9px] opacity-60 underline ml-0.5">{hasWebGPU ? "switch" : "info"}</span>
+          <span className={`w-2 h-2 rounded-full ${useWhisper ? "bg-[#D4FF00] shadow-[0_0_8px_#D4FF00]" : "bg-amber-400 shadow-[0_0_8px_#F59E0B]"}`} />
+          <span>{useWhisper ? "On-Device Whisper (100% Private)" : "Browser Speech (Cloud)"}</span>
+          <span className="text-[9px] opacity-75 font-mono underline ml-0.5">{hasWebGPU ? "switch" : "info"}</span>
         </button>
       </div>
 
       {/* Active Listening Indicator Banner */}
       {isListening && (
-        <div className={`mb-2 px-2.5 py-1 rounded text-[11px] flex items-center justify-between ${
+        <div className={`mb-2 px-3 py-1.5 rounded-xl text-[11px] flex items-center justify-between shadow-sm animate-pulse ${
           useWhisper
-            ? "bg-emerald-950/80 border border-emerald-500/50 text-emerald-200"
-            : "bg-amber-950/80 border border-amber-500/50 text-amber-200"
+            ? "bg-emerald-950/90 border-2 border-emerald-500/60 text-emerald-200"
+            : "bg-amber-950/90 border-2 border-amber-500/60 text-amber-200"
         }`}>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
-            <span className="font-medium">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
+            <span className="font-bold">
               {useWhisper
-                ? "Recording with On-device Whisper (zero cloud egress)..."
-                : "Recording with Browser speech (audio sent to Google)..."}
+                ? "Listening with On-Device Whisper (Zero Egress)..."
+                : "Recording with Browser speech (Sent to Google)..."}
             </span>
           </div>
-          <span className="text-[10px] opacity-75">Click mic to finish</span>
+          <span className="text-[10px] font-mono opacity-80">Tap mic to finish</span>
         </div>
       )}
 
-      <form onSubmit={onSubmit} className="flex items-center gap-2">
-        <div className="flex-1 flex items-center gap-1.5 bg-black/40 border border-white/10 focus-within:border-purple-500/70 rounded-[8px] px-2.5 py-1.5 transition-colors min-w-0">
+      <form onSubmit={onSubmit} className="flex items-center gap-2 p-1 rounded-2xl bg-[#090d18] border-2 border-white/15 focus-within:border-[#D4FF00] focus-within:shadow-[0_0_18px_rgba(212,255,0,0.18)] transition-all">
+        <div className="flex-1 flex items-center gap-1.5 px-2.5 py-1 min-w-0">
           {/* Dismissible Left Page-Context Tag */}
           {!isContextDismissed && contextLabel && !hasInput && (
-            <span className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[4px] bg-purple-500/15 text-purple-300 border border-purple-500/25 text-[10px] font-mono leading-none">
+            <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-purple-500/20 text-purple-200 border border-purple-500/35 text-[10px] font-mono font-bold leading-none">
               <span className="truncate max-w-[70px] sm:max-w-[120px]">{contextLabel}</span>
               <button
                 type="button"
@@ -183,7 +183,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             value={inputValue}
             onChange={(e) => onInputChange(e.target.value)}
             placeholder={
-              isReady ? "Ask about this page..." : "Initializing local engine..."
+              isReady ? "Ask about this page or command..." : "Initializing local engine..."
             }
             disabled={!isReady}
             style={{
@@ -194,7 +194,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               boxShadow: "none",
               WebkitAppearance: "none",
             }}
-            className="flex-1 bg-transparent text-white placeholder-gray-500 px-1 py-1 text-[16px] leading-[1.5] focus:outline-none disabled:opacity-50 min-w-0"
+            className="flex-1 bg-transparent text-white placeholder-gray-500 px-1 py-1 text-[16px] leading-[1.5] focus:outline-none disabled:opacity-50 min-w-0 font-medium"
           />
         </div>
 
@@ -203,10 +203,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           type="button"
           onClick={toggleVoiceRecording}
           disabled={!isReady || isLoading}
-          className={`w-[44px] h-[44px] min-w-[44px] min-h-[44px] rounded-[8px] flex items-center justify-center transition-all shrink-0 shadow-sm ${
+          className={`w-[42px] h-[42px] min-w-[42px] min-h-[42px] rounded-xl flex items-center justify-center transition-all shrink-0 shadow-sm ${
             isListening
-              ? "bg-red-500/90 text-white animate-pulse ring-2 ring-red-400/50 cursor-pointer"
-              : "bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/10 cursor-pointer"
+              ? "bg-red-500 text-white animate-pulse ring-2 ring-red-400/50 cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+              : "bg-white/8 hover:bg-white/15 text-gray-200 hover:text-white border border-white/10 cursor-pointer active:scale-95"
           }`}
           style={isListening ? { transform: `scale(${1 + audioLevel * 0.15})` } : undefined}
           title={
@@ -220,33 +220,33 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               : `Start voice input (${useWhisper ? "On-device Whisper" : "Browser speech (sent to Google)"})`
           }
         >
-          <Mic size={17} className={isListening ? "text-white animate-bounce" : "text-gray-300"} />
+          <Mic size={18} className={isListening ? "text-white animate-bounce" : "text-gray-200"} />
         </button>
 
-        {/* Right Action: Stop or Send (Minimum 44x44px Thumb Target Slot) */}
+        {/* Right Action: Stop or Send (High-Contrast Tactile Button) */}
         {isLoading ? (
           <button
             type="button"
             onClick={onStop}
-            className="w-[44px] h-[44px] min-w-[44px] min-h-[44px] rounded-[8px] bg-white/15 hover:bg-white/25 text-white flex items-center justify-center cursor-pointer transition-colors shrink-0 shadow-sm"
+            className="w-[42px] h-[42px] min-w-[42px] min-h-[42px] rounded-xl bg-white/20 hover:bg-white/30 text-white flex items-center justify-center cursor-pointer transition-colors shrink-0 shadow-sm active:scale-95"
             title="Stop generation"
             aria-label="Stop generation"
           >
-            <Square size={13} className="fill-current text-gray-200" />
+            <Square size={13} className="fill-current text-gray-100" />
           </button>
         ) : (
           <button
             type="submit"
             disabled={!isReady || !hasInput}
-            className={`w-[44px] h-[44px] min-w-[44px] min-h-[44px] rounded-[8px] flex items-center justify-center transition-colors shrink-0 shadow-sm ${
+            className={`w-[42px] h-[42px] min-w-[42px] min-h-[42px] rounded-xl flex items-center justify-center transition-all shrink-0 ${
               hasInput
-                ? "bg-purple-600 hover:bg-purple-500 text-white cursor-pointer shadow-purple-600/30"
-                : "text-gray-600 bg-white/4 cursor-not-allowed opacity-40"
+                ? "bg-[#D4FF00] hover:bg-[#c2eb00] text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] cursor-pointer active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
+                : "text-gray-600 bg-white/5 cursor-not-allowed opacity-35"
             }`}
             title="Send"
             aria-label="Send message"
           >
-            <ArrowUp size={18} />
+            <ArrowUp size={20} className={hasInput ? "stroke-[3] text-black" : "text-gray-500"} />
           </button>
         )}
       </form>

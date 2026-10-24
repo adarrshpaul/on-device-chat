@@ -152,7 +152,8 @@ async function runCrossAppConsistencyTests() {
     // 2. AMAZON E-COMMERCE INPUT ISOLATION VERIFICATION
     // -------------------------------------------------------------------
     console.log("\n--- TEST 2: Amazon E-Commerce Input Isolation ---");
-    const page2 = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+    const context2 = await browser.newContext({ viewport: { width: 1280, height: 720 }, bypassCSP: true });
+    const page2 = await context2.newPage();
     await page2.goto("https://www.amazon.com/s?k=wireless+earbuds", { waitUntil: "domcontentloaded", timeout: 30000 });
     await page2.waitForTimeout(2000);
 

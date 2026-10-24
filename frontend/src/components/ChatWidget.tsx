@@ -730,63 +730,59 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
                       </div>
                     )}
 
-                    {/* PROMINENT WORKFLOW SUGGESTIONS - UNMISSABLE HERO SHOWCASE */}
-                    <div className="mt-1 flex flex-col gap-2.5">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5 text-[12px] font-semibold text-white">
-                          <Zap size={14} className="text-amber-400 fill-amber-400" />
-                          <span>Suggested Workflows for This Page</span>
-                          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-mono">
-                            {displayWorkflows.length} available
-                          </span>
+                    {/* PROMINENT WORKFLOW SUGGESTIONS - UNMISSABLE NEO-BRUTALIST HERO SHOWCASE */}
+                    <div className="mt-1 flex flex-col gap-3">
+                      <div className="flex items-baseline justify-between pt-1">
+                        <div>
+                          <h2 className="text-[19px] font-black text-white tracking-tight leading-tight">
+                            What do you want to automate <span className="text-[#D4FF00] font-serif italic underline decoration-wavy decoration-purple-500/80">today?</span>
+                          </h2>
+                          <p className="text-[11.5px] text-gray-300 mt-0.5 font-normal">
+                            1-click on-device browser routines physically discovered on this page.
+                          </p>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-col items-end gap-1.5 shrink-0 ml-2">
+                          <span className="text-[10px] font-black font-mono px-2 py-0.5 rounded-full bg-[#D4FF00] text-black shadow-sm uppercase tracking-wider">
+                            {displayWorkflows.length} ready
+                          </span>
                           <button
                             type="button"
                             onClick={() => startMacroRecording()}
-                            className="text-[11px] text-purple-300 hover:text-white bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 px-2 py-0.5 rounded-[5px] flex items-center gap-1 font-medium cursor-pointer transition-colors shadow-sm"
+                            className="text-[10px] text-purple-200 hover:text-white bg-purple-900/40 hover:bg-purple-900/60 border border-purple-500/35 px-2 py-0.5 rounded-lg flex items-center gap-1 font-bold cursor-pointer transition-all active:scale-95"
                             title="Teach 1 item, batch replay across N items"
                           >
-                            <CircleDot size={11} className="text-purple-400" />
+                            <CircleDot size={10} className="text-[#D4FF00]" />
                             <span>Teach 1 → Batch N</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setActiveTab("workflows")}
-                            className="text-[11px] text-purple-400 hover:text-purple-300 flex items-center gap-1 font-medium cursor-pointer transition-colors"
-                          >
-                            <Plus size={11} />
-                            <span>Create Custom</span>
                           </button>
                         </div>
                       </div>
 
-                      {/* Prominent Large Workflow Cards Deck */}
-                      <div className="grid grid-cols-1 gap-2.5">
+                      {/* Prominent Large Workflow Cards Deck with Neo-Brutalist Tactile Surfaces */}
+                      <div className="grid grid-cols-1 gap-3">
                         {displayWorkflows.length === 0 ? (
-                          <div className="p-4 rounded-xl border border-white/10 bg-white/[0.02] text-center flex flex-col items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-300">
+                          <div className="p-4 rounded-2xl border-2 border-white/10 bg-white/[0.03] text-center flex flex-col items-center gap-2">
+                            <div className="w-9 h-9 rounded-full bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-300">
                               <Sparkles size={16} />
                             </div>
-                            <div className="text-[12px] font-medium text-gray-200">
+                            <div className="text-[13px] font-bold text-white">
                               No Pre-built Workflows for This View
                             </div>
-                            <p className="text-[11px] text-gray-400 max-w-[280px]">
+                            <p className="text-[11px] text-gray-300 max-w-[280px]">
                               Record any custom workflow in seconds, or use Teach 1 → Batch N to automate tasks on this page.
                             </p>
                             <div className="flex items-center gap-2 mt-1">
                               <button
                                 type="button"
                                 onClick={() => startMacroRecording()}
-                                className="px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium text-[11px] shadow-sm flex items-center gap-1 cursor-pointer transition-colors"
+                                className="px-3 py-1.5 rounded-xl bg-[#D4FF00] text-black font-black text-[11px] shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center gap-1 cursor-pointer transition-all active:scale-95"
                               >
-                                <CircleDot size={11} />
+                                <CircleDot size={11} className="stroke-[3]" />
                                 <span>Teach 1 → Batch N</span>
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setActiveTab("workflows")}
-                                className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/15 text-white font-medium text-[11px] border border-white/10 flex items-center gap-1 cursor-pointer transition-colors"
+                                className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-[11px] border border-white/15 flex items-center gap-1 cursor-pointer transition-colors"
                               >
                                 <Plus size={11} />
                                 <span>Create Custom</span>
@@ -794,48 +790,88 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
                             </div>
                           </div>
                         ) : (
-                          displayWorkflows.map((item) => (
-                            <div
-                              key={item.workflow.id}
-                              className={`p-3.5 rounded-xl border shadow-md transition-all flex flex-col justify-between gap-2.5 group hover:shadow-purple-950/50 ${
-                                item.isPredicted
-                                  ? "bg-gradient-to-r from-purple-950/50 via-purple-900/25 to-black/40 border-purple-500/40 hover:border-purple-400/70"
-                                  : "bg-white/[0.04] hover:bg-white/[0.07] border-white/10 hover:border-white/20"
-                              }`}
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="min-w-0">
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <span className="text-[13px] font-semibold text-white group-hover:text-purple-200 transition-colors">
-                                      {item.workflow.name}
-                                    </span>
-                                    {item.isPredicted && item.confidence && (
-                                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono flex items-center gap-0.5">
-                                        <Sparkles size={8} />
-                                        <span>AI Predicted ({Math.round(item.confidence * 100)}%)</span>
-                                      </span>
-                                    )}
+                          displayWorkflows.map((item, idx) => {
+                            // Cycle through high-energy tactile theme cards
+                            const themeIndex = idx % 4;
+                            const isLime = themeIndex === 0;
+                            const isWhite = themeIndex === 1;
+                            const isPurple = themeIndex === 2;
+                            const isPink = themeIndex === 3;
+
+                            const cardBg = isLime
+                              ? "bg-[#D4FF00] text-black border-2 border-black/80 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                              : isWhite
+                              ? "bg-white text-black border-2 border-black/80 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                              : isPurple
+                              ? "bg-gradient-to-br from-[#9333EA] to-[#7E22CE] text-white border-2 border-black/80 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                              : "bg-gradient-to-br from-[#FF2E93] to-[#E11D48] text-white border-2 border-black/80 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]";
+
+                            const isDarkCard = isPurple || isPink;
+
+                            return (
+                              <div
+                                key={item.workflow.id}
+                                className={`p-4 rounded-2xl transition-all flex flex-col justify-between gap-3 group active:translate-x-[2px] active:translate-y-[2px] active:shadow-none ${cardBg}`}
+                              >
+                                <div className="flex items-start justify-between gap-2.5">
+                                  <div className="flex items-start gap-2.5 min-w-0">
+                                    <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold shrink-0 shadow-sm ${
+                                      isDarkCard ? "bg-black text-[#D4FF00]" : "bg-black text-white"
+                                    }`}>
+                                      <Zap size={16} className="fill-current" />
+                                    </div>
+                                    <div className="min-w-0">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <span className={`text-[14px] font-black tracking-tight leading-snug ${
+                                          isDarkCard ? "text-white" : "text-black"
+                                        }`}>
+                                          {item.workflow.name}
+                                        </span>
+                                        {item.isPredicted && item.confidence && (
+                                          <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-black text-[#D4FF00] uppercase tracking-wider font-mono">
+                                            Verified
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className={`text-[11.5px] mt-1 leading-snug line-clamp-2 ${
+                                        isDarkCard ? "text-white/85" : "text-black/80 font-medium"
+                                      }`}>
+                                        {item.workflow.description}
+                                      </p>
+                                    </div>
                                   </div>
-                                  <p className="text-[11px] text-gray-300 mt-1 leading-snug line-clamp-2">
-                                    {item.workflow.description}
-                                  </p>
+
+                                  <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                                    isDarkCard ? "bg-white/20 text-white" : "bg-black/10 text-black"
+                                  }`}>
+                                    {item.workflow.steps.length} {item.workflow.steps.length === 1 ? "step" : "steps"}
+                                  </span>
+                                </div>
+
+                                <div className={`flex items-center justify-between pt-2 border-t ${
+                                  isDarkCard ? "border-white/15" : "border-black/15"
+                                }`}>
+                                  <span className={`text-[10px] font-mono font-semibold ${
+                                    isDarkCard ? "text-white/75" : "text-black/70"
+                                  }`}>
+                                    ⚡ 0 tokens • 1-click execution
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => runSavedWorkflow(item.workflow)}
+                                    className={`px-4 py-1.5 rounded-xl font-black text-[11px] flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-sm ${
+                                      isDarkCard
+                                        ? "bg-white text-black hover:bg-neutral-100"
+                                        : "bg-black text-white hover:bg-neutral-900"
+                                    }`}
+                                  >
+                                    <Play size={10} className="fill-current" />
+                                    <span>Run Routine</span>
+                                  </button>
                                 </div>
                               </div>
-                              <div className="flex items-center justify-between pt-1 border-t border-white/5">
-                                <span className="text-[10px] text-gray-400 font-mono">
-                                  {item.workflow.steps.length} {item.workflow.steps.length === 1 ? "step" : "steps"} • instant
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => runSavedWorkflow(item.workflow)}
-                                  className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-[11px] shadow-md shadow-emerald-950/40 flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
-                                >
-                                  <Play size={10} className="fill-current text-white" />
-                                  <span>Run Workflow</span>
-                                </button>
-                              </div>
-                            </div>
-                          ))
+                            );
+                          })
                         )}
                       </div>
                     </div>
@@ -1002,37 +1038,72 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
                 </button>
               )}
 
-              {/* Quick Workflows Thumb Bar with In-Flow Chevrons & Hardware Trackpad Scrolling */}
+              {/* Neo-Brutalist Tactile Workflows Carousel with Human Ergonomics */}
               {quickWorkflows.length > 0 && (
                 <div
                   ref={workflowsBarRef}
-                  className="px-3 py-1.5 bg-black/40 border-t border-white/6 flex items-center gap-1.5 shrink-0 select-none"
+                  className="px-3 pt-2.5 pb-2 bg-[#090d18] border-t border-white/10 shrink-0 select-none space-y-1.5"
                 >
-                  {/* Pinned Label */}
-                  <div className="flex items-center gap-1 text-[10px] font-mono text-purple-400 font-semibold shrink-0 mr-0.5">
-                    <Zap size={11} className="text-amber-400" />
-                    <span>Workflows:</span>
+                  {/* Clean Header Bar */}
+                  <div className="flex items-center justify-between px-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#D4FF00] text-black shadow-sm">
+                        <Zap size={10} className="fill-black stroke-black" />
+                      </span>
+                      <span className="text-[11px] font-black tracking-wider uppercase text-white">
+                        Quick Routines
+                      </span>
+                      <span className="text-[9px] font-bold font-mono px-1.5 py-0.2 rounded-full bg-white/10 text-gray-300">
+                        {quickWorkflows.length}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      {hasWfOverflow && (
+                        <div className="flex items-center gap-1 mr-1">
+                          <button
+                            type="button"
+                            disabled={!canScrollWfLeft}
+                            onClick={() => {
+                              workflowsScrollRef.current?.scrollBy({ left: -160, behavior: "smooth" });
+                            }}
+                            className={`w-5 h-5 rounded-md bg-white/10 text-white flex items-center justify-center transition-all ${
+                              !canScrollWfLeft ? "opacity-20 cursor-default" : "opacity-80 hover:opacity-100 hover:bg-white/20 cursor-pointer active:scale-90"
+                            }`}
+                            aria-label="Previous workflows"
+                          >
+                            <ChevronLeft size={12} />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={!canScrollWfRight}
+                            onClick={() => {
+                              workflowsScrollRef.current?.scrollBy({ left: 160, behavior: "smooth" });
+                            }}
+                            className={`w-5 h-5 rounded-md bg-white/10 text-white flex items-center justify-center transition-all ${
+                              !canScrollWfRight ? "opacity-20 cursor-default" : "opacity-80 hover:opacity-100 hover:bg-white/20 cursor-pointer active:scale-90"
+                            }`}
+                            aria-label="Next workflows"
+                          >
+                            <ChevronRight size={12} />
+                          </button>
+                        </div>
+                      )}
+                      <button
+                        onClick={() => {
+                          if (hasMovedWfRef.current) return;
+                          setActiveTab("workflows");
+                        }}
+                        className="text-[10px] font-black text-[#D4FF00] hover:text-white flex items-center gap-0.5 cursor-pointer uppercase tracking-wider transition-colors"
+                        title="Open Workflows Studio"
+                      >
+                        <Plus size={11} className="stroke-[3]" />
+                        <span>Add</span>
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Left Chevron in Dedicated In-Flow Slot */}
-                  {hasWfOverflow && (
-                    <button
-                      type="button"
-                      disabled={!canScrollWfLeft}
-                      onClick={() => {
-                        workflowsScrollRef.current?.scrollBy({ left: -180, behavior: "smooth" });
-                      }}
-                      className={`shrink-0 w-5 h-5 rounded-[4px] bg-white/5 hover:bg-purple-900/50 border border-white/10 hover:border-purple-500/40 text-purple-200 flex items-center justify-center transition-all active:scale-90 ${
-                        !canScrollWfLeft ? "opacity-20 pointer-events-none cursor-default" : "opacity-90 hover:opacity-100 cursor-pointer"
-                      }`}
-                      aria-label="Scroll workflows left"
-                      title="Scroll left"
-                    >
-                      <ChevronLeft size={12} />
-                    </button>
-                  )}
-
-                  {/* Scrollable Track - Instant 120fps hardware scrolling without scroll-smooth lag */}
+                  {/* Horizontal Tactile Cards Carousel */}
                   <div
                     ref={workflowsScrollRef}
                     onScroll={updateWfScrollBounds}
@@ -1040,55 +1111,52 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
                     onPointerMove={handlePointerMoveWf}
                     onPointerUp={handlePointerUpWf}
                     onPointerCancel={handlePointerCancelWf}
-                    className="flex-1 flex items-center gap-1.5 overflow-x-auto no-scrollbar g4-workflows-scroll cursor-grab active:cursor-grabbing select-none py-0.5"
+                    className="flex items-center gap-2 overflow-x-auto no-scrollbar g4-workflows-scroll cursor-grab active:cursor-grabbing select-none py-1 px-0.5"
                     style={{ WebkitOverflowScrolling: "touch" }}
                   >
-                    {quickWorkflows.map((wf) => (
-                      <button
-                        key={wf.id}
-                        onClick={() => {
-                          if (hasMovedWfRef.current) return;
-                          runSavedWorkflow(wf);
-                        }}
-                        className="px-2 py-0.5 rounded-[5px] bg-white/5 hover:bg-purple-950/40 text-gray-300 hover:text-white border border-white/8 hover:border-purple-500/30 text-[10px] flex items-center gap-1 cursor-pointer transition-all shrink-0 whitespace-nowrap active:scale-95"
-                        title={wf.description}
-                      >
-                        <Play size={9} className="fill-current text-emerald-400 shrink-0" />
-                        <span className="truncate max-w-[200px]">{wf.name}</span>
-                      </button>
-                    ))}
+                    {quickWorkflows.map((wf, idx) => {
+                      // Cycle through vibrant neo-brutalist theme palettes
+                      const themeIndex = idx % 4;
+                      const cardStyles = [
+                        // Theme 0: Electric Lime (Hero)
+                        "bg-[#D4FF00] text-black border border-black/40 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-[#c2eb00]",
+                        // Theme 1: Porcelain White
+                        "bg-white text-black border border-black/40 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-neutral-100",
+                        // Theme 2: Electric Purple
+                        "bg-[#9333EA] text-white border border-black/40 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-[#7E22CE]",
+                        // Theme 3: Punchy Fuchsia / Coral
+                        "bg-[#FF2E93] text-white border border-black/40 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-[#e02474]"
+                      ][themeIndex];
+
+                      const isLight = themeIndex === 0 || themeIndex === 1;
+
+                      return (
+                        <button
+                          key={wf.id}
+                          onClick={() => {
+                            if (hasMovedWfRef.current) return;
+                            runSavedWorkflow(wf);
+                          }}
+                          className={`h-[40px] px-3 rounded-xl flex items-center gap-2 cursor-pointer transition-all shrink-0 whitespace-nowrap active:translate-x-[1px] active:translate-y-[1px] active:shadow-none ${cardStyles}`}
+                          title={wf.description}
+                        >
+                          <span className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${
+                            isLight ? "bg-black text-white" : "bg-white text-black"
+                          }`}>
+                            <Play size={8} className="fill-current ml-0.5" />
+                          </span>
+                          <span className="font-extrabold text-[12px] truncate max-w-[150px] tracking-tight">
+                            {wf.name}
+                          </span>
+                          <span className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded-full shrink-0 ${
+                            isLight ? "bg-black/15 text-black" : "bg-white/20 text-white"
+                          }`}>
+                            {wf.steps.length} {wf.steps.length === 1 ? "step" : "steps"}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
-
-                  {/* Right Chevron in Dedicated In-Flow Slot */}
-                  {hasWfOverflow && (
-                    <button
-                      type="button"
-                      disabled={!canScrollWfRight}
-                      onClick={() => {
-                        workflowsScrollRef.current?.scrollBy({ left: 180, behavior: "smooth" });
-                      }}
-                      className={`shrink-0 w-5 h-5 rounded-[4px] bg-white/5 hover:bg-purple-900/50 border border-white/10 hover:border-purple-500/40 text-purple-200 flex items-center justify-center transition-all active:scale-90 ${
-                        !canScrollWfRight ? "opacity-20 pointer-events-none cursor-default" : "opacity-90 hover:opacity-100 cursor-pointer"
-                      }`}
-                      aria-label="Scroll workflows right"
-                      title="Scroll right"
-                    >
-                      <ChevronRight size={12} />
-                    </button>
-                  )}
-
-                  {/* Pinned Add Button */}
-                  <button
-                    onClick={() => {
-                      if (hasMovedWfRef.current) return;
-                      setActiveTab("workflows");
-                    }}
-                    className="shrink-0 px-2 py-0.5 rounded-[5px] bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 text-[10px] font-medium flex items-center gap-1 cursor-pointer transition-colors"
-                    title="Open Workflows & Automations Studio"
-                  >
-                    <Plus size={10} />
-                    <span>Add</span>
-                  </button>
                 </div>
               )}
 
