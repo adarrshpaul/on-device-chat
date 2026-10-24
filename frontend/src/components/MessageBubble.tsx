@@ -311,7 +311,7 @@ export default function MessageBubble({
                 navigator.clipboard.writeText(message.content);
               }
             }}
-            className="w-8 h-8 rounded-[6px] hover:bg-white/10 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+            className="g4-bubble-action-btn w-8 h-8 rounded-[6px] flex items-center justify-center transition-colors cursor-pointer"
             title="Copy response"
             aria-label="Copy response"
           >
@@ -322,7 +322,7 @@ export default function MessageBubble({
           </button>
           <button
             onClick={() => message.id && onFeedback?.(message.id, "up")}
-            className={`w-8 h-8 rounded-[6px] hover:bg-white/10 hover:text-white flex items-center justify-center transition-colors cursor-pointer ${
+            className={`g4-bubble-action-btn w-8 h-8 rounded-[6px] flex items-center justify-center transition-colors cursor-pointer ${
               message.feedback === "up" ? "text-purple-400 font-bold bg-white/10" : ""
             }`}
             title="Helpful"
@@ -332,7 +332,7 @@ export default function MessageBubble({
           </button>
           <button
             onClick={() => message.id && onFeedback?.(message.id, "down")}
-            className={`w-8 h-8 rounded-[6px] hover:bg-white/10 hover:text-white flex items-center justify-center transition-colors cursor-pointer ${
+            className={`g4-bubble-action-btn w-8 h-8 rounded-[6px] flex items-center justify-center transition-colors cursor-pointer ${
               message.feedback === "down" ? "text-red-400 font-bold bg-white/10" : ""
             }`}
             title="Not helpful"

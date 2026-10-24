@@ -203,10 +203,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           type="button"
           onClick={toggleVoiceRecording}
           disabled={!isReady || isLoading}
-          className={`w-[42px] h-[42px] min-w-[42px] min-h-[42px] rounded-xl flex items-center justify-center transition-all shrink-0 shadow-sm ${
-            isListening
-              ? "bg-red-500 text-white animate-pulse ring-2 ring-red-400/50 cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-              : "bg-white/8 hover:bg-white/15 text-gray-200 hover:text-white border border-white/10 cursor-pointer active:scale-95"
+          className={`w-[42px] h-[42px] min-w-[42px] min-h-[42px] rounded-xl flex items-center justify-center transition-all shrink-0 shadow-sm g4-mic-btn ${
+            isListening ? "listening" : ""
           }`}
           style={isListening ? { transform: `scale(${1 + audioLevel * 0.15})` } : undefined}
           title={
@@ -241,7 +239,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             className={`w-[42px] h-[42px] min-w-[42px] min-h-[42px] rounded-xl flex items-center justify-center transition-all shrink-0 ${
               hasInput
                 ? "neo-btn-send-active active:translate-x-[1px] active:translate-y-[1px]"
-                : "text-gray-600 bg-white/5 cursor-not-allowed opacity-35"
+                : "g4-send-btn-disabled"
             }`}
             title="Send"
             aria-label="Send message"

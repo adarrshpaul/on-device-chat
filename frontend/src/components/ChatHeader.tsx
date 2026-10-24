@@ -123,7 +123,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   const badge = TIER_BADGES[currentTierInfo.tier] || TIER_BADGES[ModelTier.TIER_0_GEMINI_NANO];
   const TierIcon = badge.icon;
   const iconBtn =
-    "text-gray-400 hover:text-white w-7 h-7 rounded-[6px] hover:bg-white/10 flex items-center justify-center transition-colors cursor-pointer shrink-0";
+    "g4-header-btn w-7 h-7 rounded-[6px] flex items-center justify-center transition-colors cursor-pointer shrink-0";
   const menuItem =
     "w-full text-left px-2.5 py-1.5 rounded-[6px] text-gray-200 hover:text-white hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors";
 
@@ -155,8 +155,8 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           aria-expanded={showTierMenu}
           aria-label={`Active model: ${badge.label}. Change model`}
           title={`${stripLeadingEmoji(currentTierInfo.name)} · ${currentTierInfo.size}`}
-          className={`relative shrink-0 h-7 pl-2 pr-1.5 rounded-full border flex items-center gap-1.5 text-[11.5px] font-semibold whitespace-nowrap cursor-pointer transition-all active:scale-95 shadow-sm ${
-            showTierMenu ? badge.pillOpenClass : badge.pillClass
+          className={`tier-selector-pill relative shrink-0 h-7 pl-2 pr-1.5 rounded-full border flex items-center gap-1.5 text-[11.5px] font-semibold whitespace-nowrap cursor-pointer transition-all active:scale-95 shadow-sm ${
+            showTierMenu ? "open" : ""
           }`}
         >
           <TierIcon size={13} className={`${badge.iconClass} shrink-0`} />
@@ -178,7 +178,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
       <div className="flex items-center gap-1 shrink-0">
         <button
           onClick={() => onTabChange("workflows")}
-          className="h-7 px-2 text-[11px] text-amber-300 hover:text-amber-200 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 font-semibold rounded-full cursor-pointer transition-all flex items-center gap-1 whitespace-nowrap active:scale-95 shadow-sm"
+          className="g4-header-workflows-btn h-7 px-2 text-[11px] font-semibold rounded-full cursor-pointer transition-all flex items-center gap-1 whitespace-nowrap active:scale-95 shadow-sm"
           title="Open Workflows & Automations Studio"
           aria-label="Open Workflows"
         >
@@ -423,36 +423,36 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                     onSelectTier(tierKey);
                     onToggleTierMenu();
                   }}
-                  className={`w-full text-left p-2 rounded-[8px] transition-all flex flex-col gap-0.5 cursor-pointer border ${
+                  className={`w-full text-left p-2.5 rounded-[9px] transition-all flex flex-col gap-1 cursor-pointer ${
                     isSelected
-                      ? `${b.rowSelectedClass} text-white shadow-md`
-                      : "hover:bg-white/5 border-transparent text-gray-300 hover:text-white"
+                      ? "tier-menu-item-selected"
+                      : "tier-menu-item"
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2 w-full">
                     <div className="flex items-center gap-2 min-w-0">
                       <Icon size={14} className={`${b.iconClass} shrink-0`} />
-                      <span className="text-xs font-semibold text-white shrink-0">{b.label}</span>
-                      <span className="text-[11px] text-gray-400 truncate">{stripLeadingEmoji(t.name)}</span>
+                      <span className="text-xs font-bold text-white shrink-0">{b.label}</span>
+                      <span className="text-[11px] text-gray-300 font-medium truncate">{stripLeadingEmoji(t.name)}</span>
                       {t.isRecommended && (
-                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 font-semibold border border-cyan-500/40 shrink-0">
+                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-300 font-bold border border-cyan-400/50 shrink-0">
                           1st Choice
                         </span>
                       )}
                     </div>
-                    <span className="text-[10px] text-gray-400 font-mono shrink-0">
+                    <span className="text-[10px] text-gray-300 font-mono font-semibold shrink-0">
                       {t.speedProfile || t.size}
                     </span>
                   </div>
                   {t.specialty && (
-                    <p className="text-[11px] text-gray-400 leading-snug line-clamp-2 pl-[22px]">
+                    <p className="text-[11px] text-gray-300 leading-snug line-clamp-2 pl-[22px]">
                       {t.specialty}
                     </p>
                   )}
                   {t.bestFor && (
-                    <div className="text-[10px] text-purple-300/80 font-mono pl-[22px] flex items-center gap-1">
-                      <span className="text-gray-500 font-sans">Best for:</span>
-                      <span className="truncate">{t.bestFor}</span>
+                    <div className="text-[10px] text-purple-300 font-mono font-semibold pl-[22px] flex items-center gap-1">
+                      <span className="text-gray-400 font-sans">Best for:</span>
+                      <span className="truncate text-purple-200">{t.bestFor}</span>
                     </div>
                   )}
                 </button>

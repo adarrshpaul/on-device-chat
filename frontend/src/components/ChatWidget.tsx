@@ -35,6 +35,7 @@ import { NavPersistenceManager } from "../lib/navPersistence";
 import { CanvasGameController } from "../lib/canvasGameController";
 import { SafetyConfirmationCard } from "./SafetyConfirmationCard";
 import { ThinkingAccordion } from "./ThinkingAccordion";
+import { stripLeadingEmoji } from "./tierBadges";
 
 export interface ChatWidgetProps {
   config?: Gemma4Config;
@@ -773,7 +774,7 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
                                   <div className="min-w-0">
                                     <div className="flex items-center gap-1.5 flex-wrap">
                                       <span className={`text-[13.5px] font-black tracking-tight leading-snug truncate ${isDark ? "text-white" : "text-black"}`}>
-                                        {item.workflow.name}
+                                        {stripLeadingEmoji(item.workflow.name)}
                                       </span>
                                       {item.isPredicted && (
                                         <span className="text-[9px] font-black font-mono px-1.5 py-0.2 rounded-full bg-black text-[#D4FF00] uppercase tracking-wider shrink-0">
@@ -788,7 +789,7 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
                                 </div>
 
                                 <div className="flex items-center gap-2 shrink-0">
-                                  <span className={`text-[9.5px] font-mono font-bold px-2 py-0.5 rounded-full ${isDark ? "bg-white/20 text-white" : "bg-black/10 text-black"}`}>
+                                  <span className={`text-[9.5px] font-mono font-bold px-2 py-0.5 rounded-full ${isDark ? "bg-white text-black" : "bg-black text-white"}`}>
                                     {item.workflow.steps.length} {item.workflow.steps.length === 1 ? "step" : "steps"}
                                   </span>
                                   <button
@@ -1021,8 +1022,8 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
                             onClick={() => {
                               workflowsScrollRef.current?.scrollBy({ left: -160, behavior: "smooth" });
                             }}
-                            className={`w-5 h-5 rounded-md bg-white/10 text-white flex items-center justify-center transition-all ${
-                              !canScrollWfLeft ? "opacity-20 cursor-default" : "opacity-80 hover:opacity-100 hover:bg-white/20 cursor-pointer active:scale-90"
+                            className={`w-5 h-5 rounded-md g4-scroll-chevron flex items-center justify-center transition-all ${
+                              !canScrollWfLeft ? "opacity-20 cursor-default" : "opacity-90 hover:opacity-100 cursor-pointer active:scale-90"
                             }`}
                             aria-label="Previous workflows"
                           >
@@ -1034,8 +1035,8 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
                             onClick={() => {
                               workflowsScrollRef.current?.scrollBy({ left: 160, behavior: "smooth" });
                             }}
-                            className={`w-5 h-5 rounded-md bg-white/10 text-white flex items-center justify-center transition-all ${
-                              !canScrollWfRight ? "opacity-20 cursor-default" : "opacity-80 hover:opacity-100 hover:bg-white/20 cursor-pointer active:scale-90"
+                            className={`w-5 h-5 rounded-md g4-scroll-chevron flex items-center justify-center transition-all ${
+                              !canScrollWfRight ? "opacity-20 cursor-default" : "opacity-90 hover:opacity-100 cursor-pointer active:scale-90"
                             }`}
                             aria-label="Next workflows"
                           >
@@ -1097,10 +1098,10 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
                             <Play size={8} className="fill-current ml-0.5" />
                           </span>
                           <span className="font-extrabold text-[12px] truncate max-w-[150px] tracking-tight">
-                            {wf.name}
+                            {stripLeadingEmoji(wf.name)}
                           </span>
-                          <span className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded-full shrink-0 ${
-                            isLight ? "bg-black/15 text-black" : "bg-white/20 text-white"
+                          <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded-full shrink-0 shadow-xs ${
+                            isLight ? "bg-black text-white" : "bg-white text-black"
                           }`}>
                             {wf.steps.length} {wf.steps.length === 1 ? "step" : "steps"}
                           </span>
