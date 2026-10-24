@@ -1,5 +1,14 @@
 # OKF Transition Log
 
+## 2026-10-24T16:45:00Z - Gate 2: Merged to main and Cut Prerelease v0.4.0-next.1
+- **Scope & Implementation**:
+  - Merged `feat/task-118-pre-release-fixes` into `main` (fast-forward to commit `8c5f2c0`).
+  - Bumped base version to `0.4.0` in `frontend/package.json` and executed `npm run release:next 1` producing `0.4.0-next.1`.
+  - Rebuilt production standalone bundles and docs; synced extension manifest to `0.4.0.1` (`0.4.0-next.1`).
+  - Committed version cut on `main`: `feat(release): cut staging prerelease v0.4.0-next.1` (`f54260b`).
+  - Dry-run validation passed; CLI publish paused for token rotation and automation token injection.
+
+
 ## 2026-10-24T16:22:00Z - Gate 1: Multi-Site Extension E2E Suite & Pre-Release Hardening Passed
 - **Scope & Implementation**:
   - Implemented `openCleanPage` tab lifecycle management in `frontend/tests/e2e/extension/fixtures.ts` to prevent multi-tab target ambiguity under Playwright persistent worker contexts.
