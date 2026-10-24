@@ -9,6 +9,7 @@
 import type { WorkflowStep, BatchEntityItem, BatchProposal } from "./types";
 import { BatchProposalManager } from "./batchEngine";
 import { isWidgetElement } from "./domUtils";
+import { SelfHealingLocatorEngine, SelfHealingLocator } from "./selfHealingLocators.ts";
 
 export interface RecordedDomAction {
   type: "click" | "input" | "change";
@@ -21,6 +22,7 @@ export interface RecordedDomAction {
   /** Consecutive identical clicks coalesced into this action */
   count?: number;
   lastTimestamp?: number;
+  locator?: SelfHealingLocator;
 }
 
 const CLICK_COALESCE_WINDOW_MS = 2500;
@@ -133,6 +135,7 @@ export class MacroRecorder {
       tagName: target.tagName.toLowerCase(),
       textSnippet: target.textContent?.trim().slice(0, 30) || "",
       timestamp: Date.now(),
+      locator: SelfHealingLocatorEngine.generateLocator(target),
     };
 
     const last = this.session.actions[this.session.actions.length - 1];
@@ -535,6 +538,54 @@ export class MacroRecorder {
       this.bannerEl.remove();
       this.bannerEl = null;
     }
+  }
+
+  /**
+   * Exports recorded macro actions into a clean, standalone Playwright test script.
+   */
+  static exportAsPlaywright(options?: {
+    actions?: RecordedDomAction[];
+    url?: string;
+    testName?: string;
+  }): string {
+    const actions = options?.actions || this.session?.actions || [];
+    const url = options?.url || (typeof window !== "undefined" ? window.location.href : "https://example.com");
+    const testName = options?.testName || "Recorded Macro Workflow";
+
+    const lines: string[] = [
+      `import { test, expect } from '@playwright/test';`,
+      ``,
+      `test('${testName}', async ({ page }) => {`,
+      `  // 1. Navigate to target origin`,
+      `  await page.goto('${url}');`,
+      `  await page.waitForLoadState('domcontentloaded');`,
+      ``,
+      `  // 2. Execute recorded user sequence`,
+    ];
+
+    for (const act of actions) {
+      const loc = act.locator || { css: act.targetSelector };
+      const pwSelector = SelfHealingLocatorEngine.toPlaywrightSelector(loc);
+
+      if (act.type === "click") {
+        if (act.count && act.count > 1) {
+          lines.push(`  await ${pwSelector}.click({ clickCount: ${act.count} });`);
+        } else {
+          lines.push(`  await ${pwSelector}.click();`);
+        }
+      } else if (act.type === "input" || act.type === "change") {
+        const val = (act.value || "").replace(/'/g, "\\'");
+        lines.push(`  await ${pwSelector}.fill('${val}');`);
+      }
+    }
+
+    lines.push(
+      `  // 3. Settle state`,
+      `  await page.waitForLoadState('networkidle');`,
+      `});`
+    );
+
+    return lines.join("\n");
   }
 
   static cancelRecording(): void {

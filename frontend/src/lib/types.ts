@@ -382,6 +382,86 @@ export const DEFAULT_BROWSER_TOOLS: ToolDefinition[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "wait",
+      description: "Wait for page DOM mutations to settle and network requests to become idle before proceeding.",
+      parameters: {
+        type: "object",
+        properties: {
+          timeoutMs: { type: "number", description: "Max milliseconds to wait (default 5000)." },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "extract",
+      description: "Extract structured tables, lists, or product grids from the active page into JSON or CSV.",
+      parameters: {
+        type: "object",
+        properties: {
+          selector: { type: "string", description: "Optional CSS selector for the table or list container." },
+          format: { type: "string", enum: ["json", "csv"], description: "Output format (default json)." },
+          maxRows: { type: "number", description: "Maximum rows to extract (default 100)." },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "openTab",
+      description: "Open a new browser tab with the specified URL.",
+      parameters: {
+        type: "object",
+        properties: {
+          url: { type: "string", description: "URL to navigate to in the new tab." },
+        },
+        required: ["url"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "switchTab",
+      description: "Switch to an existing tab by tabId or URL pattern.",
+      parameters: {
+        type: "object",
+        properties: {
+          tabId: { type: "number", description: "Optional numeric tab ID." },
+          urlPattern: { type: "string", description: "Optional URL substring to match." },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "closeTab",
+      description: "Close a tab by tabId or close current tab.",
+      parameters: {
+        type: "object",
+        properties: {
+          tabId: { type: "number", description: "Optional numeric tab ID to close." },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "listTabs",
+      description: "List all open tabs in current window with their IDs, titles, and URLs.",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+    },
+  },
 ];
 
 export interface DecisionAlternative {

@@ -16,6 +16,8 @@
  * - Dynamic few-shot exemplars & deterministic macro execution.
  */
 
+declare const chrome: any;
+
 import { recipeStore, isActionGoal } from "./recipeStore";
 import { expertJudge, AgentStepTrace, EvalTrace } from "./expertJudge";
 import { ModelTier, ToolDefinition, DEFAULT_BROWSER_TOOLS, DecisionTrace } from "./types";
@@ -33,6 +35,8 @@ import { NavPersistenceManager } from "./navPersistence";
 import { SafetyGate } from "./safetyGate";
 import { TodoManager, globalTodoManager, TodoStatus, PlanState } from "./todoManager";
 import { ReasoningManager } from "./reasoningManager";
+import { WaitManager } from "./waitManager.ts";
+import { DataExtractor } from "./dataExtractor.ts";
 
 export type { HarnessToolCall };
 
@@ -358,9 +362,10 @@ export class AgentHarness {
             return `Click failed on ${resolved.identifierDescription}: ${failReason}.`;
           }
           if (r < repeatCount - 1) {
-            await new Promise((res) => setTimeout(res, 250));
+            await WaitManager.waitForDomSettle({ quietPeriodMs: 100, timeoutMs: 1000 });
           }
         }
+        await WaitManager.waitForPageReady({ quietPeriodMs: 100, idlePeriodMs: 150, timeoutMs: 2000 });
         const after = StateDeltaVerifier.captureSnapshot();
         const delta = StateDeltaVerifier.computeDelta(before, after);
 
@@ -413,12 +418,7 @@ export class AgentHarness {
       }
 
       case "extract": {
-        if (!selector) return "Error: selector required for extract action.";
-        const elements = smartQuerySelectorAll(selector);
-        if (elements.length === 0) return `No elements found matching "${selector}".`;
-        const texts = elements.map((e) => (e.textContent || "").trim()).filter(Boolean);
-        const dump = texts.join("\n---\n");
-        return this.compactObservation(dump, `Extracted ${texts.length} items from "${selector}"`);
+        return this.primitiveExtract(rawArgs);
       }
 
       case "see":
@@ -680,6 +680,141 @@ export class AgentHarness {
     return `Updated task ${taskId} status to "${status}".`;
   }
 
+  /** Primitive: wait (Real waits via DOM-settle and network idle, TASK-114) */
+  private async primitiveWait(args: Record<string, unknown> = {}): Promise<string> {
+    const quietMs = typeof args.quietPeriodMs === "number" ? args.quietPeriodMs : 200;
+    const idleMs = typeof args.idlePeriodMs === "number" ? args.idlePeriodMs : 250;
+    const timeoutMs = typeof args.timeoutMs === "number" ? args.timeoutMs : 5000;
+
+    const res = await WaitManager.waitForPageReady({ quietPeriodMs: quietMs, idlePeriodMs: idleMs, timeoutMs });
+    if (res.settled) {
+      return `Page ready: DOM mutations and network requests settled in ${res.durationMs}ms.`;
+    }
+    return `Wait timeout reached (${res.durationMs}ms): ${res.reason || "DOM or network did not fully settle"}.`;
+  }
+
+  /** Primitive: extract (Structured data extraction from tables/grids to JSON/CSV, TASK-114) */
+  private async primitiveExtract(args: Record<string, unknown> = {}): Promise<string> {
+    const selector = typeof args.selector === "string" ? args.selector : undefined;
+    const format = args.format === "csv" ? "csv" : "json";
+    const maxRows = typeof args.maxRows === "number" && args.maxRows > 0 ? args.maxRows : 100;
+
+    const result = DataExtractor.extractTable({ selector, maxRows });
+    if (result.rowCount === 0) {
+      return `Extract failed: no data table or repeating records found${selector ? ` for selector "${selector}"` : " on active page"}.`;
+    }
+
+    const output = format === "csv" ? result.csv : result.json;
+    const summary = `Extracted ${result.rowCount} rows (${result.columnCount} columns: ${result.headers.slice(0, 5).join(", ")}${result.headers.length > 5 ? "..." : ""})`;
+
+    return this.compactObservation(output, summary);
+  }
+
+  /** Primitive: openTab (Multi-page tab orchestration, TASK-114) */
+  private async primitiveOpenTab(args: Record<string, unknown> = {}): Promise<string> {
+    const url = String(args.url || "").trim();
+    if (!url) return "Error: url is required for openTab.";
+
+    if (typeof chrome !== "undefined" && chrome.runtime?.sendMessage) {
+      const res = await new Promise<any>((resolve) => {
+        chrome.runtime.sendMessage(
+          { target: "background", type: "TAB_OPERATION", action: "openTab", url },
+          (resp: any) => resolve(resp || { ok: false, error: chrome.runtime?.lastError?.message })
+        );
+      });
+      if (res.ok) {
+        return `Opened new tab (ID: ${res.tab?.id || "unknown"}) with URL: ${url}`;
+      }
+      return `Failed to open tab via extension: ${res.error || "unknown error"}`;
+    }
+
+    if (typeof window !== "undefined") {
+      try {
+        window.open?.(url, "_blank");
+      } catch {}
+      return `Opened URL in new browser window/tab: ${url}`;
+    }
+
+    return `openTab unavailable in this environment: ${url}`;
+  }
+
+  /** Primitive: switchTab (Multi-tab switching by ID or URL pattern, TASK-114) */
+  private async primitiveSwitchTab(args: Record<string, unknown> = {}): Promise<string> {
+    const tabId = typeof args.tabId === "number" ? args.tabId : undefined;
+    const urlPattern = typeof args.urlPattern === "string" ? args.urlPattern : undefined;
+
+    if (!tabId && !urlPattern) {
+      return "Error: either tabId or urlPattern is required for switchTab.";
+    }
+
+    if (typeof chrome !== "undefined" && chrome.runtime?.sendMessage) {
+      const res = await new Promise<any>((resolve) => {
+        chrome.runtime.sendMessage(
+          { target: "background", type: "TAB_OPERATION", action: "switchTab", tabId, urlPattern },
+          (resp: any) => resolve(resp || { ok: false, error: chrome.runtime?.lastError?.message })
+        );
+      });
+      if (res.ok) {
+        return `Switched to tab (ID: ${res.tab?.id}, Title: "${res.tab?.title}", URL: ${res.tab?.url})`;
+      }
+      return `Failed to switch tab: ${res.error || "tab not found"}`;
+    }
+
+    return "switchTab requires EdgeOperator Chrome extension privileges.";
+  }
+
+  /** Primitive: closeTab (Close a tab, TASK-114) */
+  private async primitiveCloseTab(args: Record<string, unknown> = {}): Promise<string> {
+    const tabId = typeof args.tabId === "number" ? args.tabId : undefined;
+
+    if (typeof chrome !== "undefined" && chrome.runtime?.sendMessage) {
+      const res = await new Promise<any>((resolve) => {
+        chrome.runtime.sendMessage(
+          { target: "background", type: "TAB_OPERATION", action: "closeTab", tabId },
+          (resp: any) => resolve(resp || { ok: false, error: chrome.runtime?.lastError?.message })
+        );
+      });
+      if (res.ok) {
+        return `Successfully closed tab${tabId ? ` (ID: ${tabId})` : ""}.`;
+      }
+      return `Failed to close tab: ${res.error || "unknown error"}`;
+    }
+
+    if (typeof window !== "undefined") {
+      window.close();
+      return "Attempted to close active window.";
+    }
+
+    return "closeTab unavailable in this environment.";
+  }
+
+  /** Primitive: listTabs (Inspect all open tabs, TASK-114) */
+  private async primitiveListTabs(_args: Record<string, unknown> = {}): Promise<string> {
+    if (typeof chrome !== "undefined" && chrome.runtime?.sendMessage) {
+      const res = await new Promise<any>((resolve) => {
+        chrome.runtime.sendMessage(
+          { target: "background", type: "TAB_OPERATION", action: "listTabs" },
+          (resp: any) => resolve(resp || { ok: false, error: chrome.runtime?.lastError?.message })
+        );
+      });
+      if (res.ok && Array.isArray(res.tabs)) {
+        const lines = res.tabs.map(
+          (t: any) => `[${t.id}] ${t.active ? "*ACTIVE* " : ""}"${t.title}" - ${t.url}`
+        );
+        return `Open tabs (${res.tabs.length}):\n${lines.join("\n")}`;
+      }
+      return `Failed to list tabs: ${res.error || "unknown error"}`;
+    }
+
+    if (typeof window !== "undefined") {
+      const loc = window.location?.href || "about:blank";
+      const title = typeof document !== "undefined" ? document.title : "Document";
+      return `Single active tab: "${title}" - ${loc}`;
+    }
+
+    return "No tabs available.";
+  }
+
   /**
    * Dispatch tool call to the corresponding primitive or custom host tool
    */
@@ -783,6 +918,27 @@ export class AgentHarness {
       case "update_todo":
       case "task":
         return this.primitiveUpdateTask(args);
+      case "wait":
+      case "sleep":
+      case "pause":
+        return this.primitiveWait(args);
+      case "extract":
+      case "extractData":
+      case "extract_data":
+      case "scrape":
+        return this.primitiveExtract(args);
+      case "openTab":
+      case "open_tab":
+        return this.primitiveOpenTab(args);
+      case "switchTab":
+      case "switch_tab":
+        return this.primitiveSwitchTab(args);
+      case "closeTab":
+      case "close_tab":
+        return this.primitiveCloseTab(args);
+      case "listTabs":
+      case "list_tabs":
+        return this.primitiveListTabs(args);
 
       // First-Class Direct Browser Primitives
       case "playGame":
@@ -816,8 +972,6 @@ export class AgentHarness {
         return this.primitiveBrowse({ action: "snapshot", ...args });
       case "hover":
         return this.primitiveBrowse({ action: "hover", ...args });
-      case "extract":
-        return this.primitiveBrowse({ action: "extract", ...args });
       case "see":
       case "look":
       case "visual":

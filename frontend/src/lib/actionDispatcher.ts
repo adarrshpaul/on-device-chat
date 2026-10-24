@@ -17,11 +17,12 @@
 import { A11yTreeEngine } from "./a11yTree";
 import { smartQuerySelector, smoothScrollTo, isElementNode, isTextField, topLevelRect } from "./domUtils";
 import { SafetyGate, SafetyCheckResult } from "./safetyGate";
+import { SelfHealingLocatorEngine, SelfHealingLocator } from "./selfHealingLocators.ts";
 
 export interface TargetResolutionResult {
   element: HTMLElement | null;
   identifierDescription: string;
-  matchedVia: "a11y-id" | "css-selector" | "none";
+  matchedVia: "a11y-id" | "css-selector" | "self-healing" | "none";
 }
 
 export interface TypeActionOptions {
@@ -159,6 +160,28 @@ export class ActionDispatcher {
           element: el,
           identifierDescription: `selector "${clean}"`,
           matchedVia: "css-selector",
+        };
+      }
+
+      // Try self-healing locator fallback for selector string
+      const healed = SelfHealingLocatorEngine.resolveLocator(clean);
+      if (healed.element) {
+        return {
+          element: healed.element,
+          identifierDescription: healed.matchDescription,
+          matchedVia: "self-healing",
+        };
+      }
+    }
+
+    // 3. Check if target is a SelfHealingLocator object
+    if (typeof rawTarget === "object" && rawTarget !== null && !isElementNode(rawTarget)) {
+      const healed = SelfHealingLocatorEngine.resolveLocator(rawTarget as SelfHealingLocator);
+      if (healed.element) {
+        return {
+          element: healed.element,
+          identifierDescription: healed.matchDescription,
+          matchedVia: "self-healing",
         };
       }
     }

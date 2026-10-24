@@ -11,6 +11,8 @@
  *    the harness automatically re-hydrates state and continues the workflow with the new DOM.
  */
 
+declare const chrome: any;
+
 export interface InFlightStepTrace {
   step: number;
   tool: string;
@@ -38,25 +40,36 @@ export interface InFlightTaskState {
 
 export class NavPersistenceManager {
   /**
-   * Serialize active in-flight task before page transition
+   * Serialize active in-flight task before page transition.
+   * Persists to both sessionStorage and chrome.storage.session (cross-origin resilient).
    */
   static saveTask(task: Omit<InFlightTaskState, "createdAt">): void {
+    const payload: InFlightTaskState = {
+      ...task,
+      createdAt: Date.now(),
+    };
+    const serialized = JSON.stringify(payload);
+
     try {
-      if (typeof window === "undefined" || !window.sessionStorage) return;
-      const payload: InFlightTaskState = {
-        ...task,
-        createdAt: Date.now(),
-      };
-      const serialized = JSON.stringify(payload);
-      window.sessionStorage.setItem(PRIMARY_STORAGE_KEY, serialized);
-      window.sessionStorage.setItem(LEGACY_STORAGE_KEY, serialized);
+      if (typeof window !== "undefined" && window.sessionStorage) {
+        window.sessionStorage.setItem(PRIMARY_STORAGE_KEY, serialized);
+        window.sessionStorage.setItem(LEGACY_STORAGE_KEY, serialized);
+      }
     } catch (err) {
       console.warn("[NavPersistence] Failed to serialize in-flight task to sessionStorage:", err);
+    }
+
+    // Persist to chrome.storage.session (extension tier, survives cross-domain navigations)
+    if (typeof chrome !== "undefined") {
+      const sessionStore = chrome.storage?.session || chrome.storage?.local;
+      if (sessionStore?.set) {
+        sessionStore.set({ [PRIMARY_STORAGE_KEY]: payload }).catch(() => {});
+      }
     }
   }
 
   /**
-   * Retrieve and validate pending in-flight task on page load
+   * Retrieve and validate pending in-flight task on page load (synchronous sessionStorage check).
    */
   static getPendingTask(): InFlightTaskState | null {
     try {
@@ -80,15 +93,49 @@ export class NavPersistenceManager {
   }
 
   /**
-   * Clear active task once completed or aborted
+   * Retrieve pending in-flight task asynchronously, checking chrome.storage.session first
+   * for cross-origin navigation continuation.
+   */
+  static async getPendingTaskAsync(): Promise<InFlightTaskState | null> {
+    if (typeof chrome !== "undefined") {
+      const sessionStore = chrome.storage?.session || chrome.storage?.local;
+      if (sessionStore?.get) {
+        try {
+          const res = await sessionStore.get([PRIMARY_STORAGE_KEY]);
+          const task = res?.[PRIMARY_STORAGE_KEY] as InFlightTaskState | undefined;
+          if (task) {
+            const age = Date.now() - (task.createdAt || 0);
+            if (age <= MAX_TASK_AGE_MS && task.stepIndex < task.maxSteps) {
+              return task;
+            }
+            await this.clearTaskAsync();
+          }
+        } catch {}
+      }
+    }
+    return this.getPendingTask();
+  }
+
+  /**
+   * Clear active task once completed or aborted.
    */
   static clearTask(): void {
     try {
-      if (typeof window === "undefined" || !window.sessionStorage) return;
-      window.sessionStorage.removeItem(PRIMARY_STORAGE_KEY);
-      window.sessionStorage.removeItem(LEGACY_STORAGE_KEY);
-    } catch {
-      // ignore
+      if (typeof window !== "undefined" && window.sessionStorage) {
+        window.sessionStorage.removeItem(PRIMARY_STORAGE_KEY);
+        window.sessionStorage.removeItem(LEGACY_STORAGE_KEY);
+      }
+    } catch {}
+
+    if (typeof chrome !== "undefined") {
+      const sessionStore = chrome.storage?.session || chrome.storage?.local;
+      if (sessionStore?.remove) {
+        sessionStore.remove([PRIMARY_STORAGE_KEY]).catch(() => {});
+      }
     }
+  }
+
+  static async clearTaskAsync(): Promise<void> {
+    this.clearTask();
   }
 }

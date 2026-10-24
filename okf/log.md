@@ -1,5 +1,20 @@
 # OKF Transition Log
 
+## 2026-10-24T14:41:00Z - TASK-114: Browser Automation Superpowers (Items 4, 5, 6, 8)
+- **Scope & Implementation**:
+  - Implemented `WaitManager` (`frontend/src/lib/waitManager.ts`): MutationObserver quiet period (DOM settle) + Network idle (CDP Network.* in extension, PerformanceObserver in widget) replacing fixed sleeps. Added `wait` tool to `AgentHarness`.
+  - Implemented `SelfHealingLocatorEngine` (`frontend/src/lib/selfHealingLocators.ts`): 5-tier resilient locator resolution (testId, roleAndName, text, CSS, relativeAnchor) with fallback telemetry (`healed: true`).
+  - Added Playwright test export in `MacroRecorder.exportAsPlaywright()` generating modern executable `@playwright/test` scripts.
+  - Enhanced `NavPersistenceManager` with `chrome.storage.session` for cross-origin navigation resilience and added tab orchestration primitives (`openTab`, `switchTab`, `closeTab`, `listTabs`) in `AgentHarness` and `extension/background.js`.
+  - Implemented `DataExtractor` (`frontend/src/lib/dataExtractor.ts`): parses `<table>` and `<div>` grids into RFC 4180 CSV / JSON. Added `extract` tool to `AgentHarness`.
+  - Fixed `test_tool_primitives.mjs` and made `domUtils` SSR/Node isomorphic.
+- **Verification & Git**:
+  - `test_task_114_harness_superpowers.mjs`: 14/14 passing.
+  - All 17 test suites passing in `npm test`.
+  - TypeScript `tsc --noEmit` and ESLint passing cleanly. Production build and extension sync verified.
+  - Committed to branch `feat/task-114-harness-superpowers`.
+  - Artifact/Fact: `okf/facts/fact_task_114_harness_superpowers_20261024.md`.
+
 ## 2026-10-24T14:24:00Z - TASK-117: Fix Review Blockers in Safety Gate, Voice Honesty, and Harness Lifecycle
 - **Scope & Implementation**:
   - Implemented isolated allowlist storage (`IAllowlistStore`, `MemoryAllowlistStore`, `ExtensionAllowlistStore`). Never reads or trusts host page `localStorage`.

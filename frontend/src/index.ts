@@ -59,6 +59,12 @@ export type { HarnessToolCall } from './lib/harnessDecisionParser';
 export { ProbabilisticHarnessEngine } from './lib/probabilisticHarness';
 export { personalDictionary } from './lib/personalDictionary';
 export type { DictionaryEntry } from './lib/personalDictionary';
+export { WaitManager } from './lib/waitManager';
+export type { WaitOptions, WaitResult } from './lib/waitManager';
+export { SelfHealingLocatorEngine } from './lib/selfHealingLocators';
+export type { SelfHealingLocator, ResolvedLocatorResult, LocatorStrategy } from './lib/selfHealingLocators';
+export { DataExtractor } from './lib/dataExtractor';
+export type { ExtractedTableResult, ExtractionOptions } from './lib/dataExtractor';
 export * from './lib/types';
 
 

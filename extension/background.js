@@ -159,6 +159,50 @@ async function dispatchTrustedInput(tabId, msg) {
   }
 }
 
+async function waitForCdpNetworkIdle(tabId, idleMs = 250, timeoutMs = 5000) {
+  const allowed = await trustedInputAllowed();
+  if (!allowed) {
+    return;
+  }
+  await ensureAttached(tabId);
+  return new Promise((resolve) => {
+    let inFlight = 0;
+    let lastActivity = Date.now();
+    let interval = null;
+    let timeout = null;
+
+    const eventHandler = ({ tabId: eventTabId }, message) => {
+      if (eventTabId !== tabId) return;
+      if (message === "Network.requestWillBeSent") {
+        inFlight++;
+        lastActivity = Date.now();
+      } else if (message === "Network.loadingFinished" || message === "Network.loadingFailed") {
+        inFlight = Math.max(0, inFlight - 1);
+        lastActivity = Date.now();
+      }
+    };
+
+    const cleanup = () => {
+      if (interval) clearInterval(interval);
+      if (timeout) clearTimeout(timeout);
+      chrome.debugger.onEvent.removeListener(eventHandler);
+      chrome.debugger.sendCommand({ tabId }, "Network.disable").catch(() => {});
+      resolve();
+    };
+
+    chrome.debugger.onEvent.addListener(eventHandler);
+    chrome.debugger.sendCommand({ tabId }, "Network.enable").catch(() => cleanup());
+
+    interval = setInterval(() => {
+      if (inFlight === 0 && (Date.now() - lastActivity) >= idleMs) {
+        cleanup();
+      }
+    }, 50);
+
+    timeout = setTimeout(cleanup, timeoutMs);
+  });
+}
+
 // Relay messages from popup to active tab
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.target === "background") {
@@ -178,6 +222,62 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         })
         .then(() => sendResponse({ ok: true }))
         .catch((err) => sendResponse({ ok: false, error: String(err && err.message ? err.message : err) }));
+      return true;
+    } else if (message.type === "TAB_OPERATION") {
+      const { action, url, tabId, urlPattern } = message;
+      if (action === "openTab") {
+        chrome.tabs.create({ url: url || "about:blank", active: true }, (tab) => {
+          sendResponse({ ok: true, tab: { id: tab.id, url: tab.url, title: tab.title } });
+        });
+      } else if (action === "switchTab") {
+        if (tabId) {
+          chrome.tabs.update(tabId, { active: true }, (tab) => {
+            if (chrome.runtime.lastError || !tab) {
+              sendResponse({ ok: false, error: chrome.runtime.lastError?.message || "Tab not found" });
+            } else {
+              sendResponse({ ok: true, tab: { id: tab.id, url: tab.url, title: tab.title } });
+            }
+          });
+        } else if (urlPattern) {
+          chrome.tabs.query({ currentWindow: true }, (tabs) => {
+            const found = tabs.find((t) => t.url && t.url.includes(urlPattern));
+            if (found && found.id) {
+              chrome.tabs.update(found.id, { active: true }, (tab) => {
+                sendResponse({ ok: true, tab: { id: tab.id, url: tab.url, title: tab.title } });
+              });
+            } else {
+              sendResponse({ ok: false, error: `No tab matching pattern "${urlPattern}" found` });
+            }
+          });
+        } else {
+          sendResponse({ ok: false, error: "Must specify tabId or urlPattern" });
+        }
+      } else if (action === "closeTab") {
+        const targetId = tabId || (sender.tab && sender.tab.id);
+        if (targetId) {
+          chrome.tabs.remove(targetId, () => {
+            sendResponse({ ok: true });
+          });
+        } else {
+          sendResponse({ ok: false, error: "No tabId specified" });
+        }
+      } else if (action === "listTabs") {
+        chrome.tabs.query({ currentWindow: true }, (tabs) => {
+          const list = tabs.map((t) => ({ id: t.id, url: t.url, title: t.title, active: t.active }));
+          sendResponse({ ok: true, tabs: list });
+        });
+      }
+      return true;
+    } else if (message.type === "CDP_WAIT_NETWORK_IDLE") {
+      const tabId = sender.tab && sender.tab.id;
+      if (!tabId) {
+        sendResponse({ ok: false, error: "No active sender tab" });
+        return true;
+      }
+      waitForCdpNetworkIdle(tabId, message.idleMs || 250, message.timeoutMs || 5000)
+        .then(() => sendResponse({ ok: true }))
+        .catch((err) => sendResponse({ ok: false, error: err?.message || String(err) }));
+      return true;
     }
     return true;
   }
