@@ -14,6 +14,9 @@ import {
   ArrowLeftRight,
   Maximize2,
   X,
+  ListTodo,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 import { Gemma4Config } from "../main";
 import { useChat } from "../hooks/useChat";
@@ -204,6 +207,9 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
     isRecordingMacro,
     startMacroRecording,
     stopMacroRecording,
+    currentPlan,
+    approvePlan,
+    rejectPlan,
   } = useChat(config);
 
   const loadQuickWorkflows = async () => {
@@ -884,6 +890,73 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
                       }}
                     />
                   ))
+                )}
+
+                {/* Harness-Held Task Checklist (TASK-116) */}
+                {currentPlan && currentPlan.tasks.length > 0 && (
+                  <div className="mb-2 p-2.5 rounded-lg bg-black/60 border border-purple-500/30 backdrop-blur-md shadow-lg text-[11px] font-sans">
+                    <div className="flex items-center justify-between mb-1.5 pb-1 border-b border-white/10">
+                      <div className="flex items-center gap-1.5 text-purple-300 font-semibold truncate">
+                        <ListTodo size={13} className="text-purple-400 shrink-0" />
+                        <span className="truncate">Plan: {currentPlan.goal}</span>
+                      </div>
+                      <span className="text-[10px] text-gray-400 font-mono shrink-0">
+                        {currentPlan.tasks.filter((t) => t.status === "completed").length}/{currentPlan.tasks.length}
+                      </span>
+                    </div>
+                    <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                      {currentPlan.tasks.map((task, idx) => (
+                        <div key={task.id} className="flex items-center gap-2 text-gray-300">
+                          {task.status === "completed" ? (
+                            <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />
+                          ) : task.status === "in_progress" ? (
+                            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shrink-0" />
+                          ) : task.status === "blocked" ? (
+                            <AlertCircle size={13} className="text-red-400 shrink-0" />
+                          ) : (
+                            <span className="w-2 h-2 rounded-full border border-gray-500 shrink-0" />
+                          )}
+                          <span
+                            className={`truncate ${
+                              task.status === "completed"
+                                ? "line-through text-gray-500"
+                                : task.status === "in_progress"
+                                ? "text-cyan-200 font-medium"
+                                : ""
+                            }`}
+                          >
+                            {idx + 1}. {task.title}
+                          </span>
+                          {task.note && (
+                            <span className="text-[9px] text-gray-500 italic truncate max-w-[120px]">
+                              ({task.note})
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    {!currentPlan.approved && (
+                      <div className="mt-2 pt-1.5 border-t border-white/10 flex items-center justify-between gap-2">
+                        <span className="text-[10px] text-amber-300 font-medium">User plan approval required</span>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={approvePlan}
+                            className="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-medium transition-all cursor-pointer"
+                          >
+                            Approve & Run
+                          </button>
+                          <button
+                            type="button"
+                            onClick={rejectPlan}
+                            className="px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-gray-300 text-[10px] font-medium transition-all cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
 
                 {/* In-Flight Streaming & Steps Indicator */}

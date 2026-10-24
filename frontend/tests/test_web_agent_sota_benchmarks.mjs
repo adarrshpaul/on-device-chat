@@ -172,7 +172,10 @@ async function runSotaBenchmarks() {
       globalThis.window.location.hash = "#review";
     });
 
-    const { StateDeltaVerifier, ActionDispatcher } = await import("../dist/index.js");
+    const { StateDeltaVerifier, ActionDispatcher, SafetyGate } = await import("../dist/index.js");
+    if (SafetyGate && typeof SafetyGate.setConfirmHandler === "function") {
+      SafetyGate.setConfirmHandler(async () => true);
+    }
 
     const before = StateDeltaVerifier.captureSnapshot();
     await ActionDispatcher.click(checkoutBtn);

@@ -118,7 +118,10 @@ async function runTests() {
     // -------------------------------------------------------------
     console.log("\n--- TEST 2: UISpecEngine executeAction on physical DOM ---");
     const test2Results = await page.evaluate(async () => {
-      const { UISpecEngine } = window.EdgeOperator;
+      const { UISpecEngine, SafetyGate } = window.EdgeOperator;
+      if (SafetyGate && typeof SafetyGate.setConfirmHandler === "function") {
+        SafetyGate.setConfirmHandler(async () => true);
+      }
       let clicks = 0;
       const btn = document.getElementById("checkout-btn");
       btn.addEventListener("click", () => clicks++);

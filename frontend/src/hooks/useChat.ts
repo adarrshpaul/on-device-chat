@@ -24,6 +24,7 @@ import { MacroRecorder } from "../lib/macroRecorder";
 import { CanvasGameController, GameProgressEvent } from "../lib/canvasGameController";
 import { CanvasInspector } from "../lib/canvasInspector";
 import { UISpecEngine } from "../lib/uiSpecEngine";
+import { globalTodoManager, PlanState } from "../lib/todoManager";
 import type { Gemma4Config } from "../main";
 
 export interface DisplayMessage {
@@ -73,6 +74,22 @@ export function useChat(config: Gemma4Config) {
   const [isJudging, setIsJudging] = useState(false);
   const [pageAnalysis, setPageAnalysis] = useState<PageAnalysisResult | null>(null);
   const [isRecordingMacro, setIsRecordingMacro] = useState<boolean>(false);
+  const [currentPlan, setCurrentPlan] = useState<PlanState | null>(null);
+
+  useEffect(() => {
+    const unsub = globalTodoManager.onPlanChange((plan) => {
+      setCurrentPlan(plan);
+    });
+    return unsub;
+  }, []);
+
+  const approvePlan = useCallback(() => {
+    globalTodoManager.approvePlan();
+  }, []);
+
+  const rejectPlan = useCallback(() => {
+    globalTodoManager.rejectPlan("User cancelled plan.");
+  }, []);
 
   const escalationManagerRef = useRef<EscalationManager | null>(null);
   const harnessRef = useRef<AgentHarness | null>(null);
@@ -973,5 +990,8 @@ export function useChat(config: Gemma4Config) {
     isRecordingMacro,
     startMacroRecording,
     stopMacroRecording,
+    currentPlan,
+    approvePlan,
+    rejectPlan,
   };
 }

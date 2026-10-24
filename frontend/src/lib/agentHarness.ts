@@ -31,6 +31,8 @@ import { StateDeltaVerifier } from "./stateDeltaVerifier";
 import { runSandboxExpression } from "./safeExpression";
 import { NavPersistenceManager } from "./navPersistence";
 import { SafetyGate } from "./safetyGate";
+import { TodoManager, globalTodoManager, TodoStatus, PlanState } from "./todoManager";
+import { ReasoningManager } from "./reasoningManager";
 
 export type { HarnessToolCall };
 
@@ -48,6 +50,8 @@ export interface HarnessConfig {
   onStepProgress?: (step: number, tool: string, observation: string) => void;
   customHostTools?: Record<string, (args: Record<string, unknown>) => Promise<unknown>>;
   customToolDefs?: ToolDefinition[];
+  todoManager?: TodoManager;
+  onPlanApprovalRequired?: (plan: PlanState) => Promise<boolean>;
 }
 
 export function isFailureObservation(obs: string): boolean {
@@ -106,6 +110,8 @@ export class AgentHarness {
   private currentStepIndex: number = 0;
   private currentTrajectory: AgentStepTrace[] = [];
   private activeAbortController: AbortController | null = null;
+  private todoManager: TodoManager;
+  private onPlanApprovalRequired?: (plan: PlanState) => Promise<boolean>;
 
   constructor(config: HarnessConfig = {}) {
     this.maxSteps = config.maxSteps || 10;
@@ -116,6 +122,12 @@ export class AgentHarness {
       config.customToolDefs && config.customToolDefs.length > 0
         ? config.customToolDefs
         : DEFAULT_BROWSER_TOOLS;
+    this.todoManager = config.todoManager || globalTodoManager;
+    this.onPlanApprovalRequired = config.onPlanApprovalRequired;
+  }
+
+  getTodoManager(): TodoManager {
+    return this.todoManager;
   }
 
   /**
@@ -639,6 +651,24 @@ export class AgentHarness {
     return `[Compacted ${rawText.length} chars to ${memKey}]. ${label}:\n[Head]: ${head}...\n[Tail]: ...${tail}\n(use read { target: "${memKey}" } if full observation required)`;
   }
 
+  /** Primitive: update_task (Harness-held task list management, TASK-116) */
+  private async primitiveUpdateTask(args: Record<string, unknown> = {}): Promise<string> {
+    const rawArgs = args || {};
+    const taskId = String(rawArgs.taskId || rawArgs.id || rawArgs.task || "1");
+    const rawStatus = String(rawArgs.status || "completed").toLowerCase();
+    const status: TodoStatus = (rawStatus === "blocked" || rawStatus === "failed")
+      ? "blocked"
+      : rawStatus === "in_progress"
+      ? "in_progress"
+      : "completed";
+    const note = rawArgs.note ? String(rawArgs.note) : undefined;
+    const ok = this.todoManager.updateTaskStatus(taskId, status, note);
+    if (!ok) {
+      return `Task "${taskId}" not found in current plan.`;
+    }
+    return `Updated task ${taskId} status to "${status}".`;
+  }
+
   /**
    * Dispatch tool call to the corresponding primitive or custom host tool
    */
@@ -738,6 +768,10 @@ export class AgentHarness {
         return this.primitiveSearch(args);
       case "ask":
         return this.primitiveAsk(args);
+      case "update_task":
+      case "update_todo":
+      case "task":
+        return this.primitiveUpdateTask(args);
 
       // First-Class Direct Browser Primitives
       case "playGame":
@@ -808,11 +842,13 @@ export class AgentHarness {
   /**
    * Build the compact system prompt instructing the model to emit JSON tool calls
    */
-  /**
-   * Build the compact system prompt instructing the model to emit JSON tool calls
-   */
   async getHarnessPrompt(userGoal?: string): Promise<string> {
-    return buildHarnessPrompt(this.customToolDefs, userGoal);
+    let prompt = await buildHarnessPrompt(this.customToolDefs, userGoal);
+    const planLine = this.todoManager.formatPromptLine();
+    if (planLine) {
+      prompt += `\n${planLine}\nUpdate task status: {"tool": "update_task", "args": {"taskId": "<id>", "status": "completed"}}`;
+    }
+    return prompt;
   }
 
   /**
@@ -844,7 +880,9 @@ export class AgentHarness {
     conversationHistory: Array<{ role: string; content: string }> = []
   ): Promise<HarnessExecutionResult> {
     this.currentUserGoal = userGoal;
-    this.currentConversationHistory = conversationHistory;
+    // DeepSeek Rule: Sanitize historical dialogue across user turns
+    const sanitizedHistory = ReasoningManager.sanitizeConversationHistory(conversationHistory);
+    this.currentConversationHistory = sanitizedHistory;
     const startTime = performance.now();
     const siteOrigin = typeof window !== "undefined" ? window.location.origin : "web";
 
@@ -852,6 +890,22 @@ export class AgentHarness {
     this.cancelActiveRun();
     this.activeAbortController = new AbortController();
     const abortSignal = this.activeAbortController.signal;
+
+    // Plan Approval Gate (TASK-116): User approves multi-task plan before acting
+    const activePlan = this.todoManager.getPlan();
+    if (activePlan && !activePlan.approved && activePlan.tasks.length > 1 && this.onPlanApprovalRequired) {
+      const approved = await this.onPlanApprovalRequired(activePlan);
+      if (!approved) {
+        this.todoManager.rejectPlan("User cancelled plan execution.");
+        return {
+          final: "Execution paused: plan awaiting user approval.",
+          trajectory: [],
+          isMacro: false,
+          totalDurationMs: Math.round(performance.now() - startTime),
+        };
+      }
+      this.todoManager.approvePlan();
+    }
 
     // 1. Check if a deterministic macro/recipe matches this intent (action goals only)
     if (isActionGoal(userGoal)) {
@@ -954,8 +1008,8 @@ export class AgentHarness {
 
     // OpenHarness Pattern: Auto-Compacted Context Window Management
     // Bounds conversation tokens for lightweight on-device models while preserving prior user goals
-    if (conversationHistory.length > 0) {
-      const validTurns = conversationHistory.filter(
+    if (sanitizedHistory.length > 0) {
+      const validTurns = sanitizedHistory.filter(
         (m) => (m.role === "user" || m.role === "assistant") && m.content
       );
 
@@ -1191,6 +1245,16 @@ export class AgentHarness {
       } catch (err: any) {
         observation = `Error executing tool "${decision.tool}": ${err?.message || "Execution timeout"}`;
       }
+
+      // OpenHarness & Claude Code Pattern: Per-Turn Tool-Output Truncation Budget (TASK-116)
+      // Large observations (>1200 chars) are stored in memory and summarized with a mem:// reference.
+      const MAX_OBSERVATION_CHARS = 1200;
+      if (observation && observation.length > MAX_OBSERVATION_CHARS) {
+        const memKey = `mem://obs_step${step + 1}_${Date.now().toString(36)}`;
+        this.memoryStore.set(memKey, observation);
+        const previewLimit = 400;
+        observation = `${observation.slice(0, previewLimit)}\n... [Truncated ${observation.length - previewLimit} chars. Full observation (${observation.length} chars) stored in memory at "${memKey}". Call read(target="${memKey}") to inspect.]`;
+      }
       const afterState = StateDeltaVerifier.captureSnapshot();
       const stateDelta = StateDeltaVerifier.computeDelta(beforeState, afterState);
       const stepDuration = Math.round(performance.now() - stepStart);
@@ -1314,10 +1378,17 @@ export class AgentHarness {
       }
       lastScrollY = currentScrollY;
 
-      // Append compact observation for next iteration with enriched context
+      // DeepSeek Rule: Intra-turn tool loop preserves intermediate thinking for reasoning continuity
+      const { thinking } = ReasoningManager.extractThinking(bestCandidate.raw);
+      const loopAssistantMsg = ReasoningManager.formatLoopAssistantMessage(
+        { tool: decision.tool, args: decision.args },
+        thinking
+      );
+
+      // Append observation for next iteration with enriched context
       messages.push({
         role: "assistant",
-        content: JSON.stringify({ tool: decision.tool, args: decision.args }),
+        content: loopAssistantMsg.content,
       });
 
       const failureWarning = consecutiveFailures > 0

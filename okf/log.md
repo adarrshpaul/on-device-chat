@@ -1,5 +1,27 @@
 # OKF Transition Log
 
+## 2026-10-24T13:24:00Z - TASK-112: Irreversible Action Safety Gate, Permission Modes & Pre/Post Tool Hooks
+- **Scope & Implementation**:
+  - Implemented `frontend/src/lib/safetyGate.ts` dynamic semantic classifier (financial, destructive, communication, transfer) from live DOM tags, texts, and attributes (Rule 9 compliant, 0 hardcoded domain selectors).
+  - Implemented permission modes: `ask_irreversible` (default), `ask_all`, and `plan_only` (read-only mode blocking mutations).
+  - Implemented pre/post tool middleware hooks (`runPreHooks`, `runPostHooks`) around `executeTool` in `agentHarness.ts`.
+  - Added fail-closed user confirmation gates and per-origin persistent allowlists in `localStorage` (`eo_safety_allowlist`).
+  - Added untrusted data boundary wrapper `<page_content data-untrusted="true">` to isolate live DOM text from prompt injection.
+  - Synced permission mode controls to Chrome extension popup UI (`extension/popup.*`, `extension/content/content.js`).
+- **Verification & Git**:
+  - `test_safety_gate.mjs`: 24/24 passing. Full `npm test`: 12/12 test suites passing (including Giskard, UI consistency, SOTA, Industrial OT).
+  - TypeScript `tsc --noEmit` and ESLint passing cleanly. Production build and extension sync verified.
+  - Committed to branch `feat/task-112-safety-gate` (commit `e420661`).
+  - Artifact/Fact: `okf/facts/fact_task_112_safety_gate_and_permission_modes_20261024.md`.
+
+## 2026-10-24T05:30:00Z - TASK-111: Trusted CDP Input, AST Safe Math Sandbox, Shadow DOM & Iframe Reach
+- **Scope & Implementation**:
+  - AST arithmetic sandbox in `frontend/src/lib/safeExpression.ts` eliminating `new Function` security vulnerability.
+  - Extension CDP input dispatch via Chrome DevTools Protocol (`extension/background.js` `CDP_INPUT`, optional `debugger` permission).
+  - Deep shadow DOM & same-origin iframe traversal (`domUtils.ts`).
+  - Committed to checkpoint branch `checkpoint/task-111-harness` (commit `c45f499`).
+
+
 ## 2026-10-12T04:45:00Z - Claude Independent Audit, Rule 7 Telemetry Transparency & Live Deployment
 - **Claude Audit Execution (`claude -p`):**
   - Confirmed Candidate 1 (OpenUI / DIL) is implemented and integrated into live chat message flow with live DOM checks.
