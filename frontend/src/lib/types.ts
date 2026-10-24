@@ -326,13 +326,13 @@ export const DEFAULT_BROWSER_TOOLS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "sandbox",
-      description: "Evaluate pure math formulas or isolated JavaScript expressions (e.g. 15 * 4.2). No DOM access.",
+      description: "Evaluate an arithmetic expression (e.g. 15 * 4.2, Math.round(context.price * 1.18)). Not JavaScript: numbers, + - * / % **, comparisons, && || !, ternary a ? b : c, Math.fn(...) (round, floor, ceil, abs, min, max, sqrt, pow, log, exp, trig), and numeric context.field values. No strings, arrays, objects, variables or statements.",
       parameters: {
         type: "object",
         properties: {
           code: {
             type: "string",
-            description: "Pure JS expression or math calculation returning a value.",
+            description: "Arithmetic expression returning a number or boolean.",
           },
         },
         required: ["code"],

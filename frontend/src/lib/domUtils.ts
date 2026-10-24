@@ -5,9 +5,109 @@
  * on invalid LLM selectors, and excludes internal widget UI from agent operations.
  */
 
+/** Realm-safe element check: `instanceof HTMLElement` is false for elements from same-origin iframes */
+export function isElementNode(value: unknown): value is HTMLElement {
+  if (typeof value !== "object" || value === null) return false;
+  if (typeof HTMLElement !== "undefined" && value instanceof HTMLElement) return true;
+  return (value as Node).nodeType === 1;
+}
+
+/** Realm-safe check for <input> / <textarea> (also accepts this realm's classes, e.g. test doubles) */
+export function isTextField(el: Element): el is HTMLInputElement | HTMLTextAreaElement {
+  if (typeof HTMLInputElement !== "undefined" && el instanceof HTMLInputElement) return true;
+  if (typeof HTMLTextAreaElement !== "undefined" && el instanceof HTMLTextAreaElement) return true;
+  const tag = (el.tagName || "").toUpperCase();
+  return tag === "INPUT" || tag === "TEXTAREA";
+}
+
+const MAX_SEARCH_ROOTS = 200;
+
+/**
+ * Every root a selector should search, starting with `rootDoc`: open shadow roots (at any depth)
+ * and documents of same-origin iframes. Closed shadow roots and cross-origin frames are not
+ * reachable from page script by design and are skipped.
+ */
+export function collectSearchRoots(rootDoc: Document = document): Array<Document | ShadowRoot> {
+  const roots: Array<Document | ShadowRoot> = [];
+  const queue: Array<Document | ShadowRoot> = [rootDoc];
+  while (queue.length > 0 && roots.length < MAX_SEARCH_ROOTS) {
+    const root = queue.shift()!;
+    roots.push(root);
+    const ownerDoc = root.nodeType === 9 ? (root as Document) : (root.ownerDocument as Document | null);
+    // Minimal or mock DOMs without tree walking: search the root itself only
+    if (!ownerDoc || typeof ownerDoc.createTreeWalker !== "function" || typeof NodeFilter === "undefined") continue;
+    const walker = ownerDoc.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+    for (let node = walker.nextNode() as Element | null; node; node = walker.nextNode() as Element | null) {
+      if (node.shadowRoot) queue.push(node.shadowRoot);
+      if (node.tagName === "IFRAME" || node.tagName === "FRAME") {
+        try {
+          const frameDoc = (node as HTMLIFrameElement).contentDocument;
+          if (frameDoc && frameDoc.documentElement) queue.push(frameDoc);
+        } catch {
+          // Cross-origin frame: not readable from this realm
+        }
+      }
+    }
+  }
+  return roots;
+}
+
+/** querySelectorAll across the document, open shadow roots and same-origin iframes */
+export function deepQuerySelectorAll<T extends Element = HTMLElement>(selector: string, rootDoc: Document = document): T[] {
+  const out: T[] = [];
+  for (const root of collectSearchRoots(rootDoc)) {
+    try {
+      out.push(...Array.from(root.querySelectorAll<T>(selector)));
+    } catch {
+      return out; // invalid selector: same result for every root
+    }
+  }
+  return out;
+}
+
+export interface ViewportRect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  right: number;
+  bottom: number;
+}
+
+/** Bounding rect in TOP-level viewport coordinates (adds the offsets of same-origin iframes) */
+export function topLevelRect(el: Element): ViewportRect {
+  const r = el.getBoundingClientRect();
+  let left = r.left;
+  let top = r.top;
+  let win: Window | null = el.ownerDocument ? el.ownerDocument.defaultView : null;
+  while (win && win !== win.top) {
+    let frameEl: Element | null = null;
+    try {
+      frameEl = win.frameElement;
+    } catch {
+      break;
+    }
+    if (!frameEl) break;
+    const fr = frameEl.getBoundingClientRect();
+    left += fr.left + (frameEl as HTMLElement).clientLeft;
+    top += fr.top + (frameEl as HTMLElement).clientTop;
+    win = frameEl.ownerDocument ? frameEl.ownerDocument.defaultView : null;
+  }
+  return { left, top, width: r.width, height: r.height, right: left + r.width, bottom: top + r.height };
+}
+
+const WIDGET_SELECTOR = "[data-eo-widget], [data-g4-widget], .eo-widget-container, .g4-widget-container, #edge-operator-root, #gemma4-widget-root, #chat-widget, #eo-agent-spotlight, #g4-agent-spotlight, edge-operator, on-device-chat";
+
 export function isWidgetElement(el: Element | null): boolean {
-  if (!el) return false;
-  return !!el.closest?.("[data-eo-widget], [data-g4-widget], .eo-widget-container, .g4-widget-container, #edge-operator-root, #gemma4-widget-root, #chat-widget, #eo-agent-spotlight, #g4-agent-spotlight");
+  // closest() stops at shadow boundaries and the widget renders inside its own shadow root,
+  // so check each level and then continue from the shadow host
+  let cur: Element | null = el;
+  while (cur) {
+    if (cur.closest?.(WIDGET_SELECTOR)) return true;
+    const root = cur.getRootNode ? cur.getRootNode() : null;
+    cur = root && (root as ShadowRoot).host ? (root as ShadowRoot).host : null;
+  }
+  return false;
 }
 
 /**
@@ -69,7 +169,7 @@ export function getCleanElementSelector(el: Element): string {
  * 4. Case-insensitive attribute queries (aria-label, title)
  * 5. Full semantic matching over accessible names, classes, data attributes, and token overlaps
  */
-export function smartQuerySelector(rawSelector: string, root: ParentNode = document): HTMLElement | null {
+export function smartQuerySelector(rawSelector: string, root: ParentNode = document, deep = true): HTMLElement | null {
   if (!rawSelector || typeof rawSelector !== "string") return null;
   const selector = rawSelector.trim();
 
@@ -252,6 +352,14 @@ export function smartQuerySelector(rawSelector: string, root: ParentNode = docum
     }
   } catch {}
 
+  // Not in the light DOM: repeat the same strategies inside open shadow roots and same-origin iframes
+  if (deep && typeof document !== "undefined" && root === document) {
+    for (const extraRoot of collectSearchRoots(document).slice(1)) {
+      const el = smartQuerySelector(rawSelector, extraRoot, false);
+      if (el) return el;
+    }
+  }
+
   return null;
 }
 
@@ -293,7 +401,7 @@ export function smoothScrollTo(target: HTMLElement | number | string, offset = 0
   }
 
   // 2. Element or selector target
-  const el = target instanceof HTMLElement ? target : smartQuerySelector(String(target));
+  const el = isElementNode(target) ? target : smartQuerySelector(String(target));
   if (!el || isWidgetElement(el)) return false;
 
   let scrolled = false;

@@ -322,7 +322,7 @@ export class LayaDecisionEngine {
       browse: "Click, type into form, scroll, or inspect interactive DOM elements on this page",
       search: "Find specific text, keywords, headings, or product listings on the page",
       read: "Inspect internal scratchpad notes, memory refs, or text extracted from an element",
-      sandbox: "Calculate math formulas or execute pure isolated JavaScript functions",
+      sandbox: "Calculate arithmetic expressions (numbers, operators, Math functions, numeric context fields); not JavaScript",
       final: "Directly answer general questions, greetings, or summarize completed results",
     };
 

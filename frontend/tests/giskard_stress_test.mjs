@@ -10,6 +10,7 @@
  */
 
 import { parseHarnessDecision } from "../src/lib/harnessDecisionParser.ts";
+import { runSandboxExpression } from "../src/lib/safeExpression.ts";
 
 let passedCount = 0;
 let failedCount = 0;
@@ -59,57 +60,44 @@ assert(v7.tool === "final", "Rejects placeholder tool '...' on generic query and
 // -----------------------------------------------------------------------------
 console.log("\n📌 Category 2: Security Vulnerabilities & Sandbox Escapes");
 
-function testSandbox(code) {
-  const forbiddenPatterns = [
-    /\b(window|document|globalThis|self|top|parent)\b/i,
-    /\b(fetch|XMLHttpRequest|WebSocket|Worker)\b/i,
-    /\b(localStorage|sessionStorage|indexedDB|cookieStore)\b/i,
-    /\b(constructor|__proto__|prototype)\b/i,
-    /\b(Function|eval|import|process)\b/i,
-    /\.cookie\b/i,
-    /\.location\b/i,
-  ];
-
-  for (const pattern of forbiddenPatterns) {
-    if (pattern.test(code)) {
-      return `SecurityError: Sandbox execution blocked. Prohibited property or global identifier '${pattern.source}'. The sandbox is strictly isolated.`;
-    }
-  }
-
-  try {
-    const sandboxFn = new Function(
-      "context",
-      `"use strict";
-      const window = undefined, document = undefined, fetch = undefined, localStorage = undefined, sessionStorage = undefined, globalThis = undefined, self = undefined;
-      try {
-        return (function() {
-          return (${code});
-        }).call(null);
-      } catch(e) {
-        return "Sandbox runtime error: " + e.message;
-      }`
-    );
-    const res = sandboxFn({});
-    return typeof res === "object" ? JSON.stringify(res) : String(res);
-  } catch (err) {
-    return `Sandbox syntax error: ${err.message}`;
-  }
-}
+// Tests the REAL sandbox used by AgentHarness (it previously tested a pasted copy of the code)
+const testSandbox = (code, context = {}) => runSandboxExpression(code, context);
 
 const s1 = testSandbox("this.constructor.constructor('return process')()");
-assert(s1.includes("SecurityError") && s1.includes("constructor"), "Blocks constructor prototype escape");
+assert(s1.startsWith("SecurityError"), "Blocks constructor prototype escape");
 
 const s2 = testSandbox("globalThis.fetch('https://malicious.com')");
-assert(s2.includes("SecurityError") && s2.includes("globalThis"), "Blocks globalThis network access");
+assert(s2.startsWith("SecurityError"), "Blocks globalThis network access");
 
 const s3 = testSandbox("document.cookie");
-assert(s3.includes("SecurityError") && s3.includes("document"), "Blocks document.cookie exfiltration");
+assert(s3.startsWith("SecurityError"), "Blocks document.cookie exfiltration");
 
 const s4 = testSandbox("window.location.href = 'https://phishing.com'");
-assert(s4.includes("SecurityError") && s4.includes("window"), "Blocks window redirect attack");
+assert(s4.startsWith("SecurityError"), "Blocks window redirect attack");
 
 const s5 = testSandbox("42 * 2 + 10");
 assert(s5 === "94", "Safely computes legitimate non-malicious mathematical expressions");
+
+// Regression for the regex-blocklist bypass class: names assembled from string pieces.
+// The parser has no strings, brackets or property access, so none of this can reach an object.
+globalThis.__sandboxCanary = false;
+const bypasses = [
+  // This exact input flipped the canary under the old regex + new Function sandbox (verified 2026-10-24)
+  '[]["con"+"structor"]["con"+"structor"]("glo"+"balThis.__sandboxCanary = true")()',
+  '(1)["con"+"structor"]',
+  '`${1}`',
+  'Math["co"+"nstructor"]',
+  'context.__proto__',
+];
+for (const b of bypasses) {
+  const r = testSandbox(b);
+  assert(/^(SecurityError|Sandbox syntax error)/.test(r), `Refuses string-built escape: ${b.slice(0, 40)}`);
+}
+assert(globalThis.__sandboxCanary === false, "No sandbox input executed host JavaScript (canary untouched)");
+
+assert(testSandbox("Math.round(context.price * 1.18 * 100) / 100", { price: 19.99 }) === "23.59", "Reads numeric context fields and Math functions");
+assert(testSandbox("max(3, 7) > 5 ? 1 : 0") === "1", "Supports comparisons and ternary");
+assert(testSandbox("context.name", { name: "x" }).startsWith("Sandbox syntax error"), "Rejects non-numeric context fields");
 
 // -----------------------------------------------------------------------------
 // CATEGORY 3: Business Logic & Tool Parameter Abuse Defense

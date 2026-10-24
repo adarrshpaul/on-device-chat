@@ -11,6 +11,7 @@
  * 4. Reflexion MDP: Capture failures/exceptions into episodic feedback prompting revision.
  */
 
+import { evaluateSafeExpression, SafeExpressionError } from "./safeExpression";
 import { parseHarnessDecision, HarnessToolCall } from "./harnessDecisionParser";
 import { smartQuerySelector, isWidgetElement } from "./domUtils";
 import { ActionDispatcher } from "./actionDispatcher";
@@ -185,10 +186,19 @@ export class ProbabilisticHarnessEngine {
       if (!code) {
         return { score: 0.1, passed: false, reason: "No code provided to sandbox." };
       }
-      // Rejection check for forbidden globals
-      const forbidden = /\b(window|document|globalThis|fetch|XMLHttpRequest|localStorage|cookieStore|Function|eval)\b/i;
-      if (forbidden.test(code)) {
-        return { score: 0.0, passed: false, reason: "Security violation: sandbox cannot access globals or storage." };
+      // Dry run with the same parser the sandbox uses, so a call it would reject never scores as passed
+      const ctx = args.context && typeof args.context === "object" ? (args.context as Record<string, unknown>) : {};
+      try {
+        evaluateSafeExpression(code, ctx);
+      } catch (err) {
+        const security = err instanceof SafeExpressionError && err.security;
+        return {
+          score: 0.0,
+          passed: false,
+          reason: security
+            ? `Security violation: ${(err as Error).message}`
+            : `Sandbox expression invalid: ${(err as Error).message}`,
+        };
       }
       return { score: 0.95, passed: true };
     }

@@ -9,7 +9,7 @@
  * 5. Provides O(1) resolution from integer ID to live DOM Element.
  */
 
-import { isWidgetElement, getCleanElementSelector } from "./domUtils";
+import { isWidgetElement, getCleanElementSelector, deepQuerySelectorAll, topLevelRect } from "./domUtils";
 import { CanvasInspector } from "./canvasInspector";
 
 export interface IA11yNode {
@@ -121,9 +121,10 @@ export class A11yTreeEngine {
   private static isVisible(el: HTMLElement, viewportOnly: boolean = false): boolean {
     if (isWidgetElement(el)) return false;
 
-    // Check style visibility
+    // Check style visibility (the element's own window: it may live in a same-origin iframe)
     if (typeof window !== "undefined") {
-      const style = window.getComputedStyle(el);
+      const view = el.ownerDocument?.defaultView || window;
+      const style = view.getComputedStyle(el);
       if (style.display === "none" || style.visibility === "hidden" || parseFloat(style.opacity || "1") < 0.05) {
         return false;
       }
@@ -132,7 +133,7 @@ export class A11yTreeEngine {
       }
     }
 
-    const rect = el.getBoundingClientRect();
+    const rect = topLevelRect(el);
     if (rect.width <= 2 || rect.height <= 2) return false;
 
     if (viewportOnly && typeof window !== "undefined") {
@@ -177,7 +178,8 @@ export class A11yTreeEngine {
       "canvas",
     ].join(", ");
 
-    const rawElements = Array.from(document.querySelectorAll<HTMLElement>(query));
+    // Includes open shadow roots and same-origin iframes (web-component apps hide most controls there)
+    const rawElements = deepQuerySelectorAll<HTMLElement>(query);
 
     // Filter, deduplicate child buttons inside parent buttons, and check visibility
     const visibleElements: HTMLElement[] = [];
@@ -206,8 +208,8 @@ export class A11yTreeEngine {
         if (aIn && !bIn) return -1;
         if (!aIn && bIn) return 1;
       }
-      const rectA = a.getBoundingClientRect();
-      const rectB = b.getBoundingClientRect();
+      const rectA = topLevelRect(a);
+      const rectB = topLevelRect(b);
       // Allow 8px variance in Y to treat horizontally aligned elements on the same row
       if (Math.abs(rectA.top - rectB.top) > 8) {
         return rectA.top - rectB.top;
@@ -221,7 +223,7 @@ export class A11yTreeEngine {
     const sliced = visibleElements.slice(0, maxItems);
     sliced.forEach((el, index) => {
       const id = index + 1;
-      const rect = el.getBoundingClientRect();
+      const rect = topLevelRect(el);
       const role = this.inferRole(el);
       const name = this.computeAccessibleName(el);
       const cleanSel = getCleanElementSelector(el);

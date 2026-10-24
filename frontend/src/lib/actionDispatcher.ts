@@ -1,5 +1,8 @@
 /**
- * Synthetic Human Interaction Dispatcher
+ * Human Interaction Dispatcher
+ *
+ * Uses browser-trusted input when a TrustedInputBridge is installed (Chrome extension + CDP),
+ * otherwise synthetic DOM events (isTrusted === false; some sites ignore those).
  *
  * Implements robust client-side event dispatching for modern reactive web apps
  * (React 19 SyntheticEvents, Angular Signals, Vue 3 Reactivity).
@@ -12,7 +15,7 @@
  */
 
 import { A11yTreeEngine } from "./a11yTree";
-import { smartQuerySelector, smoothScrollTo } from "./domUtils";
+import { smartQuerySelector, smoothScrollTo, isElementNode, isTextField, topLevelRect } from "./domUtils";
 
 export interface TargetResolutionResult {
   element: HTMLElement | null;
@@ -26,7 +29,88 @@ export interface TypeActionOptions {
   delayMs?: number;
 }
 
+/**
+ * Provider of browser-trusted input (isTrusted === true), e.g. the Chrome extension's
+ * Chrome DevTools Protocol bridge. Coordinates are CSS pixels in the top-level viewport.
+ * Each method resolves false when the provider could not deliver the input.
+ */
+export interface TrustedInputBridge {
+  click(x: number, y: number): Promise<boolean>;
+  hover(x: number, y: number): Promise<boolean>;
+  insertText(text: string): Promise<boolean>;
+  pressKey(key: "Enter" | "Tab" | "Escape" | "Backspace"): Promise<boolean>;
+}
+
+export type InputMode = "trusted" | "synthetic";
+
+/** True when `node` is `ancestor` or inside it, crossing open shadow-root boundaries */
+function composedContains(ancestor: Node, node: Node | null): boolean {
+  let cur: Node | null = node;
+  while (cur) {
+    if (cur === ancestor) return true;
+    cur = cur.parentNode || (cur instanceof ShadowRoot ? cur.host : null);
+  }
+  return false;
+}
+
 export class ActionDispatcher {
+  private static trustedBridge: TrustedInputBridge | null = null;
+
+  /** How the most recent click / type / hover was delivered; harness observations report it */
+  public static lastInputMode: InputMode = "synthetic";
+
+  /** Installs (or removes, with null) a trusted input provider. Without one, events are synthetic. */
+  public static setTrustedInputBridge(bridge: TrustedInputBridge | null): void {
+    this.trustedBridge = bridge;
+  }
+
+  public static hasTrustedInput(): boolean {
+    return this.trustedBridge !== null;
+  }
+
+  /**
+   * Viewport point for a trusted pointer event on `element`, or null when trusted input cannot
+   * safely hit it: no bridge, running inside an iframe (bridge coordinates are top-frame), zero
+   * size, or another element covers the centre (a real click would land on the overlay).
+   */
+  private static async trustedPoint(element: HTMLElement): Promise<{ x: number; y: number } | null> {
+    if (!this.trustedBridge || typeof window === "undefined" || window !== window.top) return null;
+    // Instant scroll: smooth scrolling would still be moving when the coordinates are used
+    element.scrollIntoView({ block: "center", inline: "center", behavior: "instant" as ScrollBehavior });
+    await this.pause(30);
+    const local = element.getBoundingClientRect();
+    if (local.width === 0 || local.height === 0) return null;
+
+    // Occlusion check in the element's own document (it may sit in a same-origin iframe)
+    const ownerDoc = element.ownerDocument || document;
+    const lx = local.left + local.width / 2;
+    const ly = local.top + local.height / 2;
+    let hit = ownerDoc.elementFromPoint(lx, ly);
+    while (hit && hit.shadowRoot) {
+      const inner = hit.shadowRoot.elementFromPoint(lx, ly);
+      if (!inner || inner === hit) break;
+      hit = inner;
+    }
+    if (!hit || !(composedContains(element, hit) || composedContains(hit, element))) return null;
+
+    // The click itself is delivered at top-level viewport coordinates
+    const rect = topLevelRect(element);
+    const x = Math.round(rect.left + rect.width / 2);
+    const y = Math.round(rect.top + rect.height / 2);
+    if (ownerDoc !== document) {
+      // ...where the outermost frame element must be what is actually on top
+      let frameEl: Element | null = null;
+      let win: Window | null = ownerDoc.defaultView;
+      while (win && win !== window) {
+        frameEl = win.frameElement;
+        win = frameEl && frameEl.ownerDocument ? frameEl.ownerDocument.defaultView : null;
+      }
+      const topHit = document.elementFromPoint(x, y);
+      if (!frameEl || topHit !== frameEl) return null;
+    }
+    return { x, y };
+  }
+
   /**
    * Resolve a target from an argument that may be an integer ID or a CSS selector
    */
@@ -93,8 +177,20 @@ export class ActionDispatcher {
    * Click an element with visual highlight and human mouse events
    */
   public static async click(target: HTMLElement | number | string): Promise<boolean> {
-    const element = target instanceof HTMLElement ? target : this.resolveTarget(target).element;
+    const element = isElementNode(target) ? target : this.resolveTarget(target).element;
     if (!element) return false;
+
+    const isCanvasNode = (typeof target === "number" || typeof target === "string")
+      && A11yTreeEngine.getNodeById(target)?.tag === "canvas-element";
+    if (!isCanvasNode) {
+      const point = await this.trustedPoint(element);
+      if (point && this.trustedBridge && await this.trustedBridge.click(point.x, point.y)) {
+        this.lastInputMode = "trusted";
+        await this.pause(50);
+        return true;
+      }
+    }
+    this.lastInputMode = "synthetic";
 
     smoothScrollTo(element);
     await this.pause(50);
@@ -155,6 +251,13 @@ export class ActionDispatcher {
       clientY = Math.round((y / 1000) * vpHeight);
     }
 
+    if (this.trustedBridge && window === window.top && await this.trustedBridge.click(clientX, clientY)) {
+      this.lastInputMode = "trusted";
+      await this.pause(30);
+      return true;
+    }
+    this.lastInputMode = "synthetic";
+
     const hitElement = targetElement || (document.elementFromPoint(clientX, clientY) as HTMLElement | null);
     if (!hitElement) return false;
 
@@ -193,28 +296,38 @@ export class ActionDispatcher {
     text: string,
     options: TypeActionOptions = {}
   ): Promise<boolean> {
-    const element = target instanceof HTMLElement ? target : this.resolveTarget(target).element;
+    const element = isElementNode(target) ? target : this.resolveTarget(target).element;
     if (!element) return false;
+
+    if (await this.typeTrusted(element, text, options)) {
+      this.lastInputMode = "trusted";
+      await this.pause(40);
+      return true;
+    }
+    this.lastInputMode = "synthetic";
+
     smoothScrollTo(element);
     await this.pause(30);
 
     element.focus();
     element.dispatchEvent(new FocusEvent("focus", { bubbles: true }));
 
-    if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+    if (isTextField(element)) {
+      const field = element as HTMLInputElement;
       if (options.clearFirst) {
-        element.value = "";
+        field.value = "";
       }
 
-      const targetValue = options.clearFirst ? text : element.value + text;
+      const targetValue = options.clearFirst ? text : field.value + text;
 
-      // Invoke native prototype setter to bypass React/Angular getter/setter wrappers
-      const prototype = element instanceof HTMLInputElement ? HTMLInputElement.prototype : HTMLTextAreaElement.prototype;
+      // Invoke the native prototype setter to bypass React/Angular getter/setter wrappers.
+      // Taken from the element's own prototype so it also works for elements in same-origin iframes.
+      const prototype = Object.getPrototypeOf(element);
       const descriptor = Object.getOwnPropertyDescriptor(prototype, "value");
       if (descriptor && descriptor.set) {
         descriptor.set.call(element, targetValue);
       } else {
-        element.value = targetValue;
+        field.value = targetValue;
       }
 
       // Dispatch full reactive input cycle
@@ -254,6 +367,42 @@ export class ActionDispatcher {
   }
 
   /**
+   * Trusted typing: real click to focus, select existing text when clearing, then CDP insertText.
+   * Returns true only if the field afterwards actually contains the text; otherwise the caller
+   * falls back to synthetic typing.
+   */
+  private static async typeTrusted(element: HTMLElement, text: string, options: TypeActionOptions): Promise<boolean> {
+    const bridge = this.trustedBridge;
+    if (!bridge) return false;
+    const point = await this.trustedPoint(element);
+    if (!point || !(await bridge.click(point.x, point.y))) return false;
+    await this.pause(30);
+
+    const isField = isTextField(element);
+    if (options.clearFirst) {
+      if (isField) {
+        (element as HTMLInputElement).select();
+      } else if (element.isContentEditable) {
+        // The element's own document: a top-level selection would be ignored inside an iframe
+        const doc = element.ownerDocument || document;
+        const range = doc.createRange();
+        range.selectNodeContents(element);
+        const sel = doc.getSelection();
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      }
+    }
+    if (!(await bridge.insertText(text))) return false;
+    await this.pause(30);
+
+    const current = isField ? (element as HTMLInputElement).value : element.innerText.replace(/\n$/, "");
+    // When clearing, anything but an exact match means the old text survived: fall back to synthetic
+    if (options.clearFirst ? current !== text : !current.includes(text)) return false;
+    if (options.pressEnter) await bridge.pressKey("Enter");
+    return true;
+  }
+
+  /**
    * Select a value from a <select> element
    */
   public static async select(element: HTMLSelectElement, value: string): Promise<boolean> {
@@ -278,8 +427,16 @@ export class ActionDispatcher {
    * Hover over an element with mouseover and mouseenter events
    */
   public static async hover(target: HTMLElement | number | string): Promise<boolean> {
-    const element = target instanceof HTMLElement ? target : this.resolveTarget(target).element;
+    const element = isElementNode(target) ? target : this.resolveTarget(target).element;
     if (!element) return false;
+
+    const point = await this.trustedPoint(element);
+    if (point && this.trustedBridge && await this.trustedBridge.hover(point.x, point.y)) {
+      this.lastInputMode = "trusted";
+      await this.pause(40);
+      return true;
+    }
+    this.lastInputMode = "synthetic";
 
     smoothScrollTo(element);
     await this.pause(30);

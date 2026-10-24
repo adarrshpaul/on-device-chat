@@ -28,6 +28,7 @@ import { A11yTreeEngine } from "./a11yTree";
 import { SomOverlayManager } from "./somOverlay";
 import { ActionDispatcher } from "./actionDispatcher";
 import { StateDeltaVerifier } from "./stateDeltaVerifier";
+import { runSandboxExpression } from "./safeExpression";
 import { NavPersistenceManager } from "./navPersistence";
 
 export type { HarnessToolCall };
@@ -171,45 +172,9 @@ export class AgentHarness {
   private async primitiveSandbox(args: Record<string, unknown> = {}): Promise<string> {
     const rawArgs = args || {};
     const code = String(rawArgs.code || rawArgs.expression || "");
-    if (!code) return "Error: No code provided to sandbox.";
-
-    // Guard against dangerous JavaScript sandbox escapes (Giskard Prompt Injection & Security)
-    const forbiddenPatterns = [
-      /\b(window|document|globalThis|self|top|parent)\b/i,
-      /\b(fetch|XMLHttpRequest|WebSocket|Worker)\b/i,
-      /\b(localStorage|sessionStorage|indexedDB|cookieStore)\b/i,
-      /\b(constructor|__proto__|prototype)\b/i,
-      /\b(Function|eval|import|process)\b/i,
-      /\.cookie\b/i,
-      /\.location\b/i,
-    ];
-
-    for (const pattern of forbiddenPatterns) {
-      if (pattern.test(code)) {
-        return `SecurityError: Sandbox execution blocked. Prohibited property or global identifier '${pattern.source}'. The sandbox is strictly isolated.`;
-      }
-    }
-
-    try {
-      // Evaluate in a strictly scoped Function with shadowed globals and null context
-      const sandboxFn = new Function(
-        "context",
-        `"use strict";
-        const window = undefined, document = undefined, fetch = undefined, localStorage = undefined, sessionStorage = undefined, globalThis = undefined, self = undefined;
-        try {
-          return (function() {
-            return (${code});
-          }).call(null);
-        } catch(e) {
-          return "Sandbox runtime error: " + e.message;
-        }`
-      );
-      const res = sandboxFn(rawArgs.context || {});
-      const strRes = typeof res === "object" ? JSON.stringify(res) : String(res);
-      return strRes.slice(0, 1000);
-    } catch (err: any) {
-      return `Sandbox syntax error: ${err.message}`;
-    }
+    const context = (rawArgs.context && typeof rawArgs.context === "object") ? rawArgs.context as Record<string, unknown> : {};
+    // Arithmetic-only parser: no JavaScript engine, no access to the page realm (see safeExpression.ts)
+    return runSandboxExpression(code, context).slice(0, 1000);
   }
 
   /** Primitive 3: browse (Inspect, Snapshot, Click, Type on any website) */
@@ -372,7 +337,7 @@ export class AgentHarness {
         const after = StateDeltaVerifier.captureSnapshot();
         const delta = StateDeltaVerifier.computeDelta(before, after);
 
-        return `Successfully clicked ${resolved.identifierDescription}${repeatCount > 1 ? ` (${repeatCount} times)` : ""}. State transition: ${delta.summary}.`;
+        return `Successfully clicked ${resolved.identifierDescription}${repeatCount > 1 ? ` (${repeatCount} times)` : ""} [${ActionDispatcher.lastInputMode} input]. State transition: ${delta.summary}.`;
       }
 
       case "type": {
@@ -392,7 +357,7 @@ export class AgentHarness {
         const after = StateDeltaVerifier.captureSnapshot();
         const delta = StateDeltaVerifier.computeDelta(before, after);
 
-        return `Successfully typed "${value}" into ${resolved.identifierDescription}. State transition: ${delta.summary}.`;
+        return `Successfully typed "${value}" into ${resolved.identifierDescription} [${ActionDispatcher.lastInputMode} input]. State transition: ${delta.summary}.`;
       }
 
       case "select": {

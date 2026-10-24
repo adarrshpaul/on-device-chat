@@ -54,11 +54,53 @@
         });
       }
       isInitialized = true;
+      loadTrustedInputSetting();
       console.log("[EdgeOperator] EdgeOperator widget successfully mounted.");
     } catch (err) {
       console.error("[EdgeOperator] Error initializing agent:", err);
     }
   }
+
+  // 2b. Trusted input bridge: lets the engine's ActionDispatcher send real (isTrusted) clicks and
+  // typing through the background worker's Chrome DevTools Protocol session. Top frame only,
+  // because CDP input coordinates are top-level viewport pixels.
+  function makeTrustedInputBridge() {
+    const send = (payload) => new Promise((resolve) => {
+      try {
+        chrome.runtime.sendMessage({ target: "background", type: "CDP_INPUT", ...payload }, (res) => {
+          if (chrome.runtime.lastError) {
+            resolve(false);
+            return;
+          }
+          if (res && !res.ok) console.warn("[EdgeOperator] Trusted input unavailable, using synthetic events:", res.error);
+          resolve(Boolean(res && res.ok));
+        });
+      } catch (e) {
+        resolve(false);
+      }
+    });
+    return {
+      click: (x, y) => send({ action: "click", x, y }),
+      hover: (x, y) => send({ action: "hover", x, y }),
+      insertText: (text) => send({ action: "insertText", text }),
+      pressKey: (key) => send({ action: "key", key }),
+    };
+  }
+
+  function applyTrustedInputSetting(enabled) {
+    const agent = window.EdgeOperator || window.OnDeviceChat;
+    const dispatcher = agent && agent.ActionDispatcher;
+    if (!dispatcher || typeof dispatcher.setTrustedInputBridge !== "function") return;
+    dispatcher.setTrustedInputBridge(enabled && window === window.top ? makeTrustedInputBridge() : null);
+  }
+
+  function loadTrustedInputSetting() {
+    chrome.storage.sync.get(["trustedInput"], (res) => applyTrustedInputSetting(res.trustedInput === true));
+  }
+
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === "sync" && changes.trustedInput) applyTrustedInputSetting(changes.trustedInput.newValue === true);
+  });
 
   // 3. Toggle Widget Open/Close
   function toggleWidget() {
@@ -131,6 +173,11 @@
       case "START_MACRO_RECORDING":
         const recordRes = startMacroRecording();
         sendResponse(recordRes);
+        break;
+
+      case "TRUSTED_INPUT_CHANGED":
+        applyTrustedInputSetting(Boolean(message.enabled));
+        sendResponse({ success: true });
         break;
 
       case "ASK_AGENT":

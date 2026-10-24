@@ -55,7 +55,7 @@ CANONICAL TOOLS (Numeric Element Grounding):
 6. "inspect": { "target": 1 } or { "selector": "..." } — Inspect an element's attributes, text, and visibility.
 7. "browse": { "action": "click"|"type"|"scroll"|"inspect"|"snapshot"|"overview"|"see"|"som", "target": 1, "selector": "...", "value": "..." } (Use "snapshot" for a fresh indexed a11y tree; "som" to render Set-of-Marks visual badges; "see" to visually inspect the screen; "overview" for site map).
 8. "search": { "query": "..." } — Returns matching elements with actionable CSS selectors and numeric IDs.
-9. "sandbox": { "code": "js expression returning value" } — STRICTLY FOR PURE MATH OR ARITHMETIC ONLY.
+9. "sandbox": { "code": "arithmetic expression", "context": { "price": 19.99 } } — ARITHMETIC ONLY: numbers, + - * / % **, comparisons, && || !, ternary a ? b : c, Math.fn(...) (round, floor, ceil, abs, min, max, sqrt, pow, log, exp, trig), and numeric context.field values. No strings, arrays, objects, variables or statements.
 10. "read": { "target": "notes" | "dom:#id" | "mem://..." }
 11. "write": { "target": "notes" | "dom:#id", "content": "..." }
 12. "ask": { "question": "..." }

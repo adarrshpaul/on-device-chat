@@ -7,6 +7,7 @@
  * - Tier 2: SmolLM2-135M-Instruct (Q4 ONNX via WebGPU) — ~80 MB lazy-loaded
  * - Tier 3: Gemma 4 E2B Unified Architecture (WebLLM Q4) — ~600-800 MB
  */
+import { evaluateSafeExpression } from "./safeExpression";
 import { GeminiNanoEngine } from "./geminiNanoEngine";
 import { CompactEngine } from "./compactEngine";
 import { Gemma4Engine } from "./engine";
@@ -1050,7 +1051,7 @@ export class EscalationManager {
       try {
         const expr = mathMatch[1].replace(/\^/g, "**").trim();
         if (/^[\d\s+\-*/().%]+$/.test(expr)) {
-          const result = Function(`"use strict"; return (${expr})`)();
+          const result = evaluateSafeExpression(expr);
           return JSON.stringify({
             final: `${expr} = **${result}**`
           });
@@ -1121,7 +1122,7 @@ export class EscalationManager {
       }
       actionsMarkdown += `• 🎯 **DOM Element Control**: Click buttons, follow links, or fill form fields on screen.\n`;
       actionsMarkdown += `• 🧠 **Memory & Engrams**: Say *"where is [topic]"* or *"help me remember [feature]"* for associative pattern recall.\n`;
-      actionsMarkdown += `• 🧮 **Math & Logic**: Compute math expressions or algorithmic evaluations locally in browser sandbox.`;
+      actionsMarkdown += `• 🧮 **Math & Logic**: Compute arithmetic expressions locally (numbers, operators and Math functions; not arbitrary code).`;
 
       return JSON.stringify({ final: actionsMarkdown });
     }

@@ -16,6 +16,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const macroBtnHint = document.getElementById("macro-btn-hint");
   const toggleAutoInject = document.getElementById("toggle-autoinject");
   const toggleDefaultOpen = document.getElementById("toggle-defaultopen");
+  const toggleTrustedInput = document.getElementById("toggle-trustedinput");
 
   // 1. Display Version from Manifest
   const manifest = chrome.runtime.getManifest();
@@ -37,6 +38,26 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (toggleAutoInject) {
     toggleAutoInject.addEventListener("change", (e) => {
       chrome.storage.sync.set({ autoInject: e.target.checked });
+    });
+  }
+
+  // Trusted input needs the optional "debugger" permission, which Chrome only grants from a user gesture
+  if (toggleTrustedInput) {
+    chrome.storage.sync.get(["trustedInput"], async (res) => {
+      const granted = await chrome.permissions.contains({ permissions: ["debugger"] });
+      toggleTrustedInput.checked = granted && res.trustedInput === true;
+    });
+    toggleTrustedInput.addEventListener("change", async (e) => {
+      let enabled = e.target.checked;
+      if (enabled) {
+        enabled = await chrome.permissions.request({ permissions: ["debugger"] });
+        toggleTrustedInput.checked = enabled;
+      } else {
+        await chrome.permissions.remove({ permissions: ["debugger"] });
+      }
+      // background.js also mirrors the permission into storage, in case this popup closed during the prompt;
+      // every tab's content script follows storage changes
+      await chrome.storage.sync.set({ trustedInput: enabled });
     });
   }
 
