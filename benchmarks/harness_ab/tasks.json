@@ -1,0 +1,15 @@
+{
+ "frozen_note": "Do not edit after the first run; SHA-256 recorded in PLAN.md and the run manifest.",
+ "tasks": [
+  {"id": "books_category", "start": "https://books.toscrape.com/", "goal": "Open the 'Travel' book category.", "check": {"type": "url_contains", "value": "/category/books/travel_2/"}, "tags": ["navigation"]},
+  {"id": "books_next_page", "start": "https://books.toscrape.com/", "goal": "Go to the next page of the book catalogue.", "check": {"type": "url_contains", "value": "page-2.html"}, "tags": ["navigation"]},
+  {"id": "login", "start": "https://the-internet.herokuapp.com/login", "goal": "Log in with username tomsmith and password SuperSecretPassword!", "check": {"type": "url_contains", "value": "/secure"}, "tags": ["form"]},
+  {"id": "checkbox", "start": "https://the-internet.herokuapp.com/checkboxes", "goal": "Make sure checkbox 1 is checked.", "check": {"type": "js", "value": "document.querySelectorAll('#checkboxes input')[0].checked === true"}, "tags": ["form"]},
+  {"id": "dropdown", "start": "https://the-internet.herokuapp.com/dropdown", "goal": "Select 'Option 2' in the dropdown.", "check": {"type": "js", "value": "document.querySelector('#dropdown').value === '2'"}, "tags": ["form"]},
+  {"id": "number_input", "start": "https://the-internet.herokuapp.com/inputs", "goal": "Type the number 42 into the input field.", "check": {"type": "js", "value": "document.querySelector('input[type=number]').value === '42'"}, "tags": ["form"]},
+  {"id": "todo_add", "start": "https://todomvc.com/examples/react/dist/", "goal": "Add a todo item called 'buy milk'.", "check": {"type": "js", "value": "[...document.querySelectorAll('.todo-list li')].some(li => li.textContent.toLowerCase().includes('buy milk'))"}, "tags": ["form"]},
+  {"id": "shadow_read", "start": "https://the-internet.herokuapp.com/shadowdom", "goal": "Read the list inside the shadow DOM component and tell me its last item.", "check": {"type": "answer_contains", "value": "In a list!"}, "tags": ["shadow_dom", "read"]},
+  {"id": "iframe_type", "start": "https://the-internet.herokuapp.com/iframe", "goal": "Type 'hello world' into the text editor.", "check": {"type": "js", "value": "document.querySelector('#mce_0_ifr').contentDocument.body.textContent.toLowerCase().includes('hello world')"}, "tags": ["iframe", "form"]},
+  {"id": "dynamic_wait", "start": "https://the-internet.herokuapp.com/dynamic_loading/1", "goal": "Click Start, wait for the loading to finish, and tell me the text that appears.", "check": {"type": "answer_contains", "value": "Hello World"}, "tags": ["wait", "read"]}
+ ]
+}

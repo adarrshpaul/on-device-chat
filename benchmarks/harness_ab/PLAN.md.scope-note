@@ -1,0 +1,7 @@
+Scope note (added 2026-10-25 after the run started, NOT part of the frozen plan):
+The A/B benchmark calls AgentHarness.runLoop directly with a fixed remote LLM (gemma-3-4b-it) for both versions.
+The shipped product instead routes model calls through EscalationManager.predictText(): regex "system1" shortcuts
+(theme/scroll/download/site tour/navigation/form synthesis) and a tier cascade (Gemini Nano -> MiniLM router ->
+Vega/Laya heuristics). This benchmark therefore measures the core harness loop given a capable model, NOT the
+end-user product path. A second, separately pre-registered "product path" test is required before any claim that
+users of 0.4.0 complete tasks more often.
