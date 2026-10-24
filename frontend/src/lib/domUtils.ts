@@ -27,9 +27,11 @@ const MAX_SEARCH_ROOTS = 200;
  * and documents of same-origin iframes. Closed shadow roots and cross-origin frames are not
  * reachable from page script by design and are skipped.
  */
-export function collectSearchRoots(rootDoc: Document = document): Array<Document | ShadowRoot> {
+export function collectSearchRoots(rootDoc?: Document): Array<Document | ShadowRoot> {
+  const doc = rootDoc || (typeof document !== "undefined" ? document : null);
+  if (!doc) return [];
   const roots: Array<Document | ShadowRoot> = [];
-  const queue: Array<Document | ShadowRoot> = [rootDoc];
+  const queue: Array<Document | ShadowRoot> = [doc];
   while (queue.length > 0 && roots.length < MAX_SEARCH_ROOTS) {
     const root = queue.shift()!;
     roots.push(root);
@@ -169,13 +171,14 @@ export function getCleanElementSelector(el: Element): string {
  * 4. Case-insensitive attribute queries (aria-label, title)
  * 5. Full semantic matching over accessible names, classes, data attributes, and token overlaps
  */
-export function smartQuerySelector(rawSelector: string, root: ParentNode = document, deep = true): HTMLElement | null {
-  if (!rawSelector || typeof rawSelector !== "string") return null;
+export function smartQuerySelector(rawSelector: string, root?: ParentNode, deep = true): HTMLElement | null {
+  const targetRoot = root || (typeof document !== "undefined" ? document : null);
+  if (!targetRoot || !rawSelector || typeof rawSelector !== "string") return null;
   const selector = rawSelector.trim();
 
   // 1. Direct native querySelector
   try {
-    const el = root.querySelector(selector);
+    const el = targetRoot.querySelector(selector);
     if (el && !isWidgetElement(el)) return el as HTMLElement;
   } catch {
     // Syntax error in rawSelector — continue to smart recovery
@@ -184,8 +187,12 @@ export function smartQuerySelector(rawSelector: string, root: ParentNode = docum
   // 2. Direct ID lookup (handles #foo or just foo)
   const idClean = selector.replace(/^[#]/, "").trim();
   if (/^[a-zA-Z0-9_-]+$/.test(idClean)) {
-    const el = document.getElementById(idClean);
-    if (el && !isWidgetElement(el)) return el;
+    try {
+      const el = (targetRoot as any).getElementById
+        ? (targetRoot as Document).getElementById(idClean)
+        : targetRoot.querySelector(`#${idClean}`);
+      if (el && !isWidgetElement(el)) return el as HTMLElement;
+    } catch {}
   }
 
   // 3. Remove Tailwind bracketed classes if present: e.g. "button.text-[10px]" -> "button"
@@ -195,7 +202,7 @@ export function smartQuerySelector(rawSelector: string, root: ParentNode = docum
       .replace(/\s+/g, " ")
       .trim();
     if (sanitized && sanitized !== selector) {
-      const el = root.querySelector(sanitized);
+      const el = targetRoot.querySelector(sanitized);
       if (el && !isWidgetElement(el)) return el as HTMLElement;
     }
   } catch {}
@@ -225,7 +232,7 @@ export function smartQuerySelector(rawSelector: string, root: ParentNode = docum
     // Direct case-insensitive attribute match if phrase exists
     if (phraseLower) {
       try {
-        const attrMatches = root.querySelectorAll(
+        const attrMatches = targetRoot.querySelectorAll(
           `${targetTag}[aria-label*="${phraseLower}" i], ${targetTag}[title*="${phraseLower}" i], [aria-label*="${phraseLower}" i]`
         );
         for (const el of Array.from(attrMatches) as HTMLElement[]) {
@@ -236,7 +243,7 @@ export function smartQuerySelector(rawSelector: string, root: ParentNode = docum
 
     // Inspect candidates across DOM
     const candidateQuery = targetTag === "*" ? "button, a, input, select, textarea, [role='button'], [tabindex='0'], nav li, header li" : targetTag;
-    const candidates = Array.from(root.querySelectorAll(candidateQuery)) as HTMLElement[];
+    const candidates = Array.from(targetRoot.querySelectorAll(candidateQuery)) as HTMLElement[];
 
     interface ScoredCandidate {
       el: HTMLElement;
@@ -366,13 +373,14 @@ export function smartQuerySelector(rawSelector: string, root: ParentNode = docum
 /**
  * Fault-tolerant querySelectorAll that automatically filters out widget UI.
  */
-export function smartQuerySelectorAll(rawSelector: string, root: ParentNode = document): HTMLElement[] {
-  if (!rawSelector || typeof rawSelector !== "string") return [];
+export function smartQuerySelectorAll(rawSelector: string, root?: ParentNode): HTMLElement[] {
+  const targetRoot = root || (typeof document !== "undefined" ? document : null);
+  if (!targetRoot || !rawSelector || typeof rawSelector !== "string") return [];
   try {
-    const elements = Array.from(root.querySelectorAll(rawSelector)) as HTMLElement[];
+    const elements = Array.from(targetRoot.querySelectorAll(rawSelector)) as HTMLElement[];
     return elements.filter((el) => !isWidgetElement(el));
   } catch {
-    const single = smartQuerySelector(rawSelector, root);
+    const single = smartQuerySelector(rawSelector, targetRoot);
     return single ? [single] : [];
   }
 }

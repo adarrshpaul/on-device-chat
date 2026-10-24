@@ -32,6 +32,13 @@ export interface VerificationResult {
 }
 
 export class ProbabilisticHarnessEngine {
+  static validateDecision(
+    decision: HarnessToolCall,
+    customToolDefs: ToolDefinition[] = []
+  ): VerificationResult {
+    return this.verifyDecision(decision, customToolDefs);
+  }
+
   /**
    * Evaluates a candidate tool decision against deterministic environment constraints.
    * Generation vs. Verification Asymmetry: Verifying is an O(1)/deterministic oracle check.

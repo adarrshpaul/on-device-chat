@@ -1,7 +1,9 @@
-import { AgentHarness } from "../src/lib/agentHarness.ts";
-import { parseHarnessDecision } from "../src/lib/harnessDecisionParser.ts";
-import { ProbabilisticHarnessEngine } from "../src/lib/probabilisticHarness.ts";
-import { DEFAULT_BROWSER_TOOLS } from "../src/lib/types.ts";
+import {
+  AgentHarness,
+  parseHarnessDecision,
+  ProbabilisticHarnessEngine,
+  DEFAULT_BROWSER_TOOLS,
+} from "../dist/index.js";
 
 console.log("Testing Tool Primitives & Direct Action Parsing/Execution...\n");
 
