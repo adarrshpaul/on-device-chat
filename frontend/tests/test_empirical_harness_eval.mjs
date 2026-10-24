@@ -1,24 +1,26 @@
 /**
- * Empirical Harness & Model Evaluation Suite (TASK-113)
+ * Synthetic Mock-Fixture Unit Evaluation Suite (TASK-113 / TASK-118)
  *
- * Mandate Rule 7 Compliant: Zero synthetic claims or fabricated metrics.
- * Runs physical evaluations against real DOM elements, measuring real empirical
- * accuracy, token reduction, and latency across:
+ * Mandate Rule 7 Compliant: Transparent labeling of mock vs live benchmarks.
+ * Evaluates core algorithm logic in headless Node.js using hand-built synthetic mock fixtures
+ * (MockDOMNode 25-element fixture, mock action sets, sample text strings).
  *
- * 1. Element Selection & Grounding Accuracy:
- *    - Compares: (A) Naive Lexical Substring, (B) Vega Keyword Heuristic, (C) Grounded A11y Tree.
- *    - 25 real-world elements across 5 domains (E-Commerce, SaaS, Industrial OT, Forms, Productivity).
- * 2. TASK-111 Verification (Trusted CDP Input & Shadow DOM Reach):
- *    - Verifies event.isTrusted = true via CDP vs false via synthetic dispatch.
- *    - Verifies open shadow DOM element resolution (100% reach vs 0% standard querySelector).
- * 3. TASK-112 Verification (Irreversible-Action Safety Gate):
- *    - Verifies 0% leakage on destructive/financial/communication/transfer operations.
- *    - Verifies zero user interruption on benign navigation/inspection operations.
+ * NOTE: Live browser execution, real website DOM validation, and physical CDP isTrusted: true
+ * verification are performed in Gate 1 Playwright tests (tests/test_playwright_extension_e2e.mjs,
+ * npm run e2e:extension), NOT in this unit test file.
+ *
+ * Evaluated components:
+ * 1. Element Selection on 25-element MockDOMNode synthetic fixture:
+ *    - Compares: (A) Naive Lexical Substring vs (B) Vega Keyword Heuristic.
+ * 2. TASK-111 Verification (Shadow DOM reach in MockDOMNode tree):
+ *    - Verifies deep shadow DOM traversal (100% reach vs 0% standard querySelector).
+ *    - Cites physical Playwright extension E2E for CDP native OS event execution.
+ * 3. TASK-112 Verification (Irreversible-Action Safety Gate on 10 synthetic action strings):
+ *    - Verifies classification & blocking logic in unit test harness.
  * 4. TASK-116 Verification (Todo Management & Reasoning History Token Savings):
- *    - Measures raw token count before and after DeepSeek reasoning-history stripping across multi-turn sessions.
- *    - Measures observation truncation footprint reduction.
- * 5. TASK-115 Verification (Voice Disfluency Polish & Jargon Accuracy):
- *    - Measures Word Error Rate (WER) reduction on realistic spoken inputs with disfluencies & domain jargon.
+ *    - Measures token character reduction on synthetic multi-turn dialogue.
+ * 5. TASK-115 Verification (Voice Polish on 4 hand-crafted text samples):
+ *    - Measures string-level WER reduction on synthetic sample transcripts.
  */
 
 import assert from "node:assert";
@@ -153,7 +155,7 @@ function computeWER(reference, hypothesis) {
 // ---------------------------------------------------------------------
 async function runEmpiricalEval() {
   console.log("======================================================================");
-  console.log("🔬 EMPIRICAL HARNESS & ELEMENT-SELECTION EVALUATION (TASK-113)");
+  console.log("🔬 SYNTHETIC MOCK-FIXTURE UNIT EVALUATION (TASK-113 / TASK-118)");
   console.log("======================================================================\n");
 
   const results = {
@@ -165,9 +167,9 @@ async function runEmpiricalEval() {
   };
 
   // -------------------------------------------------------------------
-  // PART 1: Real Element Selection & Grounding Accuracy
+  // PART 1: Mock Element Selection Unit Test (25 Hand-Built Targets)
   // -------------------------------------------------------------------
-  console.log("📌 PART 1: Real Element Selection Benchmark (25 Multi-Domain Targets)");
+  console.log("📌 PART 1: Mock Element Selection Unit Test (25 Hand-Built Fixture Targets)");
 
   const vega = new VegaDecisionEngine();
 
@@ -214,6 +216,7 @@ async function runEmpiricalEval() {
   const p95Latency = [...vegaLatencies].sort((a, b) => a - b)[Math.floor(vegaLatencies.length * 0.95)];
 
   results.elementSelection = {
+    fixtureType: "MockDOMNode 25-element synthetic fixture (not live web pages)",
     totalTargets: EVALUATION_DOM_TARGETS.length,
     naiveSubstringAccuracy: `${naiveAccuracy.toFixed(1)}% (${naiveMatches}/${EVALUATION_DOM_TARGETS.length})`,
     vegaHeuristicAccuracy: `${vegaAccuracy.toFixed(1)}% (${vegaMatches}/${EVALUATION_DOM_TARGETS.length})`,
@@ -221,38 +224,22 @@ async function runEmpiricalEval() {
     p95LatencyMs: Math.round(p95Latency * 100) / 100,
   };
 
-  console.log(`  • Naive Substring Accuracy:   ${results.elementSelection.naiveSubstringAccuracy}`);
-  console.log(`  • Vega Heuristic Accuracy:    ${results.elementSelection.vegaHeuristicAccuracy}`);
-  console.log(`  • Mean Decision Latency:      ${results.elementSelection.meanLatencyMs} ms`);
-  console.log(`  • P95 Decision Latency:       ${results.elementSelection.p95LatencyMs} ms`);
-  assert.ok(vegaAccuracy > naiveAccuracy, "Vega keyword heuristic must outperform naive substring search");
+  console.log(`  • Naive Substring Accuracy (Mock-Fixture):   ${results.elementSelection.naiveSubstringAccuracy}`);
+  console.log(`  • Vega Heuristic Accuracy (Mock-Fixture):    ${results.elementSelection.vegaHeuristicAccuracy}`);
+  console.log(`  • Mean Decision Latency:                     ${results.elementSelection.meanLatencyMs} ms`);
+  console.log(`  • P95 Decision Latency:                      ${results.elementSelection.p95LatencyMs} ms`);
+  assert.ok(vegaAccuracy > naiveAccuracy, "Vega keyword heuristic must outperform naive substring search on mock fixture");
 
   // -------------------------------------------------------------------
-  // PART 2: TASK-111 Verification (Trusted CDP Input & Shadow DOM Traversal)
+  // PART 2: TASK-111 Verification (Shadow DOM Traversal & Trusted CDP Reference)
   // -------------------------------------------------------------------
-  console.log("\n📌 PART 2: TASK-111 Verification (Trusted CDP Input & Shadow DOM Traversal)");
+  console.log("\n📌 PART 2: TASK-111 Verification (Shadow DOM Traversal & CDP Reference)");
 
-  // Test 2A: Event isTrusted verification
-  class SyntheticEvent {
-    constructor(type) {
-      this.type = type;
-      this.isTrusted = false; // Synthetic JavaScript events are always false per W3C specification
-    }
-  }
-  class CDPEmulatedEvent {
-    constructor(type) {
-      this.type = type;
-      this.isTrusted = true; // CDP Input.dispatchMouseEvent emits native OS-level trusted input
-    }
-  }
+  // Test 2A: CDP Input isTrusted Citation (Real Browser Execution)
+  console.log("  • CDP Input isTrusted: Physically verified via Playwright / Chrome Extension E2E in real Chromium");
+  console.log("    (see tests/test_playwright_extension_e2e.mjs; native CDP Input.dispatchMouseEvent emits isTrusted: true).");
 
-  const synthetic = new SyntheticEvent("click");
-  const cdpEvent = new CDPEmulatedEvent("click");
-
-  assert.strictEqual(synthetic.isTrusted, false, "Standard JS synthetic click has isTrusted = false");
-  assert.strictEqual(cdpEvent.isTrusted, true, "CDP Input dispatch has isTrusted = true");
-
-  // Test 2B: Shadow DOM Traversal Reach
+  // Test 2B: Shadow DOM Traversal Reach on MockDOMNode Tree
   const rootDoc = new MockDOMNode("body");
   const hostElem = rootDoc.appendChild(new MockDOMNode("div", { id: "host" }));
   const shadow = hostElem.attachShadow({ mode: "open" });
@@ -282,17 +269,14 @@ async function runEmpiricalEval() {
   const shadowReach = deepQueryAll(rootDoc, "#shadow-btn").length; // 1
 
   results.task111TrustedCDP = {
-    syntheticIsTrusted: synthetic.isTrusted,
-    cdpIsTrusted: cdpEvent.isTrusted,
-    standardShadowQueryMatches: standardReach,
-    deepTraversalMatches: shadowReach,
-    shadowPenetrationRate: `${((shadowReach / 1) * 100).toFixed(0)}%`,
+    cdpInputVerification: "Physical Chromium E2E (tests/test_playwright_extension_e2e.mjs) validates isTrusted: true",
+    mockStandardShadowQueryMatches: standardReach,
+    mockDeepTraversalMatches: shadowReach,
+    mockShadowPenetrationRate: `${((shadowReach / 1) * 100).toFixed(0)}%`,
   };
 
-  console.log(`  • Synthetic Dispatch isTrusted: ${synthetic.isTrusted} (Modern bot guards block synthetic events)`);
-  console.log(`  • CDP Dispatch isTrusted:       ${cdpEvent.isTrusted} (Native OS event execution)`);
-  console.log(`  • Standard DOM Query Reach:     ${standardReach}/1 (0% shadow penetration)`);
-  console.log(`  • Deep Traversal Query Reach:   ${shadowReach}/1 (100% shadow penetration)`);
+  console.log(`  • Standard DOM Query Reach (Mock):   ${standardReach}/1 (0% shadow penetration)`);
+  console.log(`  • Deep Traversal Query Reach (Mock): ${shadowReach}/1 (100% shadow penetration)`);
 
   assert.strictEqual(standardReach, 0);
   assert.strictEqual(shadowReach, 1);
@@ -300,7 +284,7 @@ async function runEmpiricalEval() {
   // -------------------------------------------------------------------
   // PART 3: TASK-112 Verification (Irreversible-Action Safety Gate)
   // -------------------------------------------------------------------
-  console.log("\n📌 PART 3: TASK-112 Verification (Safety Gate & Permission Policy)");
+  console.log("\n📌 PART 3: TASK-112 Verification (Safety Gate Unit Test on 10 Synthetic Action Strings)");
 
   const testActions = [
     { name: "Search Product", target: "input#search", isIrreversible: false },
@@ -357,16 +341,17 @@ async function runEmpiricalEval() {
   const expectedNegatives = testActions.filter((a) => !a.isIrreversible).length;
 
   results.task112SafetyGate = {
+    fixtureType: "10 synthetic action strings in unit test harness (not live page buttons)",
     totalEvaluated: testActions.length,
     truePositiveRate: `${((truePositives / expectedPositives) * 100).toFixed(0)}% (${truePositives}/${expectedPositives})`,
     trueNegativeRate: `${((trueNegatives / expectedNegatives) * 100).toFixed(0)}% (${trueNegatives}/${expectedNegatives})`,
-    leakageRate: "0.0% (Zero unverified irreversible actions executed)",
+    mockLeakageRate: "0.0% (Zero unverified irreversible actions allowed via unit test mock handler)",
     blockedUnconfirmed: blockedActions,
   };
 
-  console.log(`  • Irreversible Interception:    ${results.task112SafetyGate.truePositiveRate}`);
-  console.log(`  • Benign Pass-Through Rate:     ${results.task112SafetyGate.trueNegativeRate}`);
-  console.log(`  • Safety Leakage Rate:          ${results.task112SafetyGate.leakageRate}`);
+  console.log(`  • Irreversible Interception (Mock):    ${results.task112SafetyGate.truePositiveRate}`);
+  console.log(`  • Benign Pass-Through Rate (Mock):     ${results.task112SafetyGate.trueNegativeRate}`);
+  console.log(`  • Safety Leakage Rate (Mock):          ${results.task112SafetyGate.mockLeakageRate}`);
 
   assert.strictEqual(truePositives, expectedPositives);
   assert.strictEqual(trueNegatives, expectedNegatives);
@@ -486,6 +471,7 @@ async function runEmpiricalEval() {
   const meanVoiceLatency = polishLatencies.reduce((a, b) => a + b, 0) / polishLatencies.length;
 
   results.task115VoiceWER = {
+    fixtureType: "4 hand-crafted text transcript samples (not live microphone ASR audio)",
     testSamples: voiceTestCases.length,
     rawSpokenWER: `${meanRawWER.toFixed(1)}%`,
     polishedWER: `${meanPolishedWER.toFixed(1)}%`,
@@ -493,18 +479,18 @@ async function runEmpiricalEval() {
     meanPolishLatencyMs: Math.round(meanVoiceLatency * 1000) / 1000,
   };
 
-  console.log(`  • Raw ASR Word Error Rate:     ${results.task115VoiceWER.rawSpokenWER}`);
-  console.log(`  • Polished Voice Error Rate:   ${results.task115VoiceWER.polishedWER}`);
-  console.log(`  • WER Absolute Reduction:      ${results.task115VoiceWER.werAbsoluteReduction}`);
-  console.log(`  • Mean Polish Latency:         ${results.task115VoiceWER.meanPolishLatencyMs} ms`);
+  console.log(`  • Raw Synthetic Transcript Error Rate:   ${results.task115VoiceWER.rawSpokenWER}`);
+  console.log(`  • Polished Voice Error Rate:             ${results.task115VoiceWER.polishedWER}`);
+  console.log(`  • WER Absolute Reduction (Text):         ${results.task115VoiceWER.werAbsoluteReduction}`);
+  console.log(`  • Mean Polish Latency:                   ${results.task115VoiceWER.meanPolishLatencyMs} ms`);
 
-  assert.ok(meanPolishedWER < meanRawWER, "Voice polish must reduce word error rate");
+  assert.ok(meanPolishedWER < meanRawWER, "Voice polish must reduce word error rate on synthetic samples");
 
   // -------------------------------------------------------------------
-  // SUMMARY REPORT (Physical Reproducible Numbers)
+  // SUMMARY REPORT (Transparent Mock-Fixture Unit Numbers)
   // -------------------------------------------------------------------
   console.log("\n======================================================================");
-  console.log("📊 EMPIRICAL HARNESS EVALUATION COMPLETE (ALL 5 SECTIONS PASSED)");
+  console.log("📊 SYNTHETIC MOCK-FIXTURE UNIT EVALUATION COMPLETE (ALL 5 SECTIONS PASSED)");
   console.log("======================================================================");
   console.log(JSON.stringify(results, null, 2));
 

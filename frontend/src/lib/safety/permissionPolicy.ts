@@ -69,6 +69,7 @@ export class PermissionPolicy {
       "clickCoordinates",
       "play",
       "autopilot",
+      "download",
     ];
 
     if (directMutations.includes(tool)) {
@@ -78,7 +79,7 @@ export class PermissionPolicy {
     // Check browse tool sub-actions
     if (tool === "browse" && args?.action) {
       const browseAction = String(args.action).toLowerCase();
-      if (["click", "type", "press", "scroll", "input", "select"].includes(browseAction)) {
+      if (["click", "type", "press", "scroll", "input", "select", "download"].includes(browseAction)) {
         return true;
       }
     }

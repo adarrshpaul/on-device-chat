@@ -100,6 +100,33 @@ export class VoiceEngine {
   }
 
   /**
+   * Check if WebGPU is available for on-device Whisper execution.
+   */
+  static async hasWebGPU(): Promise<boolean> {
+    if (typeof navigator === "undefined" || !(navigator as any).gpu) {
+      return false;
+    }
+    try {
+      const adapter = await (navigator as any).gpu.requestAdapter();
+      return Boolean(adapter);
+    } catch {
+      return false;
+    }
+  }
+
+  setUseWhisperWebGPU(enabled: boolean): void {
+    this.config.useWhisperWebGPU = enabled;
+  }
+
+  isWhisper(): boolean {
+    return Boolean(this.config.useWhisperWebGPU);
+  }
+
+  getProviderLabel(): "On-device Whisper" | "Browser speech (sent to Google)" {
+    return this.config.useWhisperWebGPU ? "On-device Whisper" : "Browser speech (sent to Google)";
+  }
+
+  /**
    * Start push-to-talk voice recording.
    */
   async startRecording(): Promise<boolean> {

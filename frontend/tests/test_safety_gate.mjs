@@ -274,6 +274,15 @@ await asyncTest("Permission mode [plan_only] blocks mutation tools", async () =>
   const typeCheck = await SafetyGate.runPreHooks("type", { target: 2, value: "hello" });
   assert.equal(typeCheck.proceed, false);
 
+  // TASK-118: Download is a state mutation and must be blocked in plan_only mode
+  const dlCheck = await SafetyGate.runPreHooks("download", { target: "audit-report.pdf" });
+  assert.equal(dlCheck.proceed, false, "download tool must be blocked in plan_only mode");
+  assert.match(dlCheck.reason, /plan_only/);
+
+  const browseDlCheck = await SafetyGate.runPreHooks("browse", { action: "download", url: "/report.pdf" });
+  assert.equal(browseDlCheck.proceed, false, "browse action='download' must be blocked in plan_only mode");
+  assert.match(browseDlCheck.reason, /plan_only/);
+
   // Read-only tools proceed in plan_only mode
   const readCheck = await SafetyGate.runPreHooks("read", { target: "notes" });
   assert.equal(readCheck.proceed, true);

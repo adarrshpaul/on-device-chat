@@ -25,13 +25,28 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 }) => {
   const [isContextDismissed, setIsContextDismissed] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [useWhisper, setUseWhisper] = useState(false);
+  const [hasWebGPU, setHasWebGPU] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const voiceEngineRef = useRef<VoiceEngine | null>(null);
 
   useEffect(() => {
+    VoiceEngine.hasWebGPU().then((supported) => {
+      setHasWebGPU(supported);
+      if (supported) {
+        setUseWhisper(true);
+        if (voiceEngineRef.current) {
+          voiceEngineRef.current.setUseWhisperWebGPU(true);
+        }
+      }
+    });
+  }, []);
+
+  useEffect(() => {
     voiceEngineRef.current = new VoiceEngine({
       outputMode: "agent_command",
+      useWhisperWebGPU: useWhisper,
       onStateChange: (state, details) => {
         setIsListening(state === "listening");
         if (state === "error") {
@@ -56,7 +71,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     return () => {
       voiceEngineRef.current?.cancelRecording();
     };
-  }, [onInputChange, onVoiceTranscribed]);
+  }, [onInputChange, onVoiceTranscribed, useWhisper]);
 
   const toggleVoiceRecording = async () => {
     if (!voiceEngineRef.current) return;
@@ -94,6 +109,56 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           </button>
         </div>
       )}
+
+      {/* Voice Provider Disclosure & Switcher Pill (TASK-118 Rule 7 Honesty) */}
+      <div className="flex items-center justify-between text-[11px] mb-1.5 px-0.5">
+        <button
+          type="button"
+          onClick={() => {
+            const next = !useWhisper;
+            if (next && !hasWebGPU) {
+              setVoiceError("WebGPU is not supported in this browser. Falling back to Browser speech (sent to Google).");
+              return;
+            }
+            setUseWhisper(next);
+            voiceEngineRef.current?.setUseWhisperWebGPU(next);
+          }}
+          className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors cursor-pointer border ${
+            useWhisper
+              ? "bg-emerald-950/70 text-emerald-300 border-emerald-500/40 hover:bg-emerald-900/70"
+              : "bg-amber-950/70 text-amber-300 border-amber-500/40 hover:bg-amber-900/70"
+          }`}
+          title={
+            useWhisper
+              ? "On-device Whisper: 100% private, zero cloud egress via WebGPU. Click to switch to Browser speech."
+              : "Browser speech: Transmits audio to Google cloud servers for transcription. Click to switch to On-device Whisper."
+          }
+        >
+          <span className={`w-1.5 h-1.5 rounded-full ${useWhisper ? "bg-emerald-400" : "bg-amber-400"}`} />
+          <span>{useWhisper ? "On-device Whisper" : "Browser speech (sent to Google)"}</span>
+          <span className="text-[9px] opacity-60 underline ml-0.5">{hasWebGPU ? "switch" : "info"}</span>
+        </button>
+      </div>
+
+      {/* Active Listening Indicator Banner */}
+      {isListening && (
+        <div className={`mb-2 px-2.5 py-1 rounded text-[11px] flex items-center justify-between ${
+          useWhisper
+            ? "bg-emerald-950/80 border border-emerald-500/50 text-emerald-200"
+            : "bg-amber-950/80 border border-amber-500/50 text-amber-200"
+        }`}>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+            <span className="font-medium">
+              {useWhisper
+                ? "Recording with On-device Whisper (zero cloud egress)..."
+                : "Recording with Browser speech (audio sent to Google)..."}
+            </span>
+          </div>
+          <span className="text-[10px] opacity-75">Click mic to finish</span>
+        </div>
+      )}
+
       <form onSubmit={onSubmit} className="flex items-center gap-2">
         <div className="flex-1 flex items-center gap-1.5 bg-black/40 border border-white/10 focus-within:border-purple-500/70 rounded-[8px] px-2.5 py-1.5 transition-colors min-w-0">
           {/* Dismissible Left Page-Context Tag */}
@@ -144,8 +209,16 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               : "bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/10 cursor-pointer"
           }`}
           style={isListening ? { transform: `scale(${1 + audioLevel * 0.15})` } : undefined}
-          title={isListening ? "Listening... Click to finish voice input" : "Push-to-talk voice input"}
-          aria-label={isListening ? "Stop listening" : "Start push-to-talk voice input"}
+          title={
+            isListening
+              ? `Listening with ${useWhisper ? "On-device Whisper" : "Browser speech (sent to Google)"}... Click to finish voice input`
+              : `Voice input: ${useWhisper ? "On-device Whisper" : "Browser speech (sent to Google)"}`
+          }
+          aria-label={
+            isListening
+              ? `Stop voice input (${useWhisper ? "On-device Whisper" : "Browser speech (sent to Google)"})`
+              : `Start voice input (${useWhisper ? "On-device Whisper" : "Browser speech (sent to Google)"})`
+          }
         >
           <Mic size={17} className={isListening ? "text-white animate-bounce" : "text-gray-300"} />
         </button>
