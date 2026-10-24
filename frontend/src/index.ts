@@ -43,6 +43,14 @@ export { TodoManager, globalTodoManager } from './lib/todoManager';
 export type { TodoItem, TodoStatus, PlanState, PlanChangeListener } from './lib/todoManager';
 export { ReasoningManager } from './lib/reasoningManager';
 export type { SanitizedMessage } from './lib/reasoningManager';
+export { VoiceEngine } from './lib/voiceEngine';
+export type { VoiceEngineState, VoiceOutputMode, VoiceEngineConfig } from './lib/voiceEngine';
+export { VoicePolishEngine } from './lib/voicePolish';
+export type { TargetTone, PolishOptions } from './lib/voicePolish';
+export { TextInjector } from './lib/textInjector';
+export type { InjectionResult } from './lib/textInjector';
+export { personalDictionary } from './lib/personalDictionary';
+export type { DictionaryEntry } from './lib/personalDictionary';
 export * from './lib/types';
 
 

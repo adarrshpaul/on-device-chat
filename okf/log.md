@@ -1,5 +1,19 @@
 # OKF Transition Log
 
+## 2026-10-24T13:38:00Z - TASK-116: Harness-Held Todo List, Plan Approval Gate, DeepSeek Reasoning-History Rule & Observation Budget
+- **Scope & Implementation**:
+  - Implemented `frontend/src/lib/todoManager.ts`: harness owns task list state, lifecycle, and reactive UI updates.
+  - Added user plan approval gate: multi-step plans require user approval in the chat widget before executing mutations.
+  - Implemented `frontend/src/lib/reasoningManager.ts`: verified against DeepSeek official API docs (preserves reasoning in intra-turn tool loop, drops reasoning across multi-turn conversation history).
+  - Implemented tool observation truncation budget (`1200` chars): large outputs are offloaded into `mem://` and accessible via `read(target="mem://...")`.
+  - Added in-chat checklist card with step-by-step progress, pulsing active indicators, and approval buttons (`ChatWidget.tsx`, `useChat.ts`).
+  - Added tool `update_task` to `AgentHarness` so models can advance task status without rewriting plans.
+- **Verification & Git**:
+  - `test_task_116_todo_and_reasoning.mjs`: 13/13 passing. Full `npm test`: 13/13 test suites passing.
+  - TypeScript `tsc --noEmit` and ESLint passing cleanly. Production build and extension sync verified.
+  - Committed to branch `feat/task-116-todo-and-reasoning` (commit `2002de2`).
+  - Artifact/Fact: `okf/facts/fact_task_116_harness_held_todo_and_reasoning_history_20261024.md`.
+
 ## 2026-10-24T13:24:00Z - TASK-112: Irreversible Action Safety Gate, Permission Modes & Pre/Post Tool Hooks
 - **Scope & Implementation**:
   - Implemented `frontend/src/lib/safetyGate.ts` dynamic semantic classifier (financial, destructive, communication, transfer) from live DOM tags, texts, and attributes (Rule 9 compliant, 0 hardcoded domain selectors).

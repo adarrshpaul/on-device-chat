@@ -187,6 +187,16 @@
         sendResponse(recordRes);
         break;
 
+      case "TRIGGER_VOICE_INPUT":
+        toggleWidget();
+        // If voice input button is in DOM inside widget, trigger it
+        setTimeout(() => {
+          const micBtn = document.querySelector(".g4-widget-container button[title*='voice'], button[title*='voice']");
+          if (micBtn) (micBtn).click();
+        }, 200);
+        sendResponse({ success: true });
+        break;
+
       case "TRUSTED_INPUT_CHANGED":
         applyTrustedInputSetting(Boolean(message.enabled));
         sendResponse({ success: true });

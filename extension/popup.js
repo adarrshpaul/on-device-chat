@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const entityCountEl = document.getElementById("entity-count");
   const btnToggleChat = document.getElementById("btn-toggle-chat");
   const btnRecordMacro = document.getElementById("btn-record-macro");
+  const btnVoiceDictate = document.getElementById("btn-voice-dictate");
   const macroBtnLabel = document.getElementById("macro-btn-label");
   const macroBtnHint = document.getElementById("macro-btn-hint");
   const toggleAutoInject = document.getElementById("toggle-autoinject");
@@ -165,6 +166,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     });
   });
+
+  if (btnVoiceDictate) {
+    btnVoiceDictate.addEventListener("click", () => {
+      if (!activeTab || !activeTab.id) return;
+      chrome.tabs.sendMessage(activeTab.id, { type: "TRIGGER_VOICE_INPUT" }, () => {
+        window.close();
+      });
+    });
+  }
 
   // Helper UI routines
   function setDisconnectedUI(domainText, titleText) {
