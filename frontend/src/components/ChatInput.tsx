@@ -187,7 +187,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             value={inputValue}
             onChange={(e) => onInputChange(e.target.value)}
             placeholder={
-              isReady ? "Ask anything, run an action, or speak..." : "Initializing local engine..."
+              isReady ? "Ask about anything, run an action, or speak..." : "Initializing local engine..."
             }
             disabled={!isReady}
             style={{

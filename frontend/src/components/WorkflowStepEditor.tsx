@@ -14,14 +14,14 @@ import { smartQuerySelector } from "../lib/domUtils";
 
 type Action = WorkflowStep["action"];
 
-const ACTIONS: { value: Action; label: string; icon: React.ElementType }[] = [
-  { value: "click", label: "Click", icon: MousePointerClick },
-  { value: "type", label: "Type", icon: Type },
-  { value: "select", label: "Select", icon: ListChecks },
-  { value: "scroll", label: "Scroll", icon: ArrowDownToLine },
-  { value: "teleport", label: "Teleport", icon: Navigation },
-  { value: "verify", label: "Verify", icon: ShieldCheck },
-  { value: "wait", label: "Wait", icon: Timer },
+const ACTIONS: { value: Action; label: string; icon: React.ElementType; activeClass: string }[] = [
+  { value: "click", label: "Click", icon: MousePointerClick, activeClass: "bg-[#D4FF00] text-black font-black shadow-[0_0_10px_rgba(212,255,0,0.25)]" },
+  { value: "type", label: "Type", icon: Type, activeClass: "bg-cyan-400 text-black font-black shadow-[0_0_10px_rgba(6,182,212,0.25)]" },
+  { value: "select", label: "Select", icon: ListChecks, activeClass: "bg-emerald-400 text-black font-black shadow-[0_0_10px_rgba(16,185,129,0.25)]" },
+  { value: "scroll", label: "Scroll", icon: ArrowDownToLine, activeClass: "bg-purple-400 text-black font-black shadow-[0_0_10px_rgba(168,85,247,0.25)]" },
+  { value: "teleport", label: "Teleport", icon: Navigation, activeClass: "bg-indigo-400 text-black font-black shadow-[0_0_10px_rgba(129,140,248,0.25)]" },
+  { value: "verify", label: "Verify", icon: ShieldCheck, activeClass: "bg-blue-400 text-black font-black shadow-[0_0_10px_rgba(96,165,250,0.25)]" },
+  { value: "wait", label: "Wait", icon: Timer, activeClass: "bg-amber-400 text-black font-black shadow-[0_0_10px_rgba(251,191,36,0.25)]" },
 ];
 
 const KIND_ICON: Record<PageElementKind, React.ElementType> = {
@@ -34,7 +34,7 @@ const TARGET_NOUN: Partial<Record<Action, string>> = {
 };
 
 const fieldCls =
-  "w-full bg-[#111626] border border-white/10 rounded px-1.5 py-1 text-[11px] text-white placeholder-gray-500 focus:outline-none focus:border-purple-400";
+  "w-full bg-black/60 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white placeholder-gray-500 focus:outline-none focus:border-[#D4FF00] transition-colors";
 
 interface StepEditorProps {
   step: WorkflowStep;
@@ -63,22 +63,28 @@ export const StepEditor: React.FC<StepEditorProps> = ({ step, index, scan, picki
   };
 
   return (
-    <div className={`p-2 rounded bg-black/40 border space-y-1.5 text-[11px] ${missingTarget ? "border-amber-500/40" : "border-white/8"}`}>
-      <div className="flex items-center gap-1.5">
-        <span className="font-mono text-[10px] text-purple-300 font-bold w-4 shrink-0">{index + 1}</span>
+    <div className={`p-3 rounded-xl bg-[#090d18] border space-y-2.5 text-[11px] shadow-sm transition-all ${missingTarget ? "border-amber-400/60 ring-1 ring-amber-400/20" : "border-white/12 hover:border-white/20"}`}>
+      <div className="flex items-center gap-2">
+        <span className="w-5 h-5 rounded-full bg-black text-[#D4FF00] font-mono font-black text-[10px] flex items-center justify-center shrink-0 border border-[#D4FF00]/40 shadow-xs">
+          {index + 1}
+        </span>
         <input
           value={step.title}
           onChange={(e) => onChange({ title: e.target.value })}
-          placeholder="Step name"
-          className="flex-1 min-w-0 bg-transparent text-[11px] text-gray-200 placeholder-gray-600 focus:outline-none focus:text-white"
+          placeholder={`Step ${index + 1} label (e.g. Click Headphones)`}
+          className="flex-1 min-w-0 bg-transparent text-xs font-semibold text-white placeholder-gray-500 focus:outline-none focus:text-[#D4FF00]"
         />
-        <button onClick={onRemove} className="text-gray-500 hover:text-rose-400 cursor-pointer" title="Remove step">
+        <button
+          onClick={onRemove}
+          className="w-6 h-6 rounded-md flex items-center justify-center text-gray-500 hover:text-rose-400 hover:bg-rose-500/10 cursor-pointer transition-colors"
+          title="Remove step"
+        >
           <Trash2 size={12} />
         </button>
       </div>
 
-      <div role="radiogroup" aria-label="Action" className="flex items-center gap-0.5 p-0.5 rounded bg-[#111626] border border-white/10">
-        {ACTIONS.map(({ value, label, icon: Icon }) => {
+      <div role="radiogroup" aria-label="Action" className="flex flex-wrap items-center gap-1 p-1 rounded-lg bg-black/60 border border-white/10">
+        {ACTIONS.map(({ value, label, icon: Icon, activeClass }) => {
           const active = step.action === value;
           return (
             <button
@@ -87,12 +93,12 @@ export const StepEditor: React.FC<StepEditorProps> = ({ step, index, scan, picki
               aria-checked={active}
               title={label}
               onClick={() => onChange({ action: value })}
-              className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] cursor-pointer transition-colors ${
-                active ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white hover:bg-white/5"
+              className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[10.5px] cursor-pointer transition-all ${
+                active ? activeClass : "text-gray-400 hover:text-white hover:bg-white/5"
               }`}
             >
-              <Icon size={11} />
-              {active && <span>{label}</span>}
+              <Icon size={12} />
+              <span>{label}</span>
             </button>
           );
         })}
@@ -235,13 +241,13 @@ const TargetCombobox: React.FC<TargetComboboxProps> = ({ action, value, matched,
         <button
           onClick={onPick}
           title={picking ? "Cancel picking" : "Pick element from page"}
-          className={`shrink-0 px-1.5 rounded border cursor-pointer transition-colors ${
+          className={`shrink-0 px-2.5 rounded-lg border cursor-pointer transition-all flex items-center justify-center ${
             picking
-              ? "bg-cyan-500/20 border-cyan-400/60 text-cyan-300 animate-pulse"
-              : "bg-[#111626] border-white/10 text-gray-400 hover:text-cyan-300 hover:border-cyan-400/40"
+              ? "bg-[#D4FF00] border-[#D4FF00] text-black font-bold animate-pulse shadow-[0_0_12px_rgba(212,255,0,0.4)]"
+              : "bg-black/60 border-white/15 text-gray-400 hover:text-[#D4FF00] hover:border-[#D4FF00]/50"
           }`}
         >
-          <Crosshair size={12} />
+          <Crosshair size={13} />
         </button>
       </div>
 
@@ -418,41 +424,41 @@ const RepeatField: React.FC<RepeatFieldProps> = ({ step, onChange }) => {
   };
 
   return (
-    <div className="flex items-center justify-between gap-1.5 p-1 rounded bg-[#111626] border border-white/8 text-[10px]">
-      <div className="flex items-center gap-1 text-gray-400">
-        <Repeat size={11} className={count > 1 ? "text-purple-400" : "text-gray-500"} />
-        <span>Repeat</span>
+    <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-black/60 border border-white/10 text-[10.5px]">
+      <div className="flex items-center gap-1.5 text-gray-300 font-medium">
+        <Repeat size={12} className={count > 1 ? "text-[#D4FF00]" : "text-gray-500"} />
+        <span>Action Multiplier</span>
       </div>
 
       <div className="flex items-center gap-2">
-        <div className="flex items-center rounded border border-white/10 bg-black/40 overflow-hidden">
+        <div className="flex items-center rounded-lg border border-white/15 bg-black/80 overflow-hidden shadow-xs">
           <button
             type="button"
             onClick={() => setCount(count - 1)}
             disabled={count <= 1}
             title="Decrease repeat count"
-            className="px-1.5 py-0.5 text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer"
+            className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer"
           >
             <Minus size={10} />
           </button>
-          <span className="px-1.5 font-mono text-[11px] font-semibold text-white min-w-[20px] text-center">
-            {count}
+          <span className="px-2 font-mono text-xs font-black text-[#D4FF00] min-w-[24px] text-center">
+            ×{count}
           </span>
           <button
             type="button"
             onClick={() => setCount(count + 1)}
             disabled={count >= MAX_CLICK_REPEAT}
             title="Increase repeat count (e.g. click 3 times)"
-            className="px-1.5 py-0.5 text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer"
+            className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer"
           >
             <Plus size={10} />
           </button>
         </div>
-        <span className="text-gray-400 text-[10px]">{count === 1 ? "time" : "times"}</span>
+        <span className="text-gray-400 text-[10px] font-mono">{count === 1 ? "time" : "times"}</span>
 
         {count > 1 && (
-          <div className="flex items-center gap-1 pl-1.5 border-l border-white/10 text-gray-400">
-            <span>every</span>
+          <div className="flex items-center gap-1.5 pl-2 border-l border-white/10 text-gray-300">
+            <span className="text-[10px]">interval:</span>
             <input
               type="number"
               min={50}
@@ -461,9 +467,9 @@ const RepeatField: React.FC<RepeatFieldProps> = ({ step, onChange }) => {
               value={interval}
               onChange={(e) => setInterval(Number(e.target.value) || DEFAULT_REPEAT_INTERVAL_MS)}
               title="Interval between repeated clicks in milliseconds"
-              className="w-12 bg-black/60 border border-white/10 rounded px-1 py-0.5 text-[10px] font-mono text-purple-200 text-center focus:outline-none focus:border-purple-400"
+              className="w-14 bg-black/80 border border-white/15 rounded px-1.5 py-0.5 text-[10.5px] font-mono text-[#D4FF00] text-center focus:outline-none focus:border-[#D4FF00]"
             />
-            <span>ms</span>
+            <span className="text-[10px] font-mono text-gray-400">ms</span>
           </div>
         )}
       </div>

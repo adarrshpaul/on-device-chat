@@ -1,6 +1,6 @@
 import { chromium } from '/Users/adarrsh/.gemini/antigravity/scratch/tshirt-experiment/node_modules/playwright/index.mjs';
 
-const TARGET_URL = 'http://127.0.0.1:4173';
+const TARGET_URL = 'http://127.0.0.1:4174';
 const ARTIFACT_DIR = '/Users/adarrsh/.gemini/antigravity/brain/9318767d-4270-413c-972b-dce97d26bc12';
 
 async function verifyV050Local() {
@@ -85,6 +85,16 @@ async function verifyV050Local() {
   });
 
   console.log('  Workflows Studio Info:', JSON.stringify(studioInfo, null, 2));
+
+  console.log('▶ STEP 4: Opening "Create New Automation" Drawer (Image 1 fix)...');
+  const newFlowBtn = await page.$('button:has-text("New Flow"), button:has-text("New")');
+  if (newFlowBtn) {
+    await newFlowBtn.click();
+    console.log('  Clicked "+ New Flow" button');
+    await page.waitForTimeout(1000);
+    await page.screenshot({ path: `${ARTIFACT_DIR}/v050_create_automation_drawer_redesigned.png` });
+    console.log(`  📸 Screenshot saved: v050_create_automation_drawer_redesigned.png`);
+  }
 
   await browser.close();
   console.log('\n======================================================================');
