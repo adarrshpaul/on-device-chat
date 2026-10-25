@@ -1,5 +1,24 @@
 # OKF Transition Log
 
+## 2026-10-25T12:43:00+05:30 - Vega System One Real-Time UI Guide & Edge Telemetry Bridge
+- **Telemetry Ingestion Engine (`frontend/src/lib/telemetryTracker.ts`)**:
+  - Implemented passive non-blocking interaction tracker capturing route, dwell time, cursor `(x, y)`, and behavior patterns (`hovering_without_clicking`, `idle_on_canvas`, `rapid_tab_switching`).
+  - Benchmarked at 0.0003ms per call (1000 snapshots in 0.31ms), far outperforming the 0.2ms overhead budget.
+- **Zero-Token Edge Decision Bridge (`frontend/src/lib/vegaEdgeBridge.ts`)**:
+  - Bridges client telemetry to edge decision endpoints running `nandakishorm/vega-08b-public-intents`.
+  - Micro-tuned F1 safety thresholds: confidence > 0.65 for contextual tooltip cues (`SHOW_STEP`), confidence > 0.85 for guided flow escalation (`START_FLOW`), default `WAIT`.
+  - Rule §7 honest fallback circuit: transparently falls back to local client reflex rules with honest labeling (`local-reflex-fallback`) when edge server is offline.
+- **Production Python Edge Service (`scripts/vega_edge_service.py`)**:
+  - Python HTTP service running `vegaml.load()` / HuggingFace `nandakishorm/vega-08b-public-intents` for zero-token logit classification.
+- **Ambient Viewport HUD Overlay (`frontend/src/components/VegaGuideOverlay.tsx`)**:
+  - Renders pulsating target highlight outlines (`.vega-highlight-target`) and floating directional tooltips pointing at active coordinate boundaries.
+- **Automated Verification & Deployment**:
+  - 7/7 tests passed in `test_vega_realtime_guide.mjs`; all 19 frontend test suites passed with 0 failures (`npm test`).
+  - Deployed to Cloudflare Pages `local-agent-harness` (`https://agent.paulcreates.online`).
+  - Playwright live verified with mouse dwell telemetry: `live_deployed_vega_telemetry_guide.png`.
+  - Pushed to `origin/main` (commit `3c875ae`).
+  - Fact recorded: `okf/facts/fact_vega_realtime_guide_telemetry_bridge_20261025.md`.
+
 ## 2026-10-25T04:48:00+05:30 - Visual Automation Builder Overhaul: 3-Stage Pipeline Flow & Category Filters
 - **3-Stage Visual Automation Builder Modal (`WorkflowStudio.tsx`)**:
   - Overhauled "Create New Automation" drawer into an intuitive 3-stage visual builder inspired by modern clean orchestration designs.
