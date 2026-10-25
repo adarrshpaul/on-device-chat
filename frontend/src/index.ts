@@ -58,6 +58,12 @@ export { parseHarnessDecision } from './lib/harnessDecisionParser';
 export type { HarnessToolCall } from './lib/harnessDecisionParser';
 export { ProbabilisticHarnessEngine } from './lib/probabilisticHarness';
 export { personalDictionary } from './lib/personalDictionary';
+export { TelemetryTracker, telemetryTracker } from './lib/telemetryTracker';
+export type { UIContextSnapshot, UserActionPattern, DOMFocusState, TelemetryListener } from './lib/telemetryTracker';
+export { VegaEdgeBridge, vegaEdgeBridge } from './lib/vegaEdgeBridge';
+export type { VegaGuideDirective, DirectiveListener } from './lib/vegaEdgeBridge';
+export { VegaGuideOverlay } from './components/VegaGuideOverlay';
+
 export type { DictionaryEntry } from './lib/personalDictionary';
 export { WaitManager } from './lib/waitManager';
 export type { WaitOptions, WaitResult } from './lib/waitManager';

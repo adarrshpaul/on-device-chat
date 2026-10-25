@@ -36,6 +36,7 @@ import { CanvasGameController } from "../lib/canvasGameController";
 import { SafetyConfirmationCard } from "./SafetyConfirmationCard";
 import { ThinkingAccordion } from "./ThinkingAccordion";
 import { stripLeadingEmoji } from "./tierBadges";
+import { VegaGuideOverlay } from "./VegaGuideOverlay";
 
 export interface ChatWidgetProps {
   config?: Gemma4Config;
@@ -1245,6 +1246,9 @@ export default function ChatWidget({ config = {} }: ChatWidgetProps) {
           )}
         </div>
       )}
+
+      {/* Vega System One Real-Time Ambient Guide Overlay */}
+      <VegaGuideOverlay onStartFlow={() => setActiveTab("workflows")} />
 
       {/* Floating Toggle Button (when closed) */}
       {!isOpen && (
